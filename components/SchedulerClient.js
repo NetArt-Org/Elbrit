@@ -386,7 +386,7 @@ console.log("Native:", scheduler.current?.nativeElement);
                     {/* LEFT SIDE */}
                     <section id="sideA">
                         <div className="button-container">
-                            <div id="logo"></div>
+                            {/* <div id="logo"></div> */}
                         </div>
 
                         <div className="controls-container">
