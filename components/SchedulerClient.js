@@ -109,13 +109,6 @@ export default function SchedulerComponent() {
             label: 'Approve Hiring of John Jeffers',
             dateStart: new Date(currentYear, currentMonth, currentDate + 1, 10, 0),
             dateEnd: new Date(currentYear, currentMonth, currentDate + 1, 11, 15),
-            notifications: [{
-                interval: 1,
-                type: 'days',
-                time: [currentHours, currentMinutes],
-                message: 'Approve Hiring of John Jeffers tomorrow',
-                iconType: 'success'
-            }],
             status: 'busy',
             class: 'event'
         }, {
@@ -132,21 +125,6 @@ export default function SchedulerComponent() {
             label: 'Compete Agreements',
             dateStart: new Date(currentYear, currentMonth, currentDate, currentHours, currentMinutes + 15),
             dateEnd: new Date(currentYear, currentMonth, currentDate, currentHours + 1, 45),
-            notifications: [{
-                interval: 0,
-                type: 'days',
-                time: [currentHours, currentMinutes + 1],
-                message: 'Compete Agreements in 15 minutes',
-                iconType: 'time'
-            },
-            {
-                interval: 0,
-                type: 'days',
-                time: [currentHours, currentMinutes + 2],
-                message: 'Compete Agreements in 14 minutes',
-                iconType: 'warning'
-            }
-            ],
             status: 'outOfOffice',
             class: 'event'
         }, {
@@ -211,13 +189,6 @@ export default function SchedulerComponent() {
                     backgroundColor: '#64DD17'
                 }]
             },
-            notifications: [{
-                interval: 2,
-                type: 'days',
-                time: [currentHours, currentMinutes],
-                message: 'Upgrade Apps to Windows RT in 5 minutes',
-                iconType: 'time'
-            }],
         },
         {
             label: 'Peter\'s Birthday',
@@ -294,10 +265,7 @@ export default function SchedulerComponent() {
     // Safe Create Button (Fixes .openWindow undefined)
     // ---------------------------------------------------
     const addNew = () => {
-        console.log("Wrapper:", scheduler.current);
-console.log("Native:", scheduler.current?.nativeElement);
-
-        const element = scheduler.current?.nativeElement;
+        const element = primaryContainer.current?.querySelector("smart-scheduler");
         if (!element) return;
     
         element.whenRendered(() => {
@@ -314,7 +282,7 @@ console.log("Native:", scheduler.current?.nativeElement);
             });
         });
     };
-    
+   
     // ---------------------------------------------------
     // Safe Toggle Sidebar
     // ---------------------------------------------------
@@ -376,20 +344,15 @@ console.log("Native:", scheduler.current?.nativeElement);
                 <div id="header">
                     <Button id="toggleButton" onClick={handleToggle}></Button>
                     <div id="title">Scheduler</div>
-
-                    {/* <Button id="addNew" className="floating" onClick={addNew}>
-                        <span>Create</span>
-                    </Button> */}
                 </div>
 
                 <div className="content">
                     {/* LEFT SIDE */}
                     <section id="sideA">
-                        <div className="button-container">
-                            {/* <div id="logo"></div> */}
-                        </div>
-
                         <div className="controls-container">
+                        <Button id="addNew" className="floating" onClick={addNew}>
+                        <span>Create</span>
+                    </Button>
                             <Calendar
                                 ref={calendar}
                                 id="calendar"
