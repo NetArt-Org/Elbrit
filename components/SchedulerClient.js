@@ -287,16 +287,9 @@ export default function SchedulerComponent() {
     // Safe Toggle Sidebar
     // ---------------------------------------------------
     const handleToggle = () => {
-        const container = primaryContainer.current;
-        if (!container) return;
-
-        container.classList.toggle("collapse");
-
-        if (scheduler.current) {
-            scheduler.current.disableDateMenu =
-                !container.classList.contains("collapse");
-        }
+        primaryContainer.current.classList.toggle("collapse");
     };
+
 
     // ---------------------------------------------------
     // Safe Calendar Change
@@ -338,79 +331,108 @@ export default function SchedulerComponent() {
         sched.dataSource = [...data];   // initial load with a new array copy
     };
 
+    useEffect(() => {
+        function handleOutsideClick(e) {
+            const container = primaryContainer.current;
+            const drawer = document.querySelector("#sideA");
+
+            // Drawer closed => do nothing
+            if (!container?.classList.contains("collapse")) return;
+
+            // Click inside drawer => ignore
+            if (drawer && drawer.contains(e.target)) return;
+
+            // Click toggle button => ignore
+            const toggleBtn = document.getElementById("toggleButton");
+            if (toggleBtn && toggleBtn.contains(e.target)) return;
+
+        }
+
+        document.addEventListener("click", handleOutsideClick);
+        return () => document.removeEventListener("click", handleOutsideClick);
+    }, []);
+
+
+    useEffect(() => {
+        if (window.innerWidth <= 768) {
+            primaryContainer.current?.classList.add("mobile-collapsed");
+        }
+    }, []);
 
     return (
-            <div id="primaryContainer" ref={primaryContainer}>
-                <div id="header">
-                    <Button id="toggleButton" onClick={handleToggle}></Button>
-                    <div id="title">Scheduler</div>
-                </div>
+        <div id="primaryContainer" ref={primaryContainer} className="mobile-collapsed">
+            <div id="header">
+                <Button id="toggleButton" onClick={(e) => { e.stopPropagation(); handleToggle(); }}></Button>
+            </div>
 
-                <div className="content">
-                    {/* LEFT SIDE */}
-                    <section id="sideA">
-                        <div className="controls-container">
-                        <Button id="addNew" className="floating" onClick={addNew}>
-                        <span>Create</span>
+            <div className="content">
+                {/* LEFT SIDE */}
+                <section id="sideA" onClick={(e) => e.stopPropagation()} >
+                    <div className="controls-container">
+                    <Button className="desktop-hide" id="drawerCloseBtn" onClick={() => primaryContainer.current.classList.remove("collapse")}>
+                        ×
                     </Button>
-                            <Calendar
-                                ref={calendar}
-                                id="calendar"
-                                scrollButtonsPosition="far"
-                                onChange={handleCalendarChange}
-                            />
+                        <Button id="addNew" className="floating" onClick={addNew}>
+                            <span>Create</span>
+                        </Button>
+                        <Calendar className="mobile-hide"
+                            ref={calendar}
+                            id="calendar"
+                            scrollButtonsPosition="far"
+                            onChange={handleCalendarChange}
+                        />
 
-                            {/* <Input
+                        {/* <Input
                                 id="searchBar"
                                 className="underlined"
                                 placeholder="Search for people"
                             /> */}
 
-                            <Tree
-                                ref={tree}
-                                id="tree"
-                                selectionMode="checkBox"
-                                toggleElementPosition="far"
-                                onChange={handleTreeChange}
-                            >
-                                <TreeItemsGroup expanded>
-                                    My calendars
-                                    <TreeItem value="birthday" selected={selectedCalendars.includes("birthday")}>
-                                        Birthdays
-                                    </TreeItem>
+                        <Tree
+                            ref={tree}
+                            id="tree"
+                            selectionMode="checkBox"
+                            toggleElementPosition="far"
+                            onChange={handleTreeChange}
+                        >
+                            <TreeItemsGroup expanded>
+                                My calendars
+                                <TreeItem value="birthday" selected={selectedCalendars.includes("birthday")}>
+                                    Birthdays
+                                </TreeItem>
 
-                                    <TreeItem value="holiday" selected={selectedCalendars.includes("holiday")}>
-                                        Holidays
-                                    </TreeItem>
+                                <TreeItem value="holiday" selected={selectedCalendars.includes("holiday")}>
+                                    Holidays
+                                </TreeItem>
 
-                                    <TreeItem value="event" selected={selectedCalendars.includes("event")}>
-                                        Events
-                                    </TreeItem>
+                                <TreeItem value="event" selected={selectedCalendars.includes("event")}>
+                                    Events
+                                </TreeItem>
 
-                                </TreeItemsGroup>
-                            </Tree>
-                        </div>
-                    </section>
+                            </TreeItemsGroup>
+                        </Tree>
+                    </div>
+                </section>
 
-                    {/* RIGHT SIDE */}
-                    <section id="sideB">
-                        <Scheduler
-                            ref={scheduler}
-                            dataSource={eventData}
-                            id="scheduler"
-                            view={view}
-                            views={views}
-                            nonworkingDays={nonworkingDays}
-                            firstDayOfWeek={1}
-                            disableDateMenu={true}
-                            currentTimeIndicator={true}
-                            scrollButtonsPosition="far"
-                            onReady={handleSchedulerReady}
-                            onDateChange={handleDateChange}
-                        />
+                {/* RIGHT SIDE */}
+                <section id="sideB">
+                    <Scheduler
+                        ref={scheduler}
+                        dataSource={eventData}
+                        id="scheduler"
+                        view={view}
+                        views={views}
+                        nonworkingDays={nonworkingDays}
+                        firstDayOfWeek={1}
+                        disableDateMenu={true}
+                        currentTimeIndicator={true}
+                        scrollButtonsPosition="far"
+                        onReady={handleSchedulerReady}
+                        onDateChange={handleDateChange}
+                    />
 
-                    </section>
-                </div>
+                </section>
             </div>
+        </div>
     );
 }
