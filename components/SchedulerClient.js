@@ -364,7 +364,6 @@ export default function SchedulerComponent() {
             <div id="header">
                 <Button id="toggleButton" onClick={(e) => { e.stopPropagation(); handleToggle(); }}></Button>
             </div>
-
             <div className="content">
                 {/* LEFT SIDE */}
                 <section id="sideA" onClick={(e) => e.stopPropagation()} >

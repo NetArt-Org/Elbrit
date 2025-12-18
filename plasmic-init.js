@@ -1,6 +1,5 @@
 import { initPlasmicLoader } from "@plasmicapp/loader-nextjs";
 import SchedulerClient from "./components/SchedulerClient";
-import SchedulerClientTest from "./components/SchedulerClientTest";
 export const PLASMIC = initPlasmicLoader({
   projects: [
     {
@@ -33,10 +32,5 @@ export const PLASMIC = initPlasmicLoader({
 
 PLASMIC.registerComponent(SchedulerClient, {
   name: "SchedulerClient",
-  props: {},
-});
-
-PLASMIC.registerComponent(SchedulerClientTest, {
-  name: "SchedulerClientTest",
   props: {},
 });
