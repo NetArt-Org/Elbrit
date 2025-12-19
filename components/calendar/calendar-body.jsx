@@ -29,7 +29,7 @@ export function CalendarBody() {
 
 	return (
         <div className="w-full h-full overflow-scroll relative">
-            <motion.div className="h-full"
+            <motion.div className="h-full overflow-hidden"
                 key={view}
                 initial="initial"
                 animate="animate"

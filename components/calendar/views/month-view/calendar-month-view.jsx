@@ -42,7 +42,7 @@ export function CalendarMonthView({
 					</motion.div>
 				))}
 			</div>
-            <div className="grid grid-cols-7 h-full auto-rows-fr overflow-hidden">
+            <div className="grid grid-cols-7 grid-rows-6 h-full overflow-hidden">
 				{cells.map((cell, index) => (
 					<DayCell
                         key={index}
