@@ -23,6 +23,24 @@ export const USERS_MOCK = [
 	},
 ];
 
+const HOLIDAYS = [
+	{
+	  title: "Christmas",
+	  month: 11, // December (0-based)
+	  day: 25,
+	},
+	{
+	  title: "New Year’s Eve",
+	  month: 11,
+	  day: 31,
+	},
+	{
+	  title: "Makar Sankranti",
+	  month: 0, // January
+	  day: 14,
+	},
+  ];
+  
 // ================================== //
 
 const events = [
@@ -114,69 +132,108 @@ const events = [
 	"Home renovation meeting",
 ];
 
-const mockGenerator = numberOfEvents => {
+const randomBetween = (min, max) =>
+	Math.floor(Math.random() * (max - min + 1)) + min;
+  
+  const shouldHaveEvents = () => Math.random() < 0.4;
+  // 40% days have events, 60% are empty → lots of free days
+
+  
+  const mockGenerator = () => {
 	const result = [];
 	let currentId = 1;
-
-	const randomUser = USERS_MOCK[Math.floor(Math.random() * USERS_MOCK.length)];
-
-	// Date range: 30 days before and after now
+  
 	const now = new Date();
-	const startRange = new Date(now);
-	startRange.setDate(now.getDate() - 30);
-	const endRange = new Date(now);
-	endRange.setDate(now.getDate() + 30);
-
-	// Create an event happening now
-	const currentEvent = {
-		id: currentId++,
-		startDate: new Date(now.getTime() - 30 * 60000).toISOString(),
-		endDate: new Date(now.getTime() + 30 * 60000).toISOString(),
-		title: events[Math.floor(Math.random() * events.length)],
-		color: COLORS[Math.floor(Math.random() * COLORS.length)],
-		description:
-			"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-		user: randomUser,
-	};
-
-	result.push(currentEvent);
-
-	// Generate the remaining events
-	for (let i = 0; i < numberOfEvents - 1; i++) {
-		// Determine if this is a multi-day event (10% chance)
-		const isMultiDay = Math.random() < 0.1;
-
-		const startDate = new Date(startRange.getTime() +
-            Math.random() * (endRange.getTime() - startRange.getTime()));
-
-		// Set time between 8 AM and 8 PM
-		startDate.setHours(8 + Math.floor(Math.random() * 12), Math.floor(Math.random() * 60), 0, 0);
-
-		const endDate = new Date(startDate);
-
-		if (isMultiDay) {
-			// Multi-day event: Add 1-4 days
-			const additionalDays = Math.floor(Math.random() * 4) + 1;
-			endDate.setDate(startDate.getDate() + additionalDays);
-			endDate.setHours(8 + Math.floor(Math.random() * 12), Math.floor(Math.random() * 60), 0, 0);
-		} else {
-			// Same-day event: Add 1-3 hours
-			endDate.setHours(endDate.getHours() + Math.floor(Math.random() * 3) + 1);
-		}
-
-		result.push({
+	const startDate = new Date(now);
+	startDate.setDate(now.getDate() + 7);
+  
+	const monthsToGenerate = 3;
+  
+	// ---- 1. Add holidays explicitly ----
+	// for (let i = 0; i < monthsToGenerate; i++) {
+	//   const year = startDate.getFullYear();
+	//   const month = startDate.getMonth() + i;
+  
+	//   HOLIDAYS.forEach(holiday => {
+	// 	if (holiday.month === month % 12) {
+	// 	  const date = new Date(year, month, holiday.day);
+	// 	  const SYSTEM_USER = {
+	// 		id: "system",
+	// 		name: "System",
+	// 		picturePath: null,
+	// 	  };
+		  
+	// 	  result.push({
+	// 		id: currentId++,
+	// 		startDate: new Date(date.setHours(0, 0)).toISOString(),
+	// 		endDate: new Date(date.setHours(23, 59)).toISOString(),
+	// 		title: holiday.title,
+	// 		color: "red",
+	// 		description: "Public holiday",
+	// 		user: SYSTEM_USER,
+	// 	  });
+	// 	}
+	//   });
+	// }
+  
+	// ---- 2. Generate normal events day-by-day ----
+	for (let m = 0; m < monthsToGenerate; m++) {
+	  const monthStart = new Date(startDate);
+	  monthStart.setMonth(startDate.getMonth() + m);
+	  monthStart.setDate(1);
+  
+	  const daysInMonth = new Date(
+		monthStart.getFullYear(),
+		monthStart.getMonth() + 1,
+		0
+	  ).getDate();
+  
+	  for (let d = 1; d <= daysInMonth; d++) {
+		if (!shouldHaveEvents()) continue; // ✅ free day
+  
+		const eventCount = randomBetween(1, 2); // max 2 events/day
+  
+		for (let e = 0; e < eventCount; e++) {
+		  const start = new Date(
+			monthStart.getFullYear(),
+			monthStart.getMonth(),
+			d,
+			randomBetween(9, 17),
+			0
+		  );
+  
+		  const end = new Date(start);
+		  end.setHours(start.getHours() + randomBetween(1, 2));
+  
+		  result.push({
 			id: currentId++,
-			startDate: startDate.toISOString(),
-			endDate: endDate.toISOString(),
-			title: events[Math.floor(Math.random() * events.length)],
-			color: COLORS[Math.floor(Math.random() * COLORS.length)],
-			description:
-				"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-			user: USERS_MOCK[Math.floor(Math.random() * USERS_MOCK.length)],
-		});
+			startDate: start.toISOString(),
+			endDate: end.toISOString(),
+			title: events[randomBetween(0, events.length - 1)],
+			color: COLORS[randomBetween(0, COLORS.length - 1)],
+			description: "Auto-generated mock event",
+			user: USERS_MOCK[randomBetween(0, USERS_MOCK.length - 1)],
+		  });
+		}
+	  }
 	}
-
+  
+	// ---- 3. Long-range reminders (2–3 months ahead) ----
+	const reminderDate = new Date(startDate);
+	reminderDate.setMonth(reminderDate.getMonth() + 2);
+  
+	result.push({
+	  id: currentId++,
+	  startDate: reminderDate.toISOString(),
+	  endDate: reminderDate.toISOString(),
+	  title: "Quarterly Planning Reminder",
+	  color: "blue",
+	  description: "Long-range reminder event",
+	  user: USERS_MOCK[0],
+	});
+  
 	return result;
-};
+  };
+  
 
 export const CALENDAR_ITEMS_MOCK = mockGenerator(80);

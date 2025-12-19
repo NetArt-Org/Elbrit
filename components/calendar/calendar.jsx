@@ -7,7 +7,7 @@ import { CalendarProvider } from "@/components/calendar/contexts/calendar-contex
 import { DndProvider } from "@/components/calendar/contexts/dnd-context";
 import { CalendarHeader } from "@/components/calendar/header/calendar-header";
 import { getEvents, getUsers } from "@/components/calendar/requests";
-import * as motion from "motion/react-client"
+import { motion } from "framer-motion";
 
 export function Calendar() {
   const [events, setEvents] = useState([]);

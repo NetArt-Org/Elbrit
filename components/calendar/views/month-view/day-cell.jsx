@@ -3,6 +3,7 @@ import { cva } from "class-variance-authority";
 import { isToday, startOfDay, isSunday, isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
 import { useMemo, useCallback } from "react";
+import { isBefore } from "date-fns";
 
 import { cn } from "@/lib/utils";
 import { transition } from "@/components/calendar/animations";
@@ -89,7 +90,7 @@ export function DayCell({
 
   const showMobileMore = isMobile && currentMonth && showMoreCount > 0;
   const showDesktopMore = !isMobile && currentMonth && showMoreCount > 0;
-
+  const isPastDate = isBefore(startOfDay(date), startOfDay(new Date()));
   const cellContent = useMemo(() => (
     <motion.div
       className={cn(
@@ -105,7 +106,7 @@ export function DayCell({
             "h-6 px-1 text-xs font-semibold lg:px-2",
             !currentMonth && "opacity-20",
             isToday(date) &&
-              "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
+            "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
           )}>
           {day}
         </motion.span>
@@ -115,26 +116,27 @@ export function DayCell({
             "flex h-fit gap-1 px-2 mt-1 lg:h-[94px] lg:flex-col lg:gap-2 lg:px-0",
             !currentMonth && "opacity-50"
           )}>
-            {(cellEvents.length === 0 && !isMobile) ? (
-              <div className="w-full h-full flex justify-center items-center group">
-                <AddEditEventDialog startDate={date}>
-                  <Button
-                    variant="ghost"
-                    onPointerDownCapture={(e) => {
-                      e.stopPropagation(); // 🔥 stops Radix ModalTrigger
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    className="border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Plus className="h-4 w-4" />
-                    <span className="max-sm:hidden">Add Event</span>
-                  </Button>
-                </AddEditEventDialog>
-              </div>
-            ) : (
-              [0, 1, 2].map(renderEventAtPosition)
-            )}
+          {(cellEvents.length === 0 && !isMobile && !isPastDate) ? (
+            <div className="w-full h-full flex justify-center items-center group">
+              <AddEditEventDialog startDate={date}>
+                <Button
+                  variant="ghost"
+                  disabled={isPastDate}
+                  onPointerDownCapture={(e) => {
+                    e.stopPropagation(); // 🔥 stops Radix ModalTrigger
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  className="border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <Plus className="h-4 w-4" />
+                  <span className="max-sm:hidden">Add Event</span>
+                </Button>
+              </AddEditEventDialog>
+            </div>
+          ) : (
+            [0, 1, 2].map(renderEventAtPosition)
+          )}
         </motion.div>
 
         {showMobileMore && (

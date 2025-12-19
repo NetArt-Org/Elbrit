@@ -10,6 +10,7 @@ import { CalendarMonthView } from "@/components/calendar/views/month-view/calend
 import { CalendarDayView } from "@/components/calendar/views/week-and-day-view/calendar-day-view";
 import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/calendar-week-view";
 import { CalendarYearView } from "@/components/calendar/views/year-view/calendar-year-view";
+import MobileAddEventBar from "./mobile/MobileAddEventBar";
 
 export function CalendarBody() {
 	const { view, events } = useCalendar();
@@ -58,6 +59,7 @@ export function CalendarBody() {
 						<AgendaEvents />
 					</motion.div>
 				)}
+				<MobileAddEventBar />
 			</motion.div>
         </div>
     );
