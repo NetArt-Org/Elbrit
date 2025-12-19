@@ -29,7 +29,7 @@ export function CalendarMonthView({
         calculateMonthEventPositions(multiDayEvents, singleDayEvents, selectedDate), [multiDayEvents, singleDayEvents, selectedDate]);
 
 	return (
-        <motion.div initial="initial" animate="animate" variants={staggerContainer}>
+        <motion.div initial="initial" animate="animate" variants={staggerContainer} className="h-full w-full">
             <div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
 					<motion.div
@@ -42,7 +42,7 @@ export function CalendarMonthView({
 					</motion.div>
 				))}
 			</div>
-            <div className="grid grid-cols-7 overflow-hidden">
+            <div className="grid grid-cols-7 h-full auto-rows-fr overflow-hidden">
 				{cells.map((cell, index) => (
 					<DayCell
                         key={index}

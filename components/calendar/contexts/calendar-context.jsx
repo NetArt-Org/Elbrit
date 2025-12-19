@@ -23,7 +23,7 @@ export function CalendarProvider({
         badgeVariant: badge,
         view: view,
     });
-
+	const [mobileMode, setMobileMode] = useState("expanded");
 	const [badgeVariant, setBadgeVariantState] = useState(settings.badgeVariant);
 	const [currentView, setCurrentViewState] = useState(settings.view);
 	const [use24HourFormat, setUse24HourFormatState] = useState(settings.use24HourFormat);
@@ -148,6 +148,8 @@ export function CalendarProvider({
 		updateEvent,
 		removeEvent,
 		clearFilter,
+		mobileMode,
+		setMobileMode
 	};
 
 	return (
