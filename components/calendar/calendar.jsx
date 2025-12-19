@@ -44,7 +44,7 @@ export function Calendar() {
     <CalendarProvider events={events} users={users} view="month">
       <DndProvider showConfirmation={false}>
         <div className="w-full h-full border rounded-xl">
-          {/* <CalendarHeader /> */}
+          <CalendarHeader />
           <CalendarBody />
         </div>
       </DndProvider>

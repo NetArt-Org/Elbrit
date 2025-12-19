@@ -1,7 +1,7 @@
 "use client";;
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
-
+import { useMediaQuery } from "@/components/calendar/hooks";
 import { Button } from "@/components/ui/button";
 import {
 	slideFromLeft,
@@ -19,7 +19,7 @@ import Views from "./view-tabs";
 
 export function CalendarHeader() {
 	const { view, events } = useCalendar();
-
+	const isMobile = useMediaQuery("(max-width: 768px)");
 	return (
         <div
             className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -32,7 +32,7 @@ export function CalendarHeader() {
 				<TodayButton />
 				<DateNavigator view={view} events={events} />
 			</motion.div>
-            <motion.div
+			{!isMobile && (<motion.div
                 className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
                 variants={slideFromRight}
                 initial="initial"
@@ -54,7 +54,7 @@ export function CalendarHeader() {
 					</AddEditEventDialog>
 				</div>
 				<Settings />
-			</motion.div>
+			</motion.div>)}
         </div>
     );
 }
