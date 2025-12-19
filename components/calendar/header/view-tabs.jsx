@@ -71,7 +71,7 @@ function Views() {
                 stiffness: 400,
                 damping: 25,
               }}>
-              <TabsTrigger value={value} asChild>
+              <TabsTrigger value={value} asChild className="px-2">
                 <motion.div
                   className="flex h-8 w-full items-center justify-center cursor-pointer"
                   animate={{ filter: "blur(0px)" }}
