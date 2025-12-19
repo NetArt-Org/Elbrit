@@ -116,19 +116,15 @@ export function DayCell({
             "flex h-fit gap-1 px-2 mt-1 lg:h-[94px] lg:flex-col lg:gap-2 lg:px-0",
             !currentMonth && "opacity-50"
           )}>
-          {(cellEvents.length === 0 && !isMobile && !isPastDate) ? (
+          {!isMobile && !isPastDate && cellEvents.length === 0 ? (
             <div className="w-full h-full flex justify-center items-center group">
               <AddEditEventDialog startDate={date}>
                 <Button
                   variant="ghost"
-                  disabled={isPastDate}
-                  onPointerDownCapture={(e) => {
-                    e.stopPropagation(); // 🔥 stops Radix ModalTrigger
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  className="border opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  onPointerDownCapture={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  className="border opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                >
                   <Plus className="h-4 w-4" />
                   <span className="max-sm:hidden">Add Event</span>
                 </Button>
@@ -137,6 +133,7 @@ export function DayCell({
           ) : (
             [0, 1, 2].map(renderEventAtPosition)
           )}
+
         </motion.div>
 
         {showMobileMore && (

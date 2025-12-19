@@ -12,6 +12,7 @@ import {formatTime} from "@/components/calendar/helpers";
 import {dayCellVariants} from "@/components/calendar/views/month-view/day-cell";
 import {EventBullet} from "@/components/calendar/views/month-view/event-bullet";
 import {EventDetailsDialog} from "@/components/calendar/dialogs/event-details-dialog";
+import MobileAddEventBar from "../mobile/MobileAddEventBar";
 
 export function EventListDialog({
     date,
@@ -47,7 +48,7 @@ export function EventListDialog({
                         </div>
                     </ModalTitle>
                 </ModalHeader>
-                <div className="max-h-[60vh] overflow-y-auto space-y-2">
+                <div className="max-h-[60vh] overflow-y-auto space-y-2 pb-24">
                     {cellEvents.length > 0 ? (
                         cellEvents.map((event) => (
                             <EventDetailsDialog event={event} key={event.id}>
@@ -74,6 +75,7 @@ export function EventListDialog({
                             No events for this date.
                         </p>
                     )}
+                <MobileAddEventBar date={date} />
                 </div>
             </ModalContent>
         </Modal>
