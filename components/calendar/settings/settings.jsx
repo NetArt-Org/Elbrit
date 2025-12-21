@@ -53,7 +53,7 @@ export function Settings() {
 				<DropdownMenuLabel>Calendar settings</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
-					<DropdownMenuItem>
+					{/* <DropdownMenuItem>
 						Use dark mode
 						<DropdownMenuShortcut>
 							<Switch
@@ -69,8 +69,8 @@ export function Settings() {
 									setTheme(checked ? "dark" : "light")
 								} />
 						</DropdownMenuShortcut>
-					</DropdownMenuItem>
-					<DropdownMenuItem>
+					</DropdownMenuItem> */}
+					{/* <DropdownMenuItem>
 						Show confirmation dialog on event drop
 						<DropdownMenuShortcut>
 							<Switch
@@ -84,7 +84,7 @@ export function Settings() {
                                 checked={showConfirmation}
                                 onCheckedChange={(checked) => setShowConfirmation(checked)} />
 						</DropdownMenuShortcut>
-					</DropdownMenuItem>
+					</DropdownMenuItem> */}
 					<DropdownMenuItem>
 						Use dot badge
 						<DropdownMenuShortcut>
