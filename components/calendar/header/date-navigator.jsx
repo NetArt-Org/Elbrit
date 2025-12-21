@@ -5,15 +5,15 @@ import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-	buttonHover,
-	transition,
+    buttonHover,
+    transition,
 } from "@/components/calendar/animations";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-
+import { startTransition } from "react";
 import {
-	getEventsCount,
-	navigateDate,
-	rangeText,
+    getEventsCount,
+    navigateDate,
+    rangeText,
 } from "@/components/calendar/helpers";
 
 const MotionButton = motion.create(Button);
@@ -23,45 +23,52 @@ export function DateNavigator({
     view,
     events
 }) {
-	const { selectedDate, setSelectedDate } = useCalendar();
+    const { selectedDate, setSelectedDate } = useCalendar();
 
-	const month = formatDate(selectedDate, "MMMM");
-	const year = selectedDate.getFullYear();
+    const month = formatDate(selectedDate, "MMMM");
+    const year = selectedDate.getFullYear();
 
-	const eventCount = useMemo(
+    const eventCount = useMemo(
         () => getEventsCount(events, selectedDate, view),
         [events, selectedDate, view]
     );
 
-	const handlePrevious = () =>
-		setSelectedDate(navigateDate(selectedDate, view, "previous"));
-	const handleNext = () =>
-		setSelectedDate(navigateDate(selectedDate, view, "next"));
+    const handlePrevious = () =>
+        startTransition(() => {
+            setSelectedDate(navigateDate(selectedDate, view, "previous"));
+        });
 
-	return (
+    const handleNext = () =>
+        startTransition(() => {
+            setSelectedDate(navigateDate(selectedDate, view, "next"));
+        });
+
+    return (
         <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-				<motion.span
+                <motion.span
                     className="text-lg font-semibold"
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={transition}>
-					{month} {year}
-				</motion.span>
-				<AnimatePresence mode="wait">
-					<MotionBadge
-                        key={eventCount}
+                    {month} {year}
+                </motion.span>
+                <AnimatePresence mode="wait" initial={false}>
+                    <MotionBadge
+                        key={`${selectedDate.toISOString()}-${view}`}
                         variant="secondary"
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.8, opacity: 0 }}
-                        transition={transition}>
-						{eventCount} events
-					</MotionBadge>
-				</AnimatePresence>
-			</div>
+                        transition={transition}
+                    >
+                        {eventCount} events
+                    </MotionBadge>
+                </AnimatePresence>
+
+            </div>
             <div className="flex items-center gap-2">
-				<MotionButton
+                <MotionButton
                     variant="outline"
                     size="icon"
                     className="h-6 w-6"
@@ -69,18 +76,18 @@ export function DateNavigator({
                     variants={buttonHover}
                     whileHover="hover"
                     whileTap="tap">
-					<ChevronLeft className="h-4 w-4" />
-				</MotionButton>
+                    <ChevronLeft className="h-4 w-4" />
+                </MotionButton>
 
-				<motion.p
+                <motion.p
                     className="text-sm text-muted-foreground"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={transition}>
-					{rangeText(view, selectedDate)}
-				</motion.p>
+                    {rangeText(view, selectedDate)}
+                </motion.p>
 
-				<MotionButton
+                <MotionButton
                     variant="outline"
                     size="icon"
                     className="h-6 w-6"
@@ -88,9 +95,9 @@ export function DateNavigator({
                     variants={buttonHover}
                     whileHover="hover"
                     whileTap="tap">
-					<ChevronRight className="h-4 w-4" />
-				</MotionButton>
-			</div>
+                    <ChevronRight className="h-4 w-4" />
+                </MotionButton>
+            </div>
         </div>
     );
 }

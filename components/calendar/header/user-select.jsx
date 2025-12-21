@@ -19,7 +19,7 @@ export function UserSelect() {
 			</SelectTrigger>
             <SelectContent align="end">
 				<SelectItem value="all">
-					<AvatarGroup className="mx-2 flex items-center" max={2}>
+					<AvatarGroup className="mx-2 flex items-center" max={3}>
 						{users.map((user) => (
 							<Avatar key={user.id} className="size-5 text-xxs">
 								<AvatarImage src={user.picturePath ?? undefined} alt={user.name} />
