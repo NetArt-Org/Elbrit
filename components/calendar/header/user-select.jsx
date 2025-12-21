@@ -13,15 +13,15 @@ export function UserSelect() {
 	const { users, selectedUserId, filterEventsBySelectedUser } = useCalendar();
 
 	return (
-        <Select value={selectedUserId} onValueChange={filterEventsBySelectedUser}>
+        <Select  value={selectedUserId} onValueChange={filterEventsBySelectedUser}>
             <SelectTrigger className="w-full">
 				<SelectValue placeholder="Select a user" />
 			</SelectTrigger>
             <SelectContent align="end">
 				<SelectItem value="all">
-					<AvatarGroup className="mx-2 flex items-center" max={3}>
+					<AvatarGroup className="mx-2 flex items-center" max={2}>
 						{users.map((user) => (
-							<Avatar key={user.id} className="size-6 text-xxs">
+							<Avatar key={user.id} className="size-5 text-xxs">
 								<AvatarImage src={user.picturePath ?? undefined} alt={user.name} />
 								<AvatarFallback className="text-xxs">
 									{user.name[0]}
@@ -29,7 +29,7 @@ export function UserSelect() {
 							</Avatar>
 						))}
 					</AvatarGroup>
-					All
+					{/* All */}
 				</SelectItem>
 
 				{users.map((user) => (

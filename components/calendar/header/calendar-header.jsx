@@ -21,29 +21,34 @@ export function CalendarHeader() {
 	const { view, events } = useCalendar();
 	const isMobile = useMediaQuery("(max-width: 768px)");
 	return (
-        <div
-            className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
-            <motion.div
-                className="flex items-center gap-3"
-                variants={slideFromLeft}
-                initial="initial"
-                animate="animate"
-                transition={transition}>
-				<TodayButton />
-				<DateNavigator view={view} events={events} />
-			</motion.div>
-			{!isMobile && (<motion.div
-                className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
-                variants={slideFromRight}
-                initial="initial"
-                animate="animate"
-                transition={transition}>
-				<div className="options flex-wrap flex items-center gap-4 md:gap-2">
+		<div
+			className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
+			<motion.div
+				className="flex items-center justify-between gap-3"
+				variants={slideFromLeft}
+				initial="initial"
+				animate="animate"
+				transition={transition}>
+				<div className="flex gap-2 flex-row lg:items-center lg:gap-1.5">
+					<TodayButton />
+					<DateNavigator view={view} events={events} />
+				</div>
+				<div className="md:hidden flex gap-2 flex-row lg:items-center lg:gap-1.5">
 					<FilterEvents />
+					<Settings />
+				</div>
+			</motion.div>
+			<motion.div
+				className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
+				variants={slideFromRight}
+				initial="initial"
+				animate="animate"
+				transition={transition}>
+				<div className="options flex-wrap flex items-center gap-4 md:gap-2">
 					<Views />
 				</div>
 
-				<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5">
+				<div className="md:flex hidden flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5">
 					<UserSelect />
 
 					<AddEditEventDialog>
@@ -53,8 +58,11 @@ export function CalendarHeader() {
 						</Button>
 					</AddEditEventDialog>
 				</div>
-				<Settings />
-			</motion.div>)}
-        </div>
-    );
+				<div className="md:flex hidden gap-2 flex-row lg:items-center lg:gap-1.5">
+					<FilterEvents />
+					<Settings />
+				</div>
+			</motion.div>
+		</div>
+	);
 }
