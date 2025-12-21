@@ -149,7 +149,7 @@ export function CalendarDayView({
 					</div>
 				</ScrollArea>
 			</div>
-            <div className="hidden w-72 divide-y border-l md:block">
+            <div className="hidden w-72 divide-y border-l">
 				<DayPicker
                     className="mx-auto w-fit"
                     mode="single"
