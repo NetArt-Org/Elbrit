@@ -42,19 +42,20 @@ export function CalendarHeader() {
 					<Views />
 				</div>
 
-				<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5">
+				<div className="flex flex-row gap-4  lg:items-center lg:gap-1.5">
 					<UserSelect />
-
-					<AddEditEventDialog>
-						<Button>
-							<Plus className="h-4 w-4" />
-							Add Event
-						</Button>
-					</AddEditEventDialog>
-				</div>
+					<div className="hidden md:block">
+						<AddEditEventDialog>
+							<Button>
+								<Plus className="h-4 w-4" />
+								Add Event
+							</Button>
+						</AddEditEventDialog>
+					</div>
 				<div className="flex gap-2 flex-row lg:items-center lg:gap-1.5">
 					<FilterEvents />
 					<Settings />
+				</div>
 				</div>
 			</motion.div>
 		</div>
