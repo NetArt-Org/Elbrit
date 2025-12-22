@@ -1,58 +1,142 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Search, CheckSquare, X } from "lucide-react";
+import {
+    Menu,
+    Search,
+    CheckSquare,
+    House,
+    Rows2,
+    CalendarRange,
+    List,
+    Columns,
+    Grid3X3,
+    Grid2X2,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { slideFromLeft, transition, } from "@/components/calendar/animations";
 import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { CalendarSidebar } from "./calendar-sidebar";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { cn } from "@/lib/utils";
+import { tabs } from "@/components/calendar/header/view-tabs";
+import { DateNavigator } from "@/components/calendar/header/date-navigator";
 
 export function MobileCalendarHeader() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
 
-  return (
-    <>
-      {/* HEADER */}
-      <header className="flex items-center justify-between border-b px-4 py-3 md:hidden">
-        {/* Left – Hamburger */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+    const { view, setView, setSelectedDate, events } = useCalendar();
 
-        {/* Right – Actions */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSearchOpen((prev) => !prev)}
-          >
-            <Search className="h-5 w-5" />
-          </Button>
+    return (
+        <>
+            {/* HEADER */}
+            <header className="flex items-center justify-between border-b px-4 py-3 md:hidden">
+                {/* LEFT SIDE */}
+                <div className="flex items-center gap-2">
+                    {/* Hamburger */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSidebarOpen(true)}
+                    >
+                        <Menu className="h-5 w-5" />
+                    </Button>
+                    <motion.div
+                        className="flex items-center gap-3"
+                        variants={slideFromLeft}
+                        initial="initial"
+                        animate="animate"
+                        transition={transition}>
+                        <DateNavigator view={view} events={events} />
+                    </motion.div>
+                </div>
 
-          <Button variant="ghost" size="icon">
-            <CheckSquare className="h-5 w-5" />
-          </Button>
-        </div>
-      </header>
+                {/* RIGHT SIDE */}
+                <div className="flex items-center gap-2">
+                    {/* Home */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            setView("month");
+                            setSelectedDate(new Date());
+                            setSearchOpen(false);
+                            setSidebarOpen(false);
+                        }}
+                    >
+                        <House className="h-5 w-5" />
+                    </Button>
 
-      {/* INLINE SEARCH PANEL */}
-      {searchOpen && (
-        <div className="md:hidden border-b bg-background">
+                    {/* Search */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSearchOpen((prev) => !prev)}
+                    >
+                        <Search className="h-5 w-5" />
+                    </Button>
 
-          {/* Reuse your existing Agenda search */}
-          <AgendaEvents />
-        </div>
-      )}
+                    {/* View switch dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Rows2 className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
 
-      {/* SIDEBAR */}
-      <CalendarSidebar
-        open={sidebarOpen}
-        onOpenChange={setSidebarOpen}
-      />
-    </>
-  );
+                        <DropdownMenuContent
+                            align="end"
+                            sideOffset={8}
+                            className="w-44"
+                        >
+                            {tabs.map(({ name, value, icon: Icon }) => {
+                                const isActive = view === value;
+
+                                return (
+                                    <DropdownMenuItem
+                                        key={value}
+                                        onClick={() => setView(value)}
+                                        className={cn(
+                                            "flex items-center gap-2 cursor-pointer",
+                                            isActive && "bg-muted font-medium"
+                                        )}
+                                    >
+                                        <Icon className="h-4 w-4" />
+                                        {name}
+                                    </DropdownMenuItem>
+                                );
+                            })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Tasks */}
+                    <Button variant="ghost" size="icon">
+                        <CheckSquare className="h-5 w-5" />
+                    </Button>
+                </div>
+            </header>
+
+            {/* INLINE SEARCH PANEL */}
+            {searchOpen && (
+                <div className="md:hidden border-b bg-background">
+                    <AgendaEvents />
+                </div>
+            )}
+
+            {/* SIDEBAR */}
+            <CalendarSidebar
+                open={sidebarOpen}
+                onOpenChange={setSidebarOpen}
+            />
+        </>
+    );
 }

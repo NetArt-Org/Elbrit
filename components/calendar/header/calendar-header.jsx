@@ -11,15 +11,14 @@ import {
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { DateNavigator } from "@/components/calendar/header/date-navigator";
-import FilterEvents from "@/components/calendar/header/filter";
 import { TodayButton } from "@/components/calendar/header/today-button";
+import FilterEvents from "@/components/calendar/header/filter";
 import { UserSelect } from "@/components/calendar/header/user-select";
 import { Settings } from "@/components/calendar/settings/settings";
 import Views from "./view-tabs";
 
 export function CalendarHeader() {
 	const { view, events } = useCalendar();
-	const isMobile = useMediaQuery("(max-width: 768px)");
 	return (
 		<div
 			className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -33,7 +32,7 @@ export function CalendarHeader() {
 				<DateNavigator view={view} events={events} />
 			</motion.div>
 			<motion.div
-				className="md:flex hidden flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
+				className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
 				variants={slideFromRight}
 				initial="initial"
 				animate="animate"

@@ -7,14 +7,13 @@ import { CalendarProvider } from "@/components/calendar/contexts/calendar-contex
 import { DndProvider } from "@/components/calendar/contexts/dnd-context";
 import { CalendarHeader } from "@/components/calendar/header/calendar-header";
 import { getEvents, getUsers } from "@/components/calendar/requests";
-import { motion } from "framer-motion";
 import { MobileCalendarHeader } from "./mobile/mobile-calendar-header";
-
+import { useMediaQuery } from "@/components/calendar/hooks";
 export function Calendar() {
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const isMobile = useMediaQuery("(max-width: 768px)");
   useEffect(() => {
     async function loadData() {
       try {
@@ -45,8 +44,8 @@ export function Calendar() {
     <CalendarProvider events={events} users={users} view="month">
       <DndProvider showConfirmation={false}>
         <div className="w-full h-full  rounded-xl">
-          <MobileCalendarHeader />
-          <CalendarHeader />
+          {isMobile && <MobileCalendarHeader />}
+          {!isMobile && <CalendarHeader />}
           <CalendarBody />
         </div>
       </DndProvider>

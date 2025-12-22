@@ -46,6 +46,28 @@ export function DateNavigator({
     return (
         <div className="space-y-0.5">
             <div className="flex items-center gap-2">
+            <div className="md:hidden flex items-center gap-2">
+                <MotionButton
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handlePrevious}
+                    variants={buttonHover}
+                    whileHover="hover"
+                    whileTap="tap">
+                    <ChevronLeft className="h-4 w-4" />
+                </MotionButton>
+                <MotionButton
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleNext}
+                    variants={buttonHover}
+                    whileHover="hover"
+                    whileTap="tap">
+                    <ChevronRight className="h-4 w-4" />
+                </MotionButton>
+                </div>
                 <motion.span
                     className="text-lg font-semibold"
                     initial={{ x: -20, opacity: 0 }}
@@ -53,21 +75,22 @@ export function DateNavigator({
                     transition={transition}>
                     {month} {year}
                 </motion.span>
-                <AnimatePresence mode="wait" initial={false}>
-                    <MotionBadge
-                        key={`${selectedDate.toISOString()}-${view}`}
-                        variant="secondary"
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        transition={transition}
-                    >
-                        {eventCount} events
-                    </MotionBadge>
-                </AnimatePresence>
-
+                <div className="md:block hidden">
+                    <AnimatePresence mode="wait" initial={false}>
+                        <MotionBadge
+                            key={`${selectedDate.toISOString()}-${view}`}
+                            variant="secondary"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            // exit={{ scale: 0.8, opacity: 0 }}
+                            transition={transition}
+                        >
+                            {eventCount} events
+                        </MotionBadge>
+                    </AnimatePresence>
+                </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="md:flex hidden items-center gap-2">
                 <MotionButton
                     variant="outline"
                     size="icon"
@@ -80,7 +103,7 @@ export function DateNavigator({
                 </MotionButton>
 
                 <motion.p
-                    className="text-sm text-muted-foreground"
+                    className="md:block hidden text-sm text-muted-foreground"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={transition}>
