@@ -39,9 +39,9 @@ export function MobileCalendarHeader() {
     return (
         <>
             {/* HEADER */}
-            <header className="flex items-center justify-between border-b px-4 py-3 md:hidden">
+            <header className="flex items-center justify-between border-b px-0 py-3 md:hidden">
                 {/* LEFT SIDE */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     {/* Hamburger */}
                     <Button className={ICON_SIZE}
                         variant="ghost"
@@ -51,7 +51,7 @@ export function MobileCalendarHeader() {
                         <Menu />
                     </Button>
                     <motion.div
-                        className="flex items-center gap-3"
+                        className="flex items-center gap-2"
                         variants={slideFromLeft}
                         initial="initial"
                         animate="animate"

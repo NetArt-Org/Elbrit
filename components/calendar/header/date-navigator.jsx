@@ -46,7 +46,7 @@ export function DateNavigator({
     return (
         <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-            <div className="md:hidden flex items-center gap-2">
+            <div className="md:hidden flex items-center gap-1">
                 <MotionButton
                     variant="outline"
                     size="icon"
@@ -69,7 +69,7 @@ export function DateNavigator({
                 </MotionButton>
                 </div>
                 <motion.span
-                    className="text-lg font-semibold"
+                    className="text-sm md:text-lg font-semibold"
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={transition}>
