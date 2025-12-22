@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 
-const tabs = [
+export const tabs = [
   {
     name: "Agenda",
     value: "agenda",
