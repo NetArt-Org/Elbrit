@@ -12,22 +12,23 @@ const DEFAULT_SETTINGS = {
 const CalendarContext = createContext({});
 
 export function CalendarProvider({
-    children,
-    users,
-    events,
-    badge = "colored",
-    view = "day"
+	children,
+	users,
+	events,
+	badge = "colored",
+	view = "day"
 }) {
 	const [settings, setSettings] = useLocalStorage("calendar-settings", {
-        ...DEFAULT_SETTINGS,
-        badgeVariant: badge,
-        view: view,
-    });
+		...DEFAULT_SETTINGS,
+		badgeVariant: badge,
+		view: view,
+	});
 	const [mobileMode, setMobileMode] = useState("expanded");
 	const [badgeVariant, setBadgeVariantState] = useState(settings.badgeVariant);
 	const [currentView, setCurrentViewState] = useState(settings.view);
 	const [use24HourFormat, setUse24HourFormatState] = useState(settings.use24HourFormat);
 	const [agendaModeGroupBy, setAgendaModeGroupByState] = useState(settings.agendaModeGroupBy);
+	const [isEventListOpen, setIsEventListOpen] = useState(false);
 
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [selectedUserId, setSelectedUserId] = useState("all");
@@ -149,14 +150,16 @@ export function CalendarProvider({
 		removeEvent,
 		clearFilter,
 		mobileMode,
-		setMobileMode
+		setMobileMode,
+		isEventListOpen,
+		setIsEventListOpen
 	};
 
 	return (
-        <CalendarContext.Provider value={value}>
-            {children}
-        </CalendarContext.Provider>
-    );
+		<CalendarContext.Provider value={value}>
+			{children}
+		</CalendarContext.Provider>
+	);
 }
 
 export function useCalendar() {

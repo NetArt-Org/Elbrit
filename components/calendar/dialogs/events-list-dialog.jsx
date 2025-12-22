@@ -22,7 +22,7 @@ export function EventListDialog({
 }) {
     const cellEvents = events;
     const hiddenEventsCount = Math.max(cellEvents.length - maxVisibleEvents, 0);
-    const {badgeVariant, use24HourFormat} = useCalendar();
+    const {badgeVariant, use24HourFormat,setIsEventListOpen} = useCalendar();
 
     const defaultTrigger = (
         <span className="cursor-pointer">
@@ -35,7 +35,7 @@ export function EventListDialog({
     );
 
     return (
-        <Modal modal={false}>
+        <Modal modal={false} onOpenChange={(open) => setIsEventListOpen(open)}>
             <ModalTrigger asChild>{children || defaultTrigger}</ModalTrigger>
             <ModalContent className="sm:max-w-[425px]">
                 <ModalHeader>

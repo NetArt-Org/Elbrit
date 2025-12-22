@@ -5,7 +5,7 @@ import {
 	transition,
 } from "@/components/calendar/animations";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-
+import {cn} from "@/lib/utils";
 import {
 	calculateMonthEventPositions,
 	getCalendarCells,
@@ -19,7 +19,7 @@ export function CalendarMonthView({
     singleDayEvents,
     multiDayEvents
 }) {
-	const { selectedDate } = useCalendar();
+	const { selectedDate,isEventListOpen  } = useCalendar();
 
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
 
@@ -29,7 +29,7 @@ export function CalendarMonthView({
         calculateMonthEventPositions(multiDayEvents, singleDayEvents, selectedDate), [multiDayEvents, singleDayEvents, selectedDate]);
 
 	return (
-        <motion.div initial="initial" animate="animate" variants={staggerContainer} className="h-full w-full">
+        <motion.div initial="initial" animate="animate" variants={staggerContainer} className={cn("w-full transition-all duration-300", isEventListOpen ? "h-[60vh]" : "h-[90vh]"  )}>
             <div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
 					<motion.div
