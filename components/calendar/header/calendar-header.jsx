@@ -33,7 +33,7 @@ export function CalendarHeader() {
 				<DateNavigator view={view} events={events} />
 			</motion.div>
 			<motion.div
-				className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
+				className="md:flex hidden flex-col gap-4 lg:flex-row lg:items-center lg:gap-1.5"
 				variants={slideFromRight}
 				initial="initial"
 				animate="animate"

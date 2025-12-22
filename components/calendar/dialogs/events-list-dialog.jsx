@@ -35,7 +35,7 @@ export function EventListDialog({
     );
 
     return (
-        <Modal>
+        <Modal modal={false}>
             <ModalTrigger asChild>{children || defaultTrigger}</ModalTrigger>
             <ModalContent className="sm:max-w-[425px]">
                 <ModalHeader>

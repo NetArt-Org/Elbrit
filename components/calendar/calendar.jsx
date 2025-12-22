@@ -8,6 +8,7 @@ import { DndProvider } from "@/components/calendar/contexts/dnd-context";
 import { CalendarHeader } from "@/components/calendar/header/calendar-header";
 import { getEvents, getUsers } from "@/components/calendar/requests";
 import { motion } from "framer-motion";
+import { MobileCalendarHeader } from "./mobile/mobile-calendar-header";
 
 export function Calendar() {
   const [events, setEvents] = useState([]);
@@ -44,6 +45,7 @@ export function Calendar() {
     <CalendarProvider events={events} users={users} view="month">
       <DndProvider showConfirmation={false}>
         <div className="w-full h-full  rounded-xl">
+          <MobileCalendarHeader />
           <CalendarHeader />
           <CalendarBody />
         </div>
