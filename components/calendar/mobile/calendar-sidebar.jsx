@@ -21,7 +21,7 @@ export function CalendarSidebar({ open, onOpenChange }) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="left" className="w-72 p-0">
-                <SheetHeader className="border-b px-4 py-3">
+                <SheetHeader className="border-b px-4 py-3 text-left">
                     <SheetTitle>Scheduler</SheetTitle>
                 </SheetHeader>
 

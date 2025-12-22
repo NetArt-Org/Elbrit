@@ -35,7 +35,7 @@ export function MobileCalendarHeader() {
     const [searchOpen, setSearchOpen] = useState(false);
 
     const { view, setView, setSelectedDate, events } = useCalendar();
-
+    const ICON_SIZE = "[&_svg]:size-5";
     return (
         <>
             {/* HEADER */}
@@ -43,12 +43,12 @@ export function MobileCalendarHeader() {
                 {/* LEFT SIDE */}
                 <div className="flex items-center gap-2">
                     {/* Hamburger */}
-                    <Button
+                    <Button className={ICON_SIZE}
                         variant="ghost"
                         size="icon"
                         onClick={() => setSidebarOpen(true)}
                     >
-                        <Menu className="h-5 w-5" />
+                        <Menu />
                     </Button>
                     <motion.div
                         className="flex items-center gap-3"
@@ -61,9 +61,9 @@ export function MobileCalendarHeader() {
                 </div>
 
                 {/* RIGHT SIDE */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center ">
                     {/* Home */}
-                    <Button
+                    <Button className={ICON_SIZE}
                         variant="ghost"
                         size="icon"
                         onClick={() => {
@@ -73,23 +73,23 @@ export function MobileCalendarHeader() {
                             setSidebarOpen(false);
                         }}
                     >
-                        <House className="h-5 w-5" />
+                        <House />
                     </Button>
 
                     {/* Search */}
-                    <Button
+                    <Button className={ICON_SIZE}
                         variant="ghost"
                         size="icon"
                         onClick={() => setSearchOpen((prev) => !prev)}
                     >
-                        <Search className="h-5 w-5" />
+                        <Search  />
                     </Button>
 
                     {/* View switch dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <Rows2 className="h-5 w-5" />
+                            <Button variant="ghost" size="icon" className={ICON_SIZE}>
+                                <Rows2 />
                             </Button>
                         </DropdownMenuTrigger>
 
@@ -119,8 +119,8 @@ export function MobileCalendarHeader() {
                     </DropdownMenu>
 
                     {/* Tasks */}
-                    <Button variant="ghost" size="icon">
-                        <CheckSquare className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className={ICON_SIZE}>
+                        <CheckSquare />
                     </Button>
                 </div>
             </header>
