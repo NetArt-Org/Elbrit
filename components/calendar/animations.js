@@ -34,3 +34,15 @@ export const buttonHover = {
 	hover: { scale: 1.05 },
 	tap: { scale: 0.95 },
 };
+export const SwipeFadeVariants = {
+	initial: {
+	  opacity: 0,
+	},
+	animate: {
+	  opacity: 1,
+	},
+	exit: {
+	  opacity: 0,
+	},
+  };
+  
