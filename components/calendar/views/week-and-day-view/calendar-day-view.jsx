@@ -1,6 +1,6 @@
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { Calendar, Clock, User } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence,motion } from "framer-motion";
 import { useEffect, useRef, startTransition } from "react";
 import { DayPicker } from "@/components/ui/day-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
