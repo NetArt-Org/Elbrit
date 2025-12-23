@@ -116,7 +116,7 @@ export function DayCell({
             "flex h-fit gap-1 px-2 mt-1 lg:h-[94px] lg:flex-col lg:gap-2 lg:px-0",
             !currentMonth && "opacity-50"
           )}>
-          { !isPastDate && cellEvents.length === 0 ? (
+          {!isPastDate && cellEvents.length === 0 ? (
             <div className="w-full h-full hidden md:flex  flex justify-center items-center group">
               <AddEditEventDialog startDate={date}>
                 <Button

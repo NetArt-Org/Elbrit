@@ -1,10 +1,11 @@
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { Calendar, Clock, User } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { AnimatePresence } from "framer-motion";
+import { useEffect, useRef, startTransition } from "react";
 import { DayPicker } from "@/components/ui/day-picker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-
+import { SwipeFadeVariants } from "@/components/calendar/animations";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { DroppableArea } from "@/components/calendar/dnd/droppable-area";
 import { groupEvents } from "@/components/calendar/helpers";
@@ -13,15 +14,30 @@ import { DayViewMultiDayEventsRow } from "@/components/calendar/views/week-and-d
 import { RenderGroupedEvents } from "@/components/calendar/views/week-and-day-view/render-grouped-events";
 
 export function CalendarDayView({
-    singleDayEvents,
-    multiDayEvents
+	singleDayEvents,
+	multiDayEvents
 }) {
 	const { selectedDate, setSelectedDate, users, use24HourFormat } =
 		useCalendar();
 	const scrollAreaRef = useRef(null);
 
 	const hours = Array.from({ length: 24 }, (_, i) => i);
+	const SWIPE_THRESHOLD = 80;
+	const handleDragEnd = (_, info) => {
+		const offsetX = info.offset.x;
 
+		if (offsetX < -SWIPE_THRESHOLD) {
+			startTransition(() => {
+				setSelectedDate(navigateDate(selectedDate, "day", "next"));
+			});
+		}
+
+		if (offsetX > SWIPE_THRESHOLD) {
+			startTransition(() => {
+				setSelectedDate(navigateDate(selectedDate, "day", "previous"));
+			});
+		}
+	};
 	useEffect(() => {
 		const handleDragOver = (e) => {
 			if (!scrollAreaRef.current) return;
@@ -53,10 +69,10 @@ export function CalendarDayView({
 		const now = new Date();
 
 		return (events.filter((event) =>
-            isWithinInterval(now, {
-                start: parseISO(event.startDate),
-                end: parseISO(event.endDate),
-            })) || []);
+			isWithinInterval(now, {
+				start: parseISO(event.startDate),
+				end: parseISO(event.endDate),
+			})) || []);
 	};
 
 	const currentEvents = getCurrentEvents(singleDayEvents);
@@ -64,14 +80,14 @@ export function CalendarDayView({
 	const dayEvents = singleDayEvents.filter((event) => {
 		const eventDate = parseISO(event.startDate);
 		return (eventDate.getDate() === selectedDate.getDate() &&
-        eventDate.getMonth() === selectedDate.getMonth() && eventDate.getFullYear() === selectedDate.getFullYear());
+			eventDate.getMonth() === selectedDate.getMonth() && eventDate.getFullYear() === selectedDate.getFullYear());
 	});
 
 	const groupedEvents = groupEvents(dayEvents);
 
 	return (
-        <div className="flex">
-            <div className="flex flex-1 flex-col">
+		<div className="flex">
+			<div className="flex flex-1 flex-col">
 				<div>
 					<DayViewMultiDayEventsRow selectedDate={selectedDate} multiDayEvents={multiDayEvents} />
 
@@ -79,7 +95,7 @@ export function CalendarDayView({
 					<div className="relative z-20 flex border-b">
 						<div className="w-18"></div>
 						<span
-                            className="flex-1 border-l py-2 text-center text-xs font-medium text-t-quaternary">
+							className="flex-1 border-l py-2 text-center text-xs font-medium text-t-quaternary">
 							{format(selectedDate, "EE")}{" "}
 							<span className="font-semibold text-t-secondary">
 								{format(selectedDate, "d")}
@@ -115,27 +131,27 @@ export function CalendarDayView({
 										)}
 
 										<DroppableArea
-                                            date={selectedDate}
-                                            hour={hour}
-                                            minute={0}
-                                            className="absolute inset-x-0 top-0 h-[48px]">
+											date={selectedDate}
+											hour={hour}
+											minute={0}
+											className="absolute inset-x-0 top-0 h-[48px]">
 											<AddEditEventDialog startDate={selectedDate} startTime={{ hour, minute: 0 }}>
 												<div
-                                                    className="absolute inset-0 cursor-pointer transition-colors hover:bg-secondary" />
+													className="absolute inset-0 cursor-pointer transition-colors hover:bg-secondary" />
 											</AddEditEventDialog>
 										</DroppableArea>
 
 										<div
-                                            className="pointer-events-none absolute inset-x-0 top-1/2 border-b border-dashed border-b-tertiary"></div>
+											className="pointer-events-none absolute inset-x-0 top-1/2 border-b border-dashed border-b-tertiary"></div>
 
 										<DroppableArea
-                                            date={selectedDate}
-                                            hour={hour}
-                                            minute={30}
-                                            className="absolute inset-x-0 bottom-0 h-[48px]">
+											date={selectedDate}
+											hour={hour}
+											minute={30}
+											className="absolute inset-x-0 bottom-0 h-[48px]">
 											<AddEditEventDialog startDate={selectedDate} startTime={{ hour, minute: 30 }}>
 												<div
-                                                    className="absolute inset-0 cursor-pointer transition-colors hover:bg-secondary" />
+													className="absolute inset-0 cursor-pointer transition-colors hover:bg-secondary" />
 											</AddEditEventDialog>
 										</DroppableArea>
 									</div>
@@ -149,20 +165,20 @@ export function CalendarDayView({
 					</div>
 				</ScrollArea>
 			</div>
-            <div className="hidden w-72 divide-y border-l">
+			<div className="hidden w-72 divide-y border-l">
 				<DayPicker
-                    className="mx-auto w-fit"
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus />
+					className="mx-auto w-fit"
+					mode="single"
+					selected={selectedDate}
+					onSelect={(date) => date && setSelectedDate(date)}
+					initialFocus />
 
 				<div className="flex-1 space-y-3">
 					{currentEvents.length > 0 ? (
 						<div className="flex items-start gap-2 px-4 pt-4">
 							<span className="relative mt-[5px] flex size-2.5">
 								<span
-                                    className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+									className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75"></span>
 								<span className="relative inline-flex size-2.5 rounded-full bg-green-600"></span>
 							</span>
 
@@ -178,45 +194,61 @@ export function CalendarDayView({
 
 					{currentEvents.length > 0 && (
 						<ScrollArea className="h-[422px] px-4" type="always">
-							<div className="space-y-6 pb-4">
-								{currentEvents.map((event) => {
-									const user = users.find((user) => user.id === event.user.id);
+							<AnimatePresence initial={false}>
+								<motion.div
+									key={selectedDate.toISOString()}
+									variants={SwipeFadeVariants}
+									initial="initial"
+									animate="animate"
+									exit="exit"
+									transition={{ duration: 0.12, ease: "easeOut" }}
+									className="flex"
+									drag="x"
+									dragConstraints={{ left: 0, right: 0 }}
+									dragElastic={0.12}
+									onDragEnd={handleDragEnd}
+								>
+									<div className="space-y-6 pb-4">
+										{currentEvents.map((event) => {
+											const user = users.find((user) => user.id === event.user.id);
 
-									return (
-                                        <div key={event.id} className="space-y-1.5">
-                                            <p className="line-clamp-2 text-sm font-semibold">
-												{event.title}
-											</p>
-                                            {user && (
-												<div className="flex items-center gap-1.5">
-													<User className="size-4 text-t-quinary" />
-													<span className="text-sm text-t-tertiary">
-														{user.name}
-													</span>
+											return (
+												<div key={event.id} className="space-y-1.5">
+													<p className="line-clamp-2 text-sm font-semibold">
+														{event.title}
+													</p>
+													{user && (
+														<div className="flex items-center gap-1.5">
+															<User className="size-4 text-t-quinary" />
+															<span className="text-sm text-t-tertiary">
+																{user.name}
+															</span>
+														</div>
+													)}
+													<div className="flex items-center gap-1.5">
+														<Calendar className="size-4 text-t-quinary" />
+														<span className="text-sm text-t-tertiary">
+															{format(new Date(event.startDate), "MMM d, yyyy")}
+														</span>
+													</div>
+													<div className="flex items-center gap-1.5">
+														<Clock className="size-4 text-t-quinary" />
+														<span className="text-sm text-t-tertiary">
+															{format(parseISO(event.startDate), use24HourFormat ? "HH:mm" : "hh:mm a")}{" "}
+															-
+															{format(parseISO(event.endDate), use24HourFormat ? "HH:mm" : "hh:mm a")}
+														</span>
+													</div>
 												</div>
-											)}
-                                            <div className="flex items-center gap-1.5">
-												<Calendar className="size-4 text-t-quinary" />
-												<span className="text-sm text-t-tertiary">
-													{format(new Date(event.startDate), "MMM d, yyyy")}
-												</span>
-											</div>
-                                            <div className="flex items-center gap-1.5">
-												<Clock className="size-4 text-t-quinary" />
-												<span className="text-sm text-t-tertiary">
-													{format(parseISO(event.startDate), use24HourFormat ? "HH:mm" : "hh:mm a")}{" "}
-													-
-													{format(parseISO(event.endDate), use24HourFormat ? "HH:mm" : "hh:mm a")}
-												</span>
-											</div>
-                                        </div>
-                                    );
-								})}
-							</div>
+											);
+										})}
+									</div>
+								</motion.div>
+							</AnimatePresence>
 						</ScrollArea>
 					)}
 				</div>
 			</div>
-        </div>
-    );
+		</div>
+	);
 }

@@ -1,15 +1,16 @@
 import {addDays, format, isSameDay, parseISO, startOfWeek} from "date-fns";
-import {motion} from "framer-motion";
+import {AnimatePresence,motion} from "framer-motion";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {
     fadeIn,
-    staggerContainer,
+    staggerContainer,SwipeFadeVariants,
     transition,
 } from "@/components/calendar/animations";
+import { startTransition } from "react";
 import {useCalendar} from "@/components/calendar/contexts/calendar-context";
 import {AddEditEventDialog} from "@/components/calendar/dialogs/add-edit-event-dialog";
 import {DroppableArea} from "@/components/calendar/dnd/droppable-area";
-import {groupEvents} from "@/components/calendar/helpers";
+import {groupEvents,navigateDate} from "@/components/calendar/helpers";
 import {CalendarTimeline} from "@/components/calendar/views/week-and-day-view/calendar-time-line";
 import {RenderGroupedEvents} from "@/components/calendar/views/week-and-day-view/render-grouped-events";
 import {
@@ -20,12 +21,27 @@ export function CalendarWeekView({
     singleDayEvents,
     multiDayEvents
 }) {
-    const {selectedDate, use24HourFormat} = useCalendar();
+    const {selectedDate,setSelectedDate, use24HourFormat} = useCalendar();
 
     const weekStart = startOfWeek(selectedDate);
     const weekDays = Array.from({length: 7}, (_, i) => addDays(weekStart, i));
     const hours = Array.from({length: 24}, (_, i) => i);
-
+    const SWIPE_THRESHOLD = 80;
+	const handleDragEnd = (_, info) => {
+		const offsetX = info.offset.x;
+	
+		if (offsetX < -SWIPE_THRESHOLD) {
+			startTransition(() => {
+				setSelectedDate(navigateDate(selectedDate, "week", "next"));
+			});
+		}
+	
+		if (offsetX > SWIPE_THRESHOLD) {
+			startTransition(() => {
+				setSelectedDate(navigateDate(selectedDate, "week", "previous"));
+			});
+		}
+	};
     return (
         <motion.div
             initial="initial"
@@ -47,13 +63,13 @@ export function CalendarWeekView({
 
                     {/* Week header */}
                     <motion.div
-                        className="relative z-20 flex border-b"
+                        className="relative z-20 flex border-b w-full"
                         initial={{opacity: 0, y: -20}}
                         animate={{opacity: 1, y: 0}}
                         transition={transition}>
                         {/* Time column header - responsive width */}
                         <div className="w-18"></div>
-                        <div className="grid flex-1 grid-cols-7  border-l">
+                        <div className="grid flex-1 grid-cols-7  border-l w-full">
                             {weekDays.map((day, index) => (
                                 <motion.span
                                     key={index}
@@ -83,7 +99,22 @@ export function CalendarWeekView({
                 </div>
 
                 <ScrollArea className="h-[736px]" type="always">
-                    <div className="flex">
+                <AnimatePresence initial={false}>
+    <motion.div
+      key={weekStart.toISOString()}
+      variants={SwipeFadeVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.12, ease: "easeOut" }}
+      className="flex w-full"
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.12}
+      onDragEnd={handleDragEnd}
+    >
+
+                    <div className="flex w-full">
                         {/* Hours column */}
                         <motion.div className="relative w-18" variants={staggerContainer}>
                             {hours.map((hour, index) => (
@@ -106,7 +137,7 @@ export function CalendarWeekView({
                         </motion.div>
 
                         {/* Week grid */}
-                        <motion.div className="relative flex-1 border-l" variants={staggerContainer}>
+                        <motion.div className="relative flex-1 border-l w-full" variants={staggerContainer}>
                             <div className="grid grid-cols-7 divide-x">
                                 {weekDays.map((day, dayIndex) => {
                                     const dayEvents = singleDayEvents.filter((event) =>
@@ -168,6 +199,8 @@ export function CalendarWeekView({
                             <CalendarTimeline />
                         </motion.div>
                     </div>
+                    </motion.div>
+                    </AnimatePresence>
                 </ScrollArea>
             </motion.div>
         </motion.div>
