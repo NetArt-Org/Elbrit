@@ -46,7 +46,7 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-
+  const { setEventListDate } = useCalendar();
   // Memoize cellEvents and currentCellMonth for performance
   const { cellEvents, currentCellMonth } = useMemo(() => {
     const cellEvents = getMonthCellEvents(date, events, eventPositions);
@@ -155,7 +155,6 @@ export function DayCell({
     showMoreCount,
     renderEventAtPosition,
   ]);
-  const { setEventListDate } = useCalendar();
   if (!isMobile || !currentMonth) {
     return cellContent;
   }
