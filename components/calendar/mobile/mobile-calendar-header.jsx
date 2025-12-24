@@ -16,6 +16,7 @@ import {
 import { motion } from "framer-motion";
 import { slideFromLeft, transition, } from "@/components/calendar/animations";
 import { Button } from "@/components/ui/button";
+import { format, isSameDay } from "date-fns";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,8 +35,10 @@ export function MobileCalendarHeader() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
 
-    const { view, setView, setSelectedDate, events } = useCalendar();
+    const { view, setView, setSelectedDate, events, selectedDate } = useCalendar();
     const ICON_SIZE = "[&_svg]:size-5";
+    const today = new Date();
+    const todayDate = format(today, "d");
     return (
         <>
             {/* HEADER */}
@@ -62,29 +65,17 @@ export function MobileCalendarHeader() {
 
                 {/* RIGHT SIDE */}
                 <div className="flex items-center ">
-                    {/* Home */}
-                    <Button className={ICON_SIZE}
-                        variant="ghost"
-                        size="icon"
+                    {/* Today date (Google Calendar style) */}
+                    <Button
                         onClick={() => {
-                            setView("month");
                             setSelectedDate(new Date());
                             setSearchOpen(false);
                             setSidebarOpen(false);
                         }}
-                    >
-                        <House />
+                        className=" mx-1 px-2 h-8 flex items-center justify-center text-sm font-medium border border-black border-solid  hover:text-foreground hover:bg-muted/40 rounded-sm transition-colors "
+                        aria-label="Go to today" variant="ghost">
+                        {todayDate}
                     </Button>
-
-                    {/* Search */}
-                    <Button className={ICON_SIZE}
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSearchOpen((prev) => !prev)}
-                    >
-                        <Search  />
-                    </Button>
-
                     {/* View switch dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -121,6 +112,12 @@ export function MobileCalendarHeader() {
                     {/* Tasks */}
                     <Button variant="ghost" size="icon" className={ICON_SIZE}>
                         <CheckSquare />
+                    </Button>
+                    {/* Home */}
+                    <Button className={ICON_SIZE}
+                        variant="ghost"
+                        size="icon">
+                        <House />
                     </Button>
                 </div>
             </header>

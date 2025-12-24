@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
     buttonHover,
@@ -23,7 +24,8 @@ export function DateNavigator({
     view,
     events
 }) {
-    const { selectedDate, setSelectedDate } = useCalendar();
+    const { selectedDate, setSelectedDate, setView } = useCalendar();
+    const isYearView = view === "year";
 
     const month = formatDate(selectedDate, "MMMM");
     const year = selectedDate.getFullYear();
@@ -46,30 +48,49 @@ export function DateNavigator({
     return (
         <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-            <div className="md:hidden flex items-center gap-1">
-                <MotionButton
-                    variant="outline"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={handlePrevious}
-                    variants={buttonHover}
-                    whileHover="hover"
-                    whileTap="tap">
-                    <ChevronLeft className="h-4 w-4" />
-                </MotionButton>
-                <MotionButton
-                    variant="outline"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={handleNext}
-                    variants={buttonHover}
-                    whileHover="hover"
-                    whileTap="tap">
-                    <ChevronRight className="h-4 w-4" />
-                </MotionButton>
+                <div className="md:hidden flex items-center gap-1">
+                    <MotionButton
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={handlePrevious}
+                        variants={buttonHover}
+                        whileHover="hover"
+                        whileTap="tap">
+                        <ChevronLeft className="h-4 w-4" />
+                    </MotionButton>
+                    <MotionButton
+                        variant="outline"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={handleNext}
+                        variants={buttonHover}
+                        whileHover="hover"
+                        whileTap="tap">
+                        <ChevronRight className="h-4 w-4" />
+                    </MotionButton>
                 </div>
+                <motion.button
+                    type="button"
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={transition}
+                    disabled={isYearView}
+                    className={cn(
+                      "text-sm md:text-lg font-semibold block md:hidden",
+                      !isYearView && "cursor-pointer"
+                    )}
+                    onClick={() =>
+                        startTransition(() => {
+                            setView("year");
+                        })
+                    }
+                >
+                    {month} {year}
+                </motion.button>
+
                 <motion.span
-                    className="text-sm md:text-lg font-semibold"
+                    className="text-sm md:text-lg font-semibold hidden md:block"
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={transition}>
