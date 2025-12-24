@@ -22,10 +22,10 @@ export function EventListDialog({
     maxVisibleEvents = 3,
     children
 }) {
+    const {badgeVariant, use24HourFormat} = useCalendar();
     if (!date) return null;
     const cellEvents = events;
     const hiddenEventsCount = Math.max(cellEvents.length - maxVisibleEvents, 0);
-    const {badgeVariant, use24HourFormat,setIsEventListOpen, isEventListOpen} = useCalendar();
 
     const defaultTrigger = (
         <span className="cursor-pointer">
