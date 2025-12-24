@@ -32,7 +32,7 @@ export function CalendarYearView({
 	singleDayEvents,
 	multiDayEvents
 }) {
-	const { selectedDate, setSelectedDate } = useCalendar();
+	const { selectedDate, setSelectedDate,setView } = useCalendar();
 	const currentYear = getYear(selectedDate);
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
 	const SWIPE_THRESHOLD = 80;
@@ -79,13 +79,16 @@ export function CalendarYearView({
 								initial={{ opacity: 0, scale: 0.97 }}
 								animate={{ opacity: 1, scale: 1 }}
 								transition={{ delay: monthIndex * 0.04, ...transition }}
+								onClick={() =>
+									startTransition(() => {
+									  setSelectedDate(new Date(currentYear, monthIndex, 1));
+									  setView("month");
+									})
+								  }
 							>
 								{/* Month header */}
 								<div
 									className="px-3 py-2 text-center font-semibold text-sm sm:text-base cursor-pointer hover:bg-primary/20 transition-colors"
-									onClick={() =>
-										setSelectedDate(new Date(currentYear, monthIndex, 1))
-									}
 								>
 									{month}
 								</div>
