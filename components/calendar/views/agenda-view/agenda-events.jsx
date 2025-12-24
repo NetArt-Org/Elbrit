@@ -1,4 +1,4 @@
-import {format, parseISO} from "date-fns";
+import {format, parseISO,startOfWeek, endOfWeek, isWithinInterval} from "date-fns";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {
     Command,
@@ -20,17 +20,27 @@ import {
 } from "@/components/calendar/helpers";
 import {EventBullet} from "@/components/calendar/views/month-view/event-bullet";
 
-export const AgendaEvents = () => {
+export const AgendaEvents = ({scope = "month" }) => {
     const {events, use24HourFormat, badgeVariant, agendaModeGroupBy, selectedDate} =
         useCalendar();
 
     const monthEvents = getEventsForMonth(events, selectedDate)
-
-    const agendaEvents = Object.groupBy(monthEvents, (event) => {
+    const baseEvents =
+    scope === "week"
+      ? events.filter((event) =>
+          isWithinInterval(parseISO(event.startDate), {
+            start: startOfWeek(selectedDate, { weekStartsOn: 0 }),
+            end: endOfWeek(selectedDate, { weekStartsOn: 0 }),
+          })
+        )
+      : getEventsForMonth(events, selectedDate);
+  
+      const agendaEvents = Object.groupBy(baseEvents, (event) => {
         return agendaModeGroupBy === "date"
-            ? format(parseISO(event.startDate), "yyyy-MM-dd")
-            : event.color;
-    });
+          ? format(parseISO(event.startDate), "yyyy-MM-dd")
+          : event.color;
+      });
+      
 
     const groupedAndSortedEvents = Object.entries(agendaEvents).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 
