@@ -17,12 +17,15 @@ import MobileAddEventBar from "../mobile/MobileAddEventBar";
 export function EventListDialog({
     date,
     events,
+    open,
+  onOpenChange,
     maxVisibleEvents = 3,
     children
 }) {
+    if (!date) return null;
     const cellEvents = events;
     const hiddenEventsCount = Math.max(cellEvents.length - maxVisibleEvents, 0);
-    const {badgeVariant, use24HourFormat,setIsEventListOpen} = useCalendar();
+    const {badgeVariant, use24HourFormat,setIsEventListOpen, isEventListOpen} = useCalendar();
 
     const defaultTrigger = (
         <span className="cursor-pointer">
@@ -35,7 +38,7 @@ export function EventListDialog({
     );
 
     return (
-        <Modal modal={false} onOpenChange={(open) => setIsEventListOpen(open)}>
+        <Modal modal={false} open={open} onOpenChange={onOpenChange}>
             <ModalTrigger asChild>{children || defaultTrigger}</ModalTrigger>
             <ModalContent className="sm:max-w-[425px]">
                 <ModalHeader>
@@ -43,7 +46,7 @@ export function EventListDialog({
                         <div className="flex items-center gap-2">
                             <EventBullet color={cellEvents[0]?.color} className="" />
                             <p className="text-sm font-medium">
-                                Events on {format(date, "EEEE, MMMM d, yyyy")}
+                            Events on {date ? format(date, "EEEE, MMMM d, yyyy") : ""}
                             </p>
                         </div>
                     </ModalTitle>

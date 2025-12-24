@@ -4,10 +4,9 @@ import { isToday, startOfDay, isSunday, isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
 import { useMemo, useCallback } from "react";
 import { isBefore } from "date-fns";
-
+import { useCalendar } from "../../contexts/calendar-context";
 import { cn } from "@/lib/utils";
 import { transition } from "@/components/calendar/animations";
-import { EventListDialog } from "@/components/calendar/dialogs/events-list-dialog";
 import { DroppableArea } from "@/components/calendar/dnd/droppable-area";
 import { getMonthCellEvents } from "@/components/calendar/helpers";
 import { useMediaQuery } from "@/components/calendar/hooks";
@@ -144,18 +143,6 @@ export function DayCell({
           </div>
         )}
 
-        {showDesktopMore && (
-          <motion.div
-            className={cn(
-              "h-4.5 px-1.5 my-2 text-end text-xs font-semibold text-muted-foreground",
-              !currentMonth && "opacity-50"
-            )}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, ...transition }}>
-            <EventListDialog date={date} events={cellEvents} />
-          </motion.div>
-        )}
       </DroppableArea>
     </motion.div>
   ), [
@@ -168,12 +155,19 @@ export function DayCell({
     showMoreCount,
     renderEventAtPosition,
   ]);
-
+  const { setEventListDate } = useCalendar();
+  if (!isMobile || !currentMonth) {
+    return cellContent;
+  }
   if (isMobile && currentMonth) {
     return (
-      <EventListDialog date={date} events={cellEvents}>
-        {cellContent}
-      </EventListDialog>
+      <motion.div
+    onPointerDown={(e) => e.stopPropagation()}
+    onClick={() => {
+      setEventListDate(date);
+    }}>
+    {cellContent}
+  </motion.div>
     );
   }
 

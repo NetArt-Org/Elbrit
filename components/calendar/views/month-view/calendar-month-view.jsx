@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo,startTransition } from "react";
+import { useMemo, startTransition } from "react";
 import {
 	staggerContainer,
 	SwipeFadeVariants,
@@ -9,9 +9,10 @@ import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { cn } from "@/lib/utils";
 import {
 	calculateMonthEventPositions,
-	getCalendarCells, navigateDate,
+	getCalendarCells, getMonthCellEvents, navigateDate,
 } from "@/components/calendar/helpers";
 import { DayCell } from "@/components/calendar/views/month-view/day-cell";
+import { EventListDialog } from "../../dialogs/events-list-dialog";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SWIPE_THRESHOLD = 80;
@@ -20,7 +21,7 @@ export function CalendarMonthView({
 	singleDayEvents, view,
 	multiDayEvents
 }) {
-	const { selectedDate, setSelectedDate, isEventListOpen } = useCalendar();
+	const { selectedDate, setSelectedDate, isEventListOpen, eventListDate, setEventListDate } = useCalendar();
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
 
 	const cells = useMemo(() => getCalendarCells(selectedDate), [selectedDate]);
@@ -47,9 +48,21 @@ export function CalendarMonthView({
 			});
 		}
 	};
+	const monthKey = isEventListOpen
+		? selectedDate.getMonth()
+		: selectedDate.toISOString();
+
 
 	return (
-		<motion.div initial="initial" animate="animate" variants={staggerContainer} className={cn("w-full transition-all duration-300", "h-[90vh]")}>
+		<motion.div
+			variants={staggerContainer}
+			initial={false}
+			transition={{ duration: 0.25, ease: "easeOut" }}
+			className={cn(
+				"w-full transition-[height] duration-300 ease-in-out overflow-hidden",
+				isEventListOpen ? "h-[50vh]" : "h-[90vh]"
+			)}
+		>
 			<div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
 					<motion.div
@@ -65,13 +78,13 @@ export function CalendarMonthView({
 			{/* Swipeable month grid */}
 			<AnimatePresence initial={false}>
 				<motion.div
-					key={selectedDate.toISOString()}
+					// key={monthKey}
 					variants={SwipeFadeVariants}
 					initial="initial"
 					animate="animate"
 					exit="exit"
 					transition={{ duration: 0.12, ease: "easeOut" }} // 🔥 faster
-					drag="x"
+					drag={isEventListOpen ? false : "x"}
 					dragConstraints={{ left: 0, right: 0 }}
 					dragElastic={0.12}
 					onDragEnd={handleDragEnd}
@@ -87,6 +100,18 @@ export function CalendarMonthView({
 					))}
 				</motion.div>
 			</AnimatePresence>
+			<EventListDialog
+				date={eventListDate}
+				events={
+					eventListDate
+						? getMonthCellEvents(eventListDate, allEvents, eventPositions)
+						: []
+				}
+				open={!!eventListDate}
+				onOpenChange={(open) => {
+					if (!open) setEventListDate(null);
+				}}
+			/>
 		</motion.div>
 	);
 }

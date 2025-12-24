@@ -28,7 +28,6 @@ export function CalendarProvider({
 	const [currentView, setCurrentViewState] = useState(settings.view);
 	const [use24HourFormat, setUse24HourFormatState] = useState(settings.use24HourFormat);
 	const [agendaModeGroupBy, setAgendaModeGroupByState] = useState(settings.agendaModeGroupBy);
-	const [isEventListOpen, setIsEventListOpen] = useState(false);
 
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [selectedUserId, setSelectedUserId] = useState("all");
@@ -36,6 +35,8 @@ export function CalendarProvider({
 
 	const [allEvents, setAllEvents] = useState(events || []);
 	const [filteredEvents, setFilteredEvents] = useState(events || []);
+	const [eventListDate, setEventListDate] = useState(null);
+const isEventListOpen = eventListDate !== null;
 
 	const updateSettings = (newPartialSettings) => {
 		setSettings({
@@ -151,8 +152,9 @@ export function CalendarProvider({
 		clearFilter,
 		mobileMode,
 		setMobileMode,
-		isEventListOpen,
-		setIsEventListOpen
+		eventListDate,
+  setEventListDate,
+  isEventListOpen,
 	};
 
 	return (
