@@ -55,7 +55,7 @@ export function CalendarMonthView({
 			transition={{ duration: 0.25, ease: "easeOut" }}
 			className={cn(
 				"w-full transition-[height] duration-300 ease-in-out overflow-hidden",
-				isEventListOpen ? "h-[26vh]" : "h-[90vh]"
+				isEventListOpen ? "h-[27vh]" : "h-[90vh]"
 			)}
 		>
 			<div className="grid grid-cols-7">

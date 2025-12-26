@@ -46,7 +46,10 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setEventListDate,isEventListOpen } = useCalendar();
+  const { setEventListDate, isEventListOpen, setSelectedDate,selectedDate,eventListDate } = useCalendar();
+  const isSelected =
+  selectedDate &&
+  startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
   // Memoize cellEvents and currentCellMonth for performance
   const { cellEvents, currentCellMonth } = useMemo(() => {
     const cellEvents = getMonthCellEvents(date, events, eventPositions);
@@ -67,7 +70,7 @@ export function DayCell({
       );
     }
     const showBullet = isSameMonth(new Date(event.startDate), currentCellMonth);
-
+  
     return (
       <motion.div
         key={`event-${event.id}-${position}`}
@@ -92,27 +95,36 @@ export function DayCell({
   const isPastDate = isBefore(startOfDay(date), startOfDay(new Date()));
   const cellContent = useMemo(() => (
     <motion.div
-      className={cn(
-        "flex h-full lg:min-h-[10rem] flex-col gap-1 border-l border-t",
-        isSunday(date) && "border-l-0"
-      )}
+    className={cn(
+      "flex h-full lg:min-h-[10rem] flex-col gap-1 border-l border-t transition-colors",
+      isSunday(date) && "border-l-0",
+      isMobile &&
+      isSelected &&
+      "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"  
+    )}  
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={transition}>
       <DroppableArea date={date} className="w-full h-full py-2">
         <motion.span
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          setSelectedDate(date);        // ✅ ALWAYS
+          setEventListDate(date);       // ✅ keep existing behavior
+        }}
           className={cn(
             "h-6 px-1 text-xs font-semibold lg:px-2",
             !currentMonth && "opacity-20",
             isToday(date) &&
             "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
+          
           )}>
-          {day}
+          {day} 
         </motion.span>
 
         <motion.div
           className={cn(
-            "flex h-fit gap-1 px-2 mt-1 lg:h-[94px] lg:flex-col lg:gap-2 lg:px-0",
+            "flex h-fit gap-1 px-2 mt-1 lg:h-[60px] overflow-hidden lg:flex-col lg:gap-1 lg:px-0",
             !currentMonth && "opacity-50"
           )}>
           {!isPastDate && cellEvents.length === 0 ? (
@@ -164,6 +176,7 @@ export function DayCell({
     onPointerDown={(e) => e.stopPropagation()}
     onClick={() => {
       setEventListDate(date);
+      setSelectedDate(date); 
     }}>
     {cellContent}
   </motion.div>
