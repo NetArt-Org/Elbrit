@@ -168,14 +168,17 @@ export function DayCell({
                     cellDate={startOfDay(date)}
                   />
                 )}
-                <EventBullet color={event.color} />
+
+                {isMobile && (
+                  <EventBullet color={event.color} />
+                )}
               </motion.div>
             ))
           )}
 
         </motion.div>
 
-        {!isMobile && hiddenEventsCount > 0 && currentMonth && (
+        {!isMobile  && hiddenEventsCount > 0 && currentMonth && (
           <div className="px-1 ">
             <button
               type="button"

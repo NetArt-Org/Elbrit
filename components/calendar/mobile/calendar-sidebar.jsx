@@ -26,7 +26,7 @@ export function CalendarSidebar({ open, onOpenChange }) {
                 </SheetHeader>
 
                 <nav className="flex flex-col gap-1 p-2">
-                    {tabs.map(({ name, value, icon: Icon }) => {
+                    {tabs.filter((tab) => tab.value !== "day").map(({ name, value, icon: Icon }) => {
                         const isActive = view === value;
 
                         return (

@@ -59,12 +59,12 @@ export function CalendarMonthView({
 			className={cn(
 				"w-full overflow-hidden transition-[height] duration-300 ease-in-out",
 				isMobile
-				  ? "h-auto"
-				  : isEventListOpen
-					? "h-[27vh] md:h-[90vh]"
-					: "h-[90vh]"
-			  )}
-			  
+					? "h-auto"
+					: isEventListOpen
+						? "h-[27vh] md:h-[90vh]"
+						: "h-[90vh]"
+			)}
+
 		>
 			<div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
@@ -94,8 +94,8 @@ export function CalendarMonthView({
 					className={cn(
 						"grid grid-cols-7",
 						isMobile ? "auto-rows-fr" : "grid-rows-6 h-full"
-					  )}
-					  
+					)}
+
 				>
 					{cells.map((cell, index) => (
 						<DayCell
@@ -108,10 +108,10 @@ export function CalendarMonthView({
 				</motion.div>
 			</AnimatePresence>
 			{isMobile && (
-  <div className="flex-1 overflow-auto border-t">
-    <AgendaEvents scope="month" />
-  </div>
-)}
+				<div className="flex-1 overflow-auto border-t">
+					<AgendaEvents scope="month" />
+				</div>
+			)}
 
 		</motion.div>
 	);

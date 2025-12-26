@@ -89,7 +89,7 @@ export function MobileCalendarHeader() {
                             sideOffset={8}
                             className="w-44"
                         >
-                            {tabs.map(({ name, value, icon: Icon }) => {
+                            {tabs.filter((tab) => tab.value !== "day").map(({ name, value, icon: Icon }) => {
                                 const isActive = view === value;
 
                                 return (
