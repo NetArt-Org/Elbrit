@@ -15,6 +15,9 @@ import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
 import { useMediaQuery } from "@/components/calendar/hooks";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+import { useState } from "react";
+
+const SWIPE_Y_THRESHOLD = 70;
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SWIPE_THRESHOLD = 80;
@@ -26,6 +29,7 @@ export function CalendarMonthView({
 	const { selectedDate, setSelectedDate, isEventListOpen, eventListDate, setEventListDate } = useCalendar();
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
 	const isMobile = useMediaQuery("(max-width: 768px)");
+	const [isCollapsed, setIsCollapsed] = useState(false);
 
 	const cells = useMemo(() => getCalendarCells(selectedDate), [selectedDate]);
 
@@ -51,22 +55,35 @@ export function CalendarMonthView({
 			});
 		}
 	};
+	const handleVerticalDragEnd = (_, info) => {
+		const offsetY = info.offset.y;
+	
+		// swipe up → collapse
+		if (offsetY < -SWIPE_Y_THRESHOLD) {
+			setIsCollapsed(true);
+		}
+	
+		// swipe down → expand
+		if (offsetY > SWIPE_Y_THRESHOLD) {
+			setIsCollapsed(false);
+		}
+	};
+	
 	return (
 		<motion.div
-			variants={staggerContainer}
-			initial={false}
-			transition={{ duration: 0.25, ease: "easeOut" }}
-			className={cn(
-				"w-full overflow-hidden transition-[height] duration-300 ease-in-out",
-				isMobile
-					? "h-auto"
-					: isEventListOpen
-						? "h-[27vh] md:h-[90vh]"
-						: "h-[90vh]"
-			)}
-
-		>
-			<div className="grid grid-cols-7">
+	variants={staggerContainer}
+	initial={false}
+	transition={{ duration: 0.3, ease: "easeInOut" }}
+	drag="y"
+	dragConstraints={{ top: 0, bottom: 0 }}
+	dragElastic={0.1}
+	onDragEnd={handleVerticalDragEnd}
+	animate={{ y: 0 }}
+	// className="w-full overflow-hidden h-full"
+	className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
+>
+<motion.div className="overflow-hidden" animate={{ height: isCollapsed ? "35%" : "100%", }}>
+<div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
 					<motion.div
 						key={day}
@@ -84,18 +101,14 @@ export function CalendarMonthView({
 					// key={monthKey}
 					variants={SwipeFadeVariants}
 					initial="initial"
-					animate="animate"
+					// animate="animate"
 					exit="exit"
 					transition={{ duration: 0.12, ease: "easeOut" }} // 🔥 faster
 					drag="x"
 					dragConstraints={{ left: 0, right: 0 }}
 					dragElastic={0.12}
 					onDragEnd={handleDragEnd}
-					className={cn(
-						"grid grid-cols-7",
-						isMobile ? "auto-rows-fr" : "grid-rows-6 h-full"
-					)}
-
+					className="grid grid-cols-7 grid-rows-6 h-full min-h-0"
 				>
 					{cells.map((cell, index) => (
 						<DayCell
@@ -107,11 +120,13 @@ export function CalendarMonthView({
 					))}
 				</motion.div>
 			</AnimatePresence>
-			{isMobile && (
-				<div className="flex-1 overflow-auto border-t">
-					<AgendaEvents scope="month" scrollToSelectedDate />
-				</div>
-			)}
+</motion.div>
+			
+{isMobile && isCollapsed && (
+  <div className=" overflow-hidden border-t">
+    <AgendaEvents scope="month" scrollToSelectedDate />
+  </div>
+)}
 
 		</motion.div>
 	);
