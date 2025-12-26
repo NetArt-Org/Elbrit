@@ -87,7 +87,7 @@ export function CalendarMonthView({
 					animate="animate"
 					exit="exit"
 					transition={{ duration: 0.12, ease: "easeOut" }} // 🔥 faster
-					drag={isEventListOpen ? false : "x"}
+					drag="x"
 					dragConstraints={{ left: 0, right: 0 }}
 					dragElastic={0.12}
 					onDragEnd={handleDragEnd}
@@ -109,7 +109,7 @@ export function CalendarMonthView({
 			</AnimatePresence>
 			{isMobile && (
 				<div className="flex-1 overflow-auto border-t">
-					<AgendaEvents scope="month" />
+					<AgendaEvents scope="month" scrollToSelectedDate />
 				</div>
 			)}
 

@@ -120,7 +120,7 @@ export function CalendarMobileWeekAgenda({
 
       {/* Agenda list */}
       <div className="flex-1 overflow-auto">
-        <AgendaEvents scope="day" />
+        <AgendaEvents scope="week" scrollToSelectedDate />
       </div>
     </div>
   );
