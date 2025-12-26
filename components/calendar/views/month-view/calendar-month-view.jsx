@@ -71,16 +71,17 @@ export function CalendarMonthView({
 	
 	return (
 		<motion.div
-	variants={staggerContainer}
-	initial={false}
-	transition={{ duration: 0.3, ease: "easeInOut" }}
-	drag="y"
-	dragConstraints={{ top: 0, bottom: 0 }}
-	dragElastic={0.1}
-	onDragEnd={handleVerticalDragEnd}
-	animate={{ y: 0 }}
-	// className="w-full overflow-hidden h-full"
-	className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
+  variants={staggerContainer}
+  initial={false}
+  transition={{ duration: 0.3, ease: "easeInOut" }}
+
+  drag={isMobile ? "y" : false}
+  dragConstraints={isMobile ? { top: 0, bottom: 0 } : undefined}
+  dragElastic={isMobile ? 0.1 : 0}
+  onDragEnd={isMobile ? handleVerticalDragEnd : undefined}
+
+  animate={{ y: 0 }}
+  className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
 >
 <motion.div className="overflow-hidden" animate={{ height: isCollapsed ? "35%" : "100%", }}>
 <div className="grid grid-cols-7">
@@ -121,6 +122,7 @@ export function CalendarMonthView({
 				</motion.div>
 			</AnimatePresence>
 </motion.div>
+			<EventListDialog />
 			
 {isMobile && isCollapsed && (
   <div className=" overflow-hidden border-t">
