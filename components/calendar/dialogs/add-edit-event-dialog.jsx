@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { TAGS } from "@/components/calendar/mocks";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
 	Form,
@@ -38,10 +39,10 @@ import { useDisclosure } from "@/components/calendar/hooks";
 import { eventSchema } from "@/components/calendar/schemas";
 
 export function AddEditEventDialog({
-    children,
-    startDate,
-    startTime,
-    event
+	children,
+	startDate,
+	startTime,
+	event
 }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
@@ -55,10 +56,10 @@ export function AddEditEventDialog({
 			}
 			const start = startTime
 				? set(new Date(startDate), {
-						hours: startTime.hour,
-						minutes: startTime.minute,
-						seconds: 0,
-					})
+					hours: startTime.hour,
+					minutes: startTime.minute,
+					seconds: 0,
+				})
 				: new Date(startDate);
 			const end = addMinutes(start, 30);
 			return { startDate: start, endDate: end };
@@ -78,6 +79,7 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "blue",
+			tags: event?.tags ?? "event",
 		},
 	});
 
@@ -88,6 +90,7 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "blue",
+			tags: event?.tags ?? "event",
 		});
 	}, [event, initialDates, form]);
 
@@ -101,10 +104,10 @@ export function AddEditEventDialog({
 				user: isEditing
 					? event.user
 					: {
-							id: Math.floor(Math.random() * 1000000).toString(),
-							name: "Jeraidi Yassir",
-							picturePath: null,
-						},
+						id: Math.floor(Math.random() * 1000000).toString(),
+						name: "Jeraidi Yassir",
+						picturePath: null,
+					},
 				color: values.color,
 			};
 
@@ -125,9 +128,9 @@ export function AddEditEventDialog({
 	};
 
 	return (
-        <Modal open={isOpen} onOpenChange={onToggle} modal={false}>
-            <ModalTrigger asChild>{children}</ModalTrigger>
-            <ModalContent>
+		<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
+			<ModalTrigger asChild>{children}</ModalTrigger>
+			<ModalContent>
 				<ModalHeader>
 					<ModalTitle>{isEditing ? "Edit Event" : "Add New Event"}</ModalTitle>
 					<ModalDescription>
@@ -139,51 +142,80 @@ export function AddEditEventDialog({
 
 				<Form {...form}>
 					<form
-                        id="event-form"
-                        onSubmit={form.handleSubmit(onSubmit)}
-                        className="grid gap-4 py-4">
+						id="event-form"
+						onSubmit={form.handleSubmit(onSubmit)}
+						className="grid gap-4 py-4">
 						<FormField
-                            control={form.control}
-                            name="title"
-                            render={({ field, fieldState }) => (
+							control={form.control}
+							name="title"
+							render={({ field, fieldState }) => (
 								<FormItem>
 									<FormLabel htmlFor="title" className="required">
 										Title
 									</FormLabel>
 									<FormControl>
 										<Input
-                                            id="title"
-                                            placeholder="Enter a title"
-                                            {...field}
-                                            className={fieldState.invalid ? "border-red-500" : ""} />
+											id="title"
+											placeholder="Enter a title"
+											{...field}
+											className={fieldState.invalid ? "border-red-500" : ""} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
 							)} />
 						<FormField
-                            control={form.control}
-                            name="startDate"
-                            render={({ field }) => (
+							control={form.control}
+							name="startDate"
+							render={({ field }) => (
 								<DateTimePicker form={form} field={field} />
 							)} />
 						<FormField
-                            control={form.control}
-                            name="endDate"
-                            render={({ field }) => (
+							control={form.control}
+							name="endDate"
+							render={({ field }) => (
 								<DateTimePicker form={form} field={field} />
 							)} />
 						<FormField
-                            control={form.control}
-                            name="color"
-                            render={({ field, fieldState }) => (
+							control={form.control}
+							name="tags"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Type</FormLabel>
+									<FormControl>
+										<Select
+											value={field.value}
+											onValueChange={field.onChange}
+										>
+											<SelectTrigger className="w-full">
+												<SelectValue placeholder="Select type" />
+											</SelectTrigger>
+											<SelectContent>
+												{TAGS.map((tag) => (
+													<SelectItem key={tag.id} value={tag.id}>
+														<div className="flex items-center gap-2">
+															{tag.label}
+														</div>
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="color"
+							render={({ field, fieldState }) => (
 								<FormItem>
 									<FormLabel className="required">Variant</FormLabel>
 									<FormControl>
 										<Select value={field.value} onValueChange={field.onChange}>
 											<SelectTrigger
-                                                className={`w-full ${
-													fieldState.invalid ? "border-red-500" : ""
-												}`}>
+												className={`w-full ${fieldState.invalid ? "border-red-500" : ""
+													}`}>
 												<SelectValue placeholder="Select a variant" />
 											</SelectTrigger>
 											<SelectContent>
@@ -202,16 +234,16 @@ export function AddEditEventDialog({
 								</FormItem>
 							)} />
 						<FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field, fieldState }) => (
+							control={form.control}
+							name="description"
+							render={({ field, fieldState }) => (
 								<FormItem>
 									<FormLabel className="required">Description</FormLabel>
 									<FormControl>
 										<Textarea
-                                            {...field}
-                                            placeholder="Enter a description"
-                                            className={fieldState.invalid ? "border-red-500" : ""} />
+											{...field}
+											placeholder="Enter a description"
+											className={fieldState.invalid ? "border-red-500" : ""} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -229,6 +261,6 @@ export function AddEditEventDialog({
 					</Button>
 				</ModalFooter>
 			</ModalContent>
-        </Modal>
-    );
+		</Modal>
+	);
 }

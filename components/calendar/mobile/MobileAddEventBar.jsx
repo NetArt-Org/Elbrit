@@ -21,7 +21,7 @@ export default function MobileAddEventBar({ date: propDate }) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      <div className="mx-4 mb-4 flex items-center justify-between rounded-xl border bg-background px-4 py-3 shadow-lg">
+      <div className="mx-4 mb-4 flex items-center justify-between rounded-xl border bg-background p-2 shadow-lg">
         {/* Date label */}
         <div className="flex flex-col">
           <span className="text-xs text-muted-foreground">

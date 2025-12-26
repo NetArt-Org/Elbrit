@@ -42,7 +42,7 @@ export function MobileCalendarHeader() {
     return (
         <>
             {/* HEADER */}
-            <header className="flex items-center justify-between border-b px-0 py-3 md:hidden">
+            <header className="flex items-center justify-between border-b px-0 py-2 md:hidden">
                 {/* LEFT SIDE */}
                 <div className="flex items-center gap-1">
                     {/* Hamburger */}

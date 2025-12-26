@@ -12,4 +12,5 @@ export const eventSchema = z.object({
 	color: z.enum(["blue", "green", "red", "yellow", "purple", "orange"], {
 		required_error: "Variant is required",
 	}),
+	tags: z.string(),
 });

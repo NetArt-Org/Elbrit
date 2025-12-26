@@ -25,17 +25,8 @@ export const AgendaEvents = ({scope = "month" }) => {
         useCalendar();
 
     const monthEvents = getEventsForMonth(events, selectedDate)
-    const baseEvents =
-    scope === "week"
-      ? events.filter((event) =>
-          isWithinInterval(parseISO(event.startDate), {
-            start: startOfWeek(selectedDate, { weekStartsOn: 0 }),
-            end: endOfWeek(selectedDate, { weekStartsOn: 0 }),
-          })
-        )
-      : getEventsForMonth(events, selectedDate);
   
-      const agendaEvents = Object.groupBy(baseEvents, (event) => {
+      const agendaEvents = Object.groupBy(monthEvents, (event) => {
         return agendaModeGroupBy === "date"
           ? format(parseISO(event.startDate), "yyyy-MM-dd")
           : event.color;

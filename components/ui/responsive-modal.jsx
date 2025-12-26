@@ -23,7 +23,7 @@ const ModalOverlay = (props) => {
 };
 
 const ModalVariants = cva(cn(
-    "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out",
+    "fixed z-50 gap-4 bg-background p-4 shadow-lg transition ease-in-out",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:duration-300 data-[state=open]:duration-500 overflow-y-auto",
     "lg:left-[50%] lg:top-[50%] lg:w-full lg:max-w-lg lg:translate-x-[-50%] lg:translate-y-[-50%]",

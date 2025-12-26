@@ -19,7 +19,7 @@ export function EventListDialog({
     events,
     open,
   onOpenChange,
-    maxVisibleEvents = 3,
+    maxVisibleEvents = 10,
     children
 }) {
     const {badgeVariant, use24HourFormat} = useCalendar();
@@ -43,7 +43,7 @@ export function EventListDialog({
             <ModalContent className="sm:max-w-[425px]">
                 <ModalHeader>
                     <ModalTitle className="my-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                             <EventBullet color={cellEvents[0]?.color} className="" />
                             <p className="text-sm font-medium">
                             Events on {date ? format(date, "EEEE, MMMM d, yyyy") : ""}
@@ -51,13 +51,13 @@ export function EventListDialog({
                         </div>
                     </ModalTitle>
                 </ModalHeader>
-                <div className="max-h-[60vh] overflow-y-auto space-y-2 pb-24">
+                <div className="max-h-[55vh] overflow-y-auto space-y-2 pb-24">
                     {cellEvents.length > 0 ? (
                         cellEvents.map((event) => (
                             <EventDetailsDialog event={event} key={event.id}>
                                 <div
                                     className={cn(
-                                        "flex items-center gap-2 p-2 border rounded-md hover:bg-muted cursor-pointer",
+                                        "flex items-center gap-1 p-1 border rounded-md hover:bg-muted cursor-pointer",
                                         {
                                             [dayCellVariants({color: event.color})]:
                                                 badgeVariant === "colored",

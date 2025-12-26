@@ -46,7 +46,7 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setEventListDate } = useCalendar();
+  const { setEventListDate,isEventListOpen } = useCalendar();
   // Memoize cellEvents and currentCellMonth for performance
   const { cellEvents, currentCellMonth } = useMemo(() => {
     const cellEvents = getMonthCellEvents(date, events, eventPositions);
@@ -76,7 +76,7 @@ export function DayCell({
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: position * 0.1, ...transition }}>
         <>
-          {showBullet && (
+          {!isEventListOpen && showBullet && (
             <EventBullet className="lg:hidden" color={event.color} />
           )}
           <MonthEventBadge className="hidden lg:flex" event={event} cellDate={startOfDay(date)} />
@@ -135,7 +135,7 @@ export function DayCell({
 
         </motion.div>
 
-        {showMobileMore && (
+        {!isEventListOpen && showMobileMore && (
           <div className="flex justify-end items-end mx-2">
             <span className="text-[0.6rem] font-semibold text-accent-foreground">
               +{showMoreCount}
