@@ -54,9 +54,9 @@ export function CalendarMonthView({
 			initial={false}
 			transition={{ duration: 0.25, ease: "easeOut" }}
 			className={cn(
-				"w-full transition-[height] duration-300 ease-in-out overflow-hidden",
-				isEventListOpen ? "h-[27vh]" : "h-[90vh]"
-			)}
+				"w-full overflow-hidden transition-[height] duration-300 ease-in-out",
+				isEventListOpen ? "h-[27vh] md:h-[90vh]" : "h-[90vh]"
+			  )}			  
 		>
 			<div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
