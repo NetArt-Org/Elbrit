@@ -13,6 +13,8 @@ import {
 } from "@/components/calendar/helpers";
 import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
+import { useMediaQuery } from "@/components/calendar/hooks";
+import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SWIPE_THRESHOLD = 80;
@@ -23,6 +25,7 @@ export function CalendarMonthView({
 }) {
 	const { selectedDate, setSelectedDate, isEventListOpen, eventListDate, setEventListDate } = useCalendar();
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
+	const isMobile = useMediaQuery("(max-width: 768px)");
 
 	const cells = useMemo(() => getCalendarCells(selectedDate), [selectedDate]);
 
@@ -55,8 +58,13 @@ export function CalendarMonthView({
 			transition={{ duration: 0.25, ease: "easeOut" }}
 			className={cn(
 				"w-full overflow-hidden transition-[height] duration-300 ease-in-out",
-				isEventListOpen ? "h-[27vh] md:h-[90vh]" : "h-[90vh]"
-			  )}			  
+				isMobile
+				  ? "h-auto"
+				  : isEventListOpen
+					? "h-[27vh] md:h-[90vh]"
+					: "h-[90vh]"
+			  )}
+			  
 		>
 			<div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
@@ -83,7 +91,11 @@ export function CalendarMonthView({
 					dragConstraints={{ left: 0, right: 0 }}
 					dragElastic={0.12}
 					onDragEnd={handleDragEnd}
-					className="grid grid-cols-7 grid-rows-6 h-full"
+					className={cn(
+						"grid grid-cols-7",
+						isMobile ? "auto-rows-fr" : "grid-rows-6 h-full"
+					  )}
+					  
 				>
 					{cells.map((cell, index) => (
 						<DayCell
@@ -95,18 +107,12 @@ export function CalendarMonthView({
 					))}
 				</motion.div>
 			</AnimatePresence>
-			<EventListDialog
-				date={eventListDate}
-				events={
-					eventListDate
-						? getMonthCellEvents(eventListDate, allEvents, eventPositions)
-						: []
-				}
-				open={!!eventListDate}
-				onOpenChange={(open) => {
-					if (!open) setEventListDate(null);
-				}}
-			/>
+			{isMobile && (
+  <div className="flex-1 overflow-auto border-t">
+    <AgendaEvents scope="month" />
+  </div>
+)}
+
 		</motion.div>
 	);
 }

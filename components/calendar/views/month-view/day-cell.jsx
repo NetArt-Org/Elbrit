@@ -37,8 +37,8 @@ export const dayCellVariants = cva("text-white", {
   },
 });
 
-const MAX_VISIBLE_EVENTS_DESKTOP = 2;
-const MAX_VISIBLE_EVENTS_MOBILE = 2;
+const MAX_VISIBLE_EVENTS_DESKTOP = 1;
+const MAX_VISIBLE_EVENTS_MOBILE = 1;
 
 
 export function DayCell({
@@ -168,17 +168,14 @@ export function DayCell({
                     cellDate={startOfDay(date)}
                   />
                 )}
-
-                {isMobile && !isEventListOpen && (
-                  <EventBullet color={event.color} />
-                )}
+                <EventBullet color={event.color} />
               </motion.div>
             ))
           )}
 
         </motion.div>
 
-        {!isEventListOpen && hiddenEventsCount > 0 && currentMonth && (
+        {!isMobile && hiddenEventsCount > 0 && currentMonth && (
           <div className="px-1 ">
             <button
               type="button"

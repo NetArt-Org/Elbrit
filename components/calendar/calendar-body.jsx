@@ -12,6 +12,7 @@ import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/
 import { CalendarYearView } from "@/components/calendar/views/year-view/calendar-year-view";
 import MobileAddEventBar from "./mobile/MobileAddEventBar";
 import { useMediaQuery } from "./hooks";
+import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
 export function CalendarBody() {
 	const { view, events } = useCalendar();
 	const isMobile = useMediaQuery("(max-width: 768px)");
@@ -41,7 +42,10 @@ export function CalendarBody() {
 				)}
 				{view === "week" && (
 					isMobile ? (
-						<AgendaEvents scope="week" />
+						<CalendarMobileWeekAgenda
+						singleDayEvents={singleDayEvents}
+						multiDayEvents={multiDayEvents}
+					  />
 					) : (
 						<CalendarWeekView
 							singleDayEvents={singleDayEvents}

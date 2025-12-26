@@ -1,5 +1,5 @@
-import {format, parseISO,startOfWeek, endOfWeek, isWithinInterval} from "date-fns";
-import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
+import { format, parseISO, startOfWeek,startOfDay,endOfDay, endOfWeek, isWithinInterval } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Command,
     CommandEmpty,
@@ -8,9 +8,10 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import {cn} from "@/lib/utils";
-import {useCalendar} from "@/components/calendar/contexts/calendar-context";
-import {EventDetailsDialog} from "@/components/calendar/dialogs/event-details-dialog";
+import { useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
 import {
     formatTime,
     getBgColor,
@@ -18,28 +19,60 @@ import {
     getFirstLetters,
     toCapitalize,
 } from "@/components/calendar/helpers";
-import {EventBullet} from "@/components/calendar/views/month-view/event-bullet";
+import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
 
-export const AgendaEvents = ({scope = "month" }) => {
-    const {events, use24HourFormat, badgeVariant, agendaModeGroupBy, selectedDate} =
+export const AgendaEvents = ({ scope = "all" }) => {
+    const { events, use24HourFormat, badgeVariant, agendaModeGroupBy, selectedDate } =
         useCalendar();
 
-    const monthEvents = getEventsForMonth(events, selectedDate)
-  
-      const agendaEvents = Object.groupBy(monthEvents, (event) => {
+    const scopedEvents = useMemo(() => {
+        if (scope === "day") {
+            return events.filter((event) =>
+              isWithinInterval(parseISO(event.startDate), {
+                start: startOfDay(selectedDate),
+                end: endOfDay(selectedDate),
+              })
+            );
+          }
+        if (scope === "week") {
+            const start = startOfWeek(selectedDate);
+            const end = endOfWeek(selectedDate);
+
+            return events.filter((event) =>
+                isWithinInterval(parseISO(event.startDate), {
+                    start,
+                    end,
+                })
+            );
+        }
+
+        if (scope === "month") {
+            return getEventsForMonth(events, selectedDate);
+        }
+
+        // ✅ default: all events
+        return events;
+    }, [events, selectedDate, scope]);
+
+
+    const agendaEvents = Object.groupBy(scopedEvents, (event) => {
         return agendaModeGroupBy === "date"
-          ? format(parseISO(event.startDate), "yyyy-MM-dd")
-          : event.color;
-      });
-      
+            ? format(parseISO(event.startDate), "yyyy-MM-dd")
+            : event.color;
+    });
+
+
 
     const groupedAndSortedEvents = Object.entries(agendaEvents).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
 
     return (
         <Command className="py-4 h-[80vh] bg-transparent">
-            <div className="mb-4 mx-4">
-                <CommandInput placeholder="Type a command or search..." />
-            </div>
+            {scope === "all" && (
+                <div className="mb-4 mx-4">
+                    <CommandInput placeholder="Type a command or search..." />
+                </div>
+            )}
+
             <CommandList className="max-h-max px-3 border-t">
                 {groupedAndSortedEvents.map(([date, groupedEvents]) => (
                     <CommandGroup
