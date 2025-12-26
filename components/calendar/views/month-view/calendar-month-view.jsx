@@ -57,78 +57,78 @@ export function CalendarMonthView({
 	};
 	const handleVerticalDragEnd = (_, info) => {
 		const offsetY = info.offset.y;
-	
+
 		// swipe up → collapse
 		if (offsetY < -SWIPE_Y_THRESHOLD) {
 			setIsCollapsed(true);
 		}
-	
+
 		// swipe down → expand
 		if (offsetY > SWIPE_Y_THRESHOLD) {
 			setIsCollapsed(false);
 		}
 	};
-	
+
 	return (
 		<motion.div
-  variants={staggerContainer}
-  initial={false}
-  transition={{ duration: 0.3, ease: "easeInOut" }}
+			variants={staggerContainer}
+			initial={false}
+			transition={{ duration: 0.3, ease: "easeInOut" }}
 
-  drag={isMobile ? "y" : false}
-  dragConstraints={isMobile ? { top: 0, bottom: 0 } : undefined}
-  dragElastic={isMobile ? 0.1 : 0}
-  onDragEnd={isMobile ? handleVerticalDragEnd : undefined}
+			drag={isMobile ? "y" : false}
+			dragConstraints={isMobile ? { top: 0, bottom: 0 } : undefined}
+			dragElastic={isMobile ? 0.1 : 0}
+			onDragEnd={isMobile ? handleVerticalDragEnd : undefined}
 
-  animate={{ y: 0 }}
-  className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
->
-<motion.div className="overflow-hidden" animate={{ height: isCollapsed ? "35%" : "100%", }}>
-<div className="grid grid-cols-7">
-				{WEEK_DAYS.map((day, index) => (
-					<motion.div
-						key={day}
-						className="flex items-center justify-center py-2"
-						initial={{ opacity: 0, y: -10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: index * 0.05, ...transition }}>
-						<span className="text-xs font-medium text-t-quaternary">{day}</span>
-					</motion.div>
-				))}
-			</div>
-			{/* Swipeable month grid */}
-			<AnimatePresence initial={false}>
-				<motion.div
-					// key={monthKey}
-					variants={SwipeFadeVariants}
-					initial="initial"
-					// animate="animate"
-					exit="exit"
-					transition={{ duration: 0.12, ease: "easeOut" }} // 🔥 faster
-					drag="x"
-					dragConstraints={{ left: 0, right: 0 }}
-					dragElastic={0.12}
-					onDragEnd={handleDragEnd}
-					className="grid grid-cols-7 grid-rows-6 h-full min-h-0"
-				>
-					{cells.map((cell, index) => (
-						<DayCell
-							key={index}
-							cell={cell}
-							events={allEvents}
-							eventPositions={eventPositions}
-						/>
+			animate={{ y: 0 }}
+			className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
+		>
+			<motion.div className="overflow-hidden" animate={{ height: isCollapsed ? "35%" : "100%", }}>
+				<div className="grid grid-cols-7">
+					{WEEK_DAYS.map((day, index) => (
+						<motion.div
+							key={day}
+							className="flex items-center justify-center py-2"
+							initial={{ opacity: 0, y: -10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: index * 0.05, ...transition }}>
+							<span className="text-xs font-medium text-t-quaternary">{day}</span>
+						</motion.div>
 					))}
-				</motion.div>
-			</AnimatePresence>
-</motion.div>
-			<EventListDialog />
-			
-{isMobile && isCollapsed && (
-  <div className=" overflow-hidden border-t">
-    <AgendaEvents scope="month" scrollToSelectedDate />
-  </div>
-)}
+				</div>
+				{/* Swipeable month grid */}
+				<AnimatePresence initial={false}>
+					<motion.div
+						// key={monthKey}
+						variants={SwipeFadeVariants}
+						initial="initial"
+						// animate="animate"
+						exit="exit"
+						transition={{ duration: 0.12, ease: "easeOut" }} // 🔥 faster
+						drag="x"
+						dragConstraints={{ left: 0, right: 0 }}
+						dragElastic={0.12}
+						onDragEnd={handleDragEnd}
+						className="grid grid-cols-7 grid-rows-6 h-full min-h-0"
+					>
+						{cells.map((cell, index) => (
+							<DayCell
+								key={index}
+								cell={cell}
+								events={allEvents}
+								eventPositions={eventPositions}
+							/>
+						))}
+					</motion.div>
+				</AnimatePresence>
+			</motion.div>
+			{!isMobile && <EventListDialog />}
+
+			{isMobile && isCollapsed && (
+				<div className=" overflow-hidden border-t">
+					<AgendaEvents scope="month" scrollToSelectedDate />
+				</div>
+			)}
 
 		</motion.div>
 	);

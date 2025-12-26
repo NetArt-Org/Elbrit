@@ -180,17 +180,19 @@ export function DayCell({
 
         {!isMobile  && hiddenEventsCount > 0 && currentMonth && (
           <div className="px-1 ">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedDate(date);
-                setEventListDate(date);
-              }}
-              className="text-xs font-semibold text-muted-foreground hover:text-foreground"
-            >
-              +{hiddenEventsCount} more
-            </button>
+          <button
+  type="button"
+  onPointerDownCapture={(e) => e.stopPropagation()}  // 🔥 REQUIRED
+  onClick={(e) => {
+    e.stopPropagation();
+    console.log("HELLO")
+    setSelectedDate(date);
+    setEventListDate(date);
+  }}
+  className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+>
+  +{hiddenEventsCount} more
+</button>
           </div>
         )}
       </DroppableArea>
