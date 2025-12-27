@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, startTransition } from "react";
+import { useMemo, startTransition,useEffect } from "react";
 import {
 	staggerContainer,
 	SwipeFadeVariants,
@@ -26,11 +26,16 @@ export function CalendarMonthView({
 	singleDayEvents, view,
 	multiDayEvents
 }) {
-	const { selectedDate, setSelectedDate, isEventListOpen, eventListDate, setEventListDate } = useCalendar();
+	const { selectedDate, setSelectedDate, } = useCalendar();
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
 	const isMobile = useMediaQuery("(max-width: 768px)");
 	const [isCollapsed, setIsCollapsed] = useState(false);
-
+	useEffect(() => {
+		if (isMobile && selectedDate) {
+		  setIsCollapsed(true);
+		}
+	  }, [selectedDate, isMobile]);
+	  
 	const cells = useMemo(() => getCalendarCells(selectedDate), [selectedDate]);
 
 	const eventPositions = useMemo(() =>
@@ -126,7 +131,7 @@ export function CalendarMonthView({
 
 			{isMobile && isCollapsed && (
 				<div className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-t">
-					<AgendaEvents scope="month" scrollToSelectedDate />
+					<AgendaEvents scope={selectedDate ? "day" : "month"} />
 				</div>
 			)}
 

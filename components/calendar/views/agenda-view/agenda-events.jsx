@@ -39,6 +39,7 @@ import {
       selectedDate,
     } = useCalendar();
   
+    
     /* --------------------------------
        Scope filtering
     -------------------------------- */

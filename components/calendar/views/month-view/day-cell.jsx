@@ -117,22 +117,26 @@ export function DayCell({
       animate={{ opacity: 1, y: 0 }}
       transition={transition}>
       <DroppableArea date={date} className="w-full h-full py-2 flex md:block">
-        <motion.span
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => {
-            setSelectedDate(date);        // ✅ ALWAYS
-            setEventListDate(date);       // ✅ keep existing behavior
-          }}
-          className={cn(
-            "h-6 px-1 text-xs font-semibold lg:px-2",
-            !currentMonth && "opacity-20",
-            isToday(date) &&
-            "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
+      <motion.span
+  onPointerDown={(e) => {
+    e.stopPropagation();
 
-          )}>
-          {day}
-        </motion.span>
+    const isSame =
+      selectedDate &&
+      startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
 
+    setSelectedDate(isSame ? null : date);
+    setEventListDate(isSame ? null : date);
+  }}
+  className={cn(
+    "h-6 px-1 text-xs font-semibold lg:px-2",
+    !currentMonth && "opacity-20",
+    isToday(date) &&
+      "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
+  )}
+>
+  {day}
+</motion.span>
         <motion.div
           className={cn(
             "flex h-fit gap-1 px-2 mt-1 lg:h-max-content overflow-hidden lg:flex-col lg:gap-1 lg:px-0",
@@ -185,7 +189,6 @@ export function DayCell({
   onPointerDownCapture={(e) => e.stopPropagation()}  // 🔥 REQUIRED
   onClick={(e) => {
     e.stopPropagation();
-    console.log("HELLO")
     setSelectedDate(date);
     setEventListDate(date);
   }}
@@ -215,8 +218,12 @@ export function DayCell({
       <motion.div
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => {
-          setEventListDate(date);
-          setSelectedDate(date);
+          const isSame =
+    selectedDate &&
+    startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
+
+  setSelectedDate(isSame ? null : date);
+  setEventListDate(isSame ? null : date);
         }}>
         {cellContent}
       </motion.div>
