@@ -98,7 +98,7 @@ import {
     }, [agendaEvents, selectedDate, agendaModeGroupBy, scope]);
   
     return (
-      <Command className="py-4 h-[80vh] bg-transparent">
+      <Command className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-4 h-[80vh] bg-transparent">
         {scope === "all" && (
           <div className="mb-4 mx-4">
             <CommandInput placeholder="Type a command or search..." />

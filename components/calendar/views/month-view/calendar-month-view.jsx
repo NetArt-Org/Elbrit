@@ -125,7 +125,7 @@ export function CalendarMonthView({
 			{!isMobile && <EventListDialog />}
 
 			{isMobile && isCollapsed && (
-				<div className=" overflow-hidden border-t">
+				<div className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-t">
 					<AgendaEvents scope="month" scrollToSelectedDate />
 				</div>
 			)}
