@@ -37,7 +37,7 @@ export function CalendarProvider({
 	const [eventListDate, setEventListDate] = useState(null);
 	const [activeDate, setActiveDate] = useState(null);
 	const isEventListOpen = eventListDate !== null;
-
+	const [mobileLayer, setMobileLayer] = useState("month-expanded");
 	const updateSettings = (newPartialSettings) => {
 		setSettings({
 			...settings,
@@ -155,7 +155,8 @@ export function CalendarProvider({
 		eventListDate,
 		setEventListDate,
 		isEventListOpen,
-		activeDate, setActiveDate
+		activeDate, setActiveDate, mobileLayer,
+		setMobileLayer,
 	};
 
 	return (

@@ -17,6 +17,7 @@ import {
     CommandList,
   } from "@/components/ui/command";
   import { useMemo } from "react";
+  import { motion } from "framer-motion";
   import { cn } from "@/lib/utils";
   import { useCalendar } from "@/components/calendar/contexts/calendar-context";
   import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
@@ -26,7 +27,7 @@ import {
     getColorClass,
     getEventsForMonth,
     getFirstLetters,
-    toCapitalize,
+    toCapitalize,navigateDate
   } from "@/components/calendar/helpers";
   import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
   
@@ -36,10 +37,41 @@ import {
       use24HourFormat,
       badgeVariant,
       agendaModeGroupBy,
-      selectedDate,
+      selectedDate,setSelectedDate,setActiveDate
     } = useCalendar();
-  
+    const SWIPE_THRESHOLD = 80;
+    const handleAgendaDragEnd = (_, info) => {
+      const offsetX = info.offset.x;
     
+      if (offsetX < -SWIPE_THRESHOLD) {
+        setSelectedDate(prev => {
+          const next = navigateDate(prev, scope, "next");
+    
+          if (scope === "day") {
+            setActiveDate(next);
+          } else {
+            setActiveDate(null);
+          }
+    
+          return next;
+        });
+      }
+    
+      if (offsetX > SWIPE_THRESHOLD) {
+        setSelectedDate(prev => {
+          const prevDate = navigateDate(prev, scope, "previous");
+    
+          if (scope === "day") {
+            setActiveDate(prevDate);
+          } else {
+            setActiveDate(null);
+          }
+    
+          return prevDate;
+        });
+      }
+    };
+
     /* --------------------------------
        Scope filtering
     -------------------------------- */
@@ -86,6 +118,12 @@ import {
     }, [agendaEvents, selectedDate, agendaModeGroupBy, scope]);
   
     return (
+      <motion.div
+  drag="x"
+  dragConstraints={{ left: 0, right: 0 }}
+  dragElastic={0.12}
+  onDragEnd={handleAgendaDragEnd}
+>
       <Command className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-4 h-[80vh] bg-transparent">
         {scope === "all" && (
           <div className="mb-4 mx-4">
@@ -155,6 +193,7 @@ import {
           <CommandEmpty>No results found.</CommandEmpty>
         </CommandList>
       </Command>
+      </motion.div>
     );
   };
   
