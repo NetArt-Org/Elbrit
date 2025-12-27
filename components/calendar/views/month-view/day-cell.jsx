@@ -48,26 +48,33 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setEventListDate, isEventListOpen, setSelectedDate, selectedDate, eventListDate } = useCalendar();
+  const { setEventListDate, isEventListOpen, setSelectedDate, selectedDate,activeDate, setActiveDate } = useCalendar();
   const isSelected =
-    selectedDate &&
-    startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
+  activeDate &&
+  startOfDay(activeDate).getTime() === startOfDay(date).getTime();
+
+const toggleDateSelection = () => {
+  const isSame =
+    activeDate &&
+    startOfDay(activeDate).getTime() === startOfDay(date).getTime();
+
+  setActiveDate(isSame ? null : date);
+
+  // keep navigation in sync
+  setSelectedDate(date);
+};
+
   // Memoize cellEvents and currentCellMonth for performance
   const { cellEvents, currentCellMonth } = useMemo(() => {
     const cellEvents = getMonthCellEvents(date, events, eventPositions);
     const currentCellMonth = startOfDay(new Date(date.getFullYear(), date.getMonth(), 1));
     return { cellEvents, currentCellMonth };
   }, [date, events, eventPositions]);
-  const maxVisibleEvents = isMobile
-    ? MAX_VISIBLE_EVENTS_MOBILE
-    : MAX_VISIBLE_EVENTS_DESKTOP;
-
   const visibleEvents = isMobile
     ? cellEvents.slice(0, MAX_VISIBLE_EVENTS_MOBILE)
     : cellEvents.slice(0, MAX_VISIBLE_EVENTS_DESKTOP);
 
   const hiddenEventsCount = cellEvents.length - visibleEvents.length;
-
   // Memoize event rendering for each position with animation
   const renderEventAtPosition = useCallback((position) => {
     const event = cellEvents.find((e) => e.position === position);
@@ -111,32 +118,26 @@ export function DayCell({
         isSunday(date) && "border-l-0",
         isMobile &&
         isSelected &&
-        "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"
+        "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"        
       )}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={transition}>
-      <DroppableArea date={date} className="w-full h-full py-2 flex md:block">
-      <motion.span
-  onPointerDown={(e) => {
-    e.stopPropagation();
-
-    const isSame =
-      selectedDate &&
-      startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
-
-    setSelectedDate(isSame ? null : date);
-    setEventListDate(isSame ? null : date);
-  }}
-  className={cn(
-    "h-6 px-1 text-xs font-semibold lg:px-2",
-    !currentMonth && "opacity-20",
-    isToday(date) &&
-      "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
-  )}
+     <DroppableArea
+  date={date}
+  className="w-full h-full py-2 flex md:block pointer-events-none"
 >
-  {day}
-</motion.span>
+        <motion.span
+            onPointerDown={(e) => e.stopPropagation()}
+          className={cn(
+            "h-6 px-1 text-xs font-semibold lg:px-2",
+            !currentMonth && "opacity-20",
+            isToday(date) &&
+            "flex w-6 translate-x-1 items-center justify-center rounded-full bg-primary px-0 font-bold text-primary-foreground"
+          )}
+        >
+          {day}
+        </motion.span>
         <motion.div
           className={cn(
             "flex h-fit gap-1 px-2 mt-1 lg:h-max-content overflow-hidden lg:flex-col lg:gap-1 lg:px-0",
@@ -149,7 +150,7 @@ export function DayCell({
                   variant="ghost"
                   onPointerDownCapture={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  className="border opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  className="border opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="max-sm:hidden">Add Event</span>
@@ -182,20 +183,20 @@ export function DayCell({
 
         </motion.div>
 
-        {!isMobile  && hiddenEventsCount > 0 && currentMonth && (
+        {!isMobile && hiddenEventsCount > 0 && currentMonth && (
           <div className="px-1 ">
-          <button
-  type="button"
-  onPointerDownCapture={(e) => e.stopPropagation()}  // 🔥 REQUIRED
-  onClick={(e) => {
-    e.stopPropagation();
-    setSelectedDate(date);
-    setEventListDate(date);
-  }}
-  className="text-xs font-semibold text-muted-foreground hover:text-foreground"
->
-  +{hiddenEventsCount} more
-</button>
+            <button
+              type="button"
+              onPointerDownCapture={(e) => e.stopPropagation()}  // 🔥 REQUIRED
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedDate(date);
+                setEventListDate(date);
+              }}
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground pointer-events-auto"
+            >
+              +{hiddenEventsCount} more
+            </button>
           </div>
         )}
       </DroppableArea>
@@ -217,16 +218,11 @@ export function DayCell({
     return (
       <motion.div
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => {
-          const isSame =
-    selectedDate &&
-    startOfDay(selectedDate).getTime() === startOfDay(date).getTime();
-
-  setSelectedDate(isSame ? null : date);
-  setEventListDate(isSame ? null : date);
-        }}>
+        onClick={toggleDateSelection}
+      >
         {cellContent}
       </motion.div>
+
     );
   }
 

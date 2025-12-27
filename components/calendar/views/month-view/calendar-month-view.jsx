@@ -6,10 +6,9 @@ import {
 	transition,
 } from "@/components/calendar/animations";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { cn } from "@/lib/utils";
 import {
 	calculateMonthEventPositions,
-	getCalendarCells, getMonthCellEvents, navigateDate,
+	getCalendarCells,navigateDate,
 } from "@/components/calendar/helpers";
 import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
@@ -26,12 +25,12 @@ export function CalendarMonthView({
 	singleDayEvents, view,
 	multiDayEvents
 }) {
-	const { selectedDate, setSelectedDate, } = useCalendar();
+	const { selectedDate, setSelectedDate,activeDate} = useCalendar();
 	const allEvents = [...multiDayEvents, ...singleDayEvents];
 	const isMobile = useMediaQuery("(max-width: 768px)");
 	const [isCollapsed, setIsCollapsed] = useState(false);
 	useEffect(() => {
-		if (isMobile && selectedDate) {
+		if (isMobile && activeDate) {
 		  setIsCollapsed(true);
 		}
 	  }, [selectedDate, isMobile]);
@@ -131,7 +130,7 @@ export function CalendarMonthView({
 
 			{isMobile && isCollapsed && (
 				<div className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-t">
-					<AgendaEvents scope={selectedDate ? "day" : "month"} />
+					<AgendaEvents scope={activeDate ? "day" : "month"} />
 				</div>
 			)}
 

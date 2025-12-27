@@ -22,7 +22,7 @@ export function CalendarMobileWeekAgenda({
   singleDayEvents,
   multiDayEvents,
 }) {
-  const { selectedDate, setSelectedDate } = useCalendar();
+  const { selectedDate, setSelectedDate,activeDate } = useCalendar();
 
   const allEvents = [...multiDayEvents, ...singleDayEvents];
 
@@ -120,7 +120,7 @@ export function CalendarMobileWeekAgenda({
 
       {/* Agenda list */}
       <div className="flex-1 overflow-auto">
-        <AgendaEvents scope="week" scrollToSelectedDate />
+        <AgendaEvents scope={activeDate ? "day" : "week"} />
       </div>
     </div>
   );

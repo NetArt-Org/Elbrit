@@ -82,19 +82,6 @@ import {
       const entries = Object.entries(agendaEvents).sort(
         (a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()
       );
-  
-      // ✅ Prioritize selected date for week/month
-      if (agendaModeGroupBy === "date" && (scope === "week" || scope === "month")) {
-        const selectedKey = format(selectedDate, "yyyy-MM-dd");
-  
-        const selectedGroup = entries.find(([key]) => key === selectedKey);
-        const remainingGroups = entries.filter(([key]) => key !== selectedKey);
-  
-        return selectedGroup
-          ? [selectedGroup, ...remainingGroups]
-          : entries;
-      }
-  
       return entries;
     }, [agendaEvents, selectedDate, agendaModeGroupBy, scope]);
   

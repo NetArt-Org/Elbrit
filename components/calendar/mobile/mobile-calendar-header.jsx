@@ -3,20 +3,14 @@
 import { useState } from "react";
 import {
     Menu,
-    Search,
     CheckSquare,
     House,
     Rows2,
-    CalendarRange,
-    List,
-    Columns,
-    Grid3X3,
-    Grid2X2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { slideFromLeft, transition, } from "@/components/calendar/animations";
 import { Button } from "@/components/ui/button";
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
 import {
     DropdownMenu,
     DropdownMenuContent,

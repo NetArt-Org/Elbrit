@@ -28,15 +28,15 @@ export function CalendarProvider({
 	const [currentView, setCurrentViewState] = useState(settings.view);
 	const [use24HourFormat, setUse24HourFormatState] = useState(settings.use24HourFormat);
 	const [agendaModeGroupBy, setAgendaModeGroupByState] = useState(settings.agendaModeGroupBy);
-
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [selectedUserId, setSelectedUserId] = useState("all");
 	const [selectedColors, setSelectedColors] = useState([]);
-
 	const [allEvents, setAllEvents] = useState(events || []);
 	const [filteredEvents, setFilteredEvents] = useState(events || []);
+
 	const [eventListDate, setEventListDate] = useState(null);
-const isEventListOpen = eventListDate !== null;
+	const [activeDate, setActiveDate] = useState(null);
+	const isEventListOpen = eventListDate !== null;
 
 	const updateSettings = (newPartialSettings) => {
 		setSettings({
@@ -153,8 +153,9 @@ const isEventListOpen = eventListDate !== null;
 		mobileMode,
 		setMobileMode,
 		eventListDate,
-  setEventListDate,
-  isEventListOpen,
+		setEventListDate,
+		isEventListOpen,
+		activeDate, setActiveDate
 	};
 
 	return (
