@@ -42,7 +42,7 @@ export function AddEditEventDialog({
 	children,
 	startDate,
 	startTime,
-	event
+	event,defaultTag,
 }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
@@ -79,7 +79,7 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "blue",
-			tags: event?.tags ?? "event",
+			tags: event?.tags ?? defaultTag ?? "event",
 		},
 	});
 
@@ -90,9 +90,10 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "blue",
-			tags: event?.tags ?? "event",
+			tags: event?.tags ?? defaultTag ?? "event",
 		});
-	}, [event, initialDates, form]);
+	}, [event, initialDates, defaultTag,form]);
+	  
 
 	const onSubmit = (values) => {
 		try {

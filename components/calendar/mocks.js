@@ -37,12 +37,6 @@ export const TAGS = [
   { id: "work_location", label: "Working location",},
   { id: "task", label: "Task"},
   { id: "event", label: "Event"},
-
-  // Custom tags
-  { id: "travel", label: "Travel", },
-  { id: "health", label: "Health", },
-  { id: "personal", label: "Personal",  },
-  { id: "important", label: "Important",  },
 ];
 
 /* =========================================================

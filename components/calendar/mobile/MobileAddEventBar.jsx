@@ -1,13 +1,32 @@
 "use client";
 
+import { useState } from "react";
+import {
+  Plus,
+  Cake,
+  CalendarCheck,
+  MapPin,
+  CheckSquare,
+  Calendar,
+} from "lucide-react";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { isBefore, startOfDay } from "date-fns";
+import { TAGS } from "@/components/calendar/mocks";
+import { motion, AnimatePresence } from "framer-motion";
+
+const ICON_MAP = {
+  birthday: Cake,
+  ooo: CalendarCheck,
+  work_location: MapPin,
+  task: CheckSquare,
+  event: Calendar,
+};
 
 export default function MobileAddEventBar({ date: propDate }) {
   const { selectedDate } = useCalendar();
+  const [showTags, setShowTags] = useState(false);
 
   const date = propDate || selectedDate || new Date();
 
@@ -16,36 +35,87 @@ export default function MobileAddEventBar({ date: propDate }) {
     startOfDay(new Date())
   );
 
-  // Do not render for past dates
   if (isPastDate) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      <div className="mx-4 mb-4 flex items-center justify-between rounded-xl border bg-background p-2 shadow-lg">
-        {/* Date label */}
-        <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground">
-            {date.toLocaleDateString("en-US", { weekday: "long" })}
-          </span>
-          <span className="text-sm font-medium">
-            {date.toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "short",
-            })}
-          </span>
-        </div>
+    <>
+      {/* Blur background (BEHIND tags) */}
+      <AnimatePresence>
+        {showTags && (
+          <motion.div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowTags(false)}
+          />
+        )}
+      </AnimatePresence>
 
-        {/* Dialog trigger */}
-        <AddEditEventDialog startDate={date}>
-          <Button
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"
-            onPointerDownCapture={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-        </AddEditEventDialog>
+      {/* Bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+        <div className="mx-4 mb-4 flex items-center justify-between rounded-xl border bg-background p-2 shadow-lg">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground">
+              {date.toLocaleDateString("en-US", { weekday: "long" })}
+            </span>
+            <span className="text-sm font-medium">
+              {date.toLocaleDateString("en-US", {
+                day: "numeric",
+                month: "short",
+              })}
+            </span>
+          </div>
+
+          {/* Plus + expanding tags */}
+          <div className="relative">
+            <AnimatePresence>
+              {showTags && (
+                <motion.div
+                  className="absolute bottom-14 right-0 z-50 flex flex-col gap-3 items-end"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                >
+                  {TAGS.map((tag, index) => {
+                    const Icon = ICON_MAP[tag.id];
+
+                    return (
+                      <motion.div
+                        key={tag.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <AddEditEventDialog
+                          startDate={date}
+                          defaultTag={tag.id}
+                        >
+                          <Button
+                            className="flex items-center gap-3 rounded-full bg-primary px-5 py-3 text-primary-foreground shadow-lg"
+                            onPointerDown={(e) => e.stopPropagation()}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {tag.label}
+                          </Button>
+                        </AddEditEventDialog>
+
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Button
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              onClick={() => setShowTags((v) => !v)}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
