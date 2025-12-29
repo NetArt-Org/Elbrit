@@ -46,13 +46,13 @@ export function CalendarDragHandle() {
   };
 
   return (
-    <div className="flex justify-center py-2">
+    <div className="flex justify-center py-1">
       <motion.div
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.18}
         onDragEnd={handleDragEnd}
-        className="w-12 h-2 rounded-full bg-muted-foreground/40"
+        className="w-20 h-2 cursor-pointer rounded-full bg-muted-foreground/40"
       />
     </div>
   );

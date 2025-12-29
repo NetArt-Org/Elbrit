@@ -42,7 +42,7 @@ export function AddEditEventDialog({
 	children,
 	startDate,
 	startTime,
-	event,defaultTag,
+	event, defaultTag,
 }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
@@ -92,8 +92,8 @@ export function AddEditEventDialog({
 			color: event?.color ?? "blue",
 			tags: event?.tags ?? defaultTag ?? "event",
 		});
-	}, [event, initialDates, defaultTag,form]);
-	  
+	}, [event, initialDates, defaultTag, form]);
+
 
 	const onSubmit = (values) => {
 		try {
@@ -146,6 +146,7 @@ export function AddEditEventDialog({
 						id="event-form"
 						onSubmit={form.handleSubmit(onSubmit)}
 						className="grid gap-4 py-4">
+
 						<FormField
 							control={form.control}
 							name="title"
@@ -166,6 +167,40 @@ export function AddEditEventDialog({
 							)} />
 						<FormField
 							control={form.control}
+							name="tags"
+							render={({ field }) => (
+								<FormItem>
+									<FormControl>
+										<div className="flex flex-wrap gap-2">
+											{TAGS.map((tag) => {
+												const isActive = field.value === tag.id;
+
+												return (
+													<button
+														key={tag.id}
+														type="button"
+														onClick={() => field.onChange(tag.id)}
+														className={`
+                  rounded-full px-4 py-1.5 text-sm font-medium transition
+                  ${isActive
+																? "bg-black text-white shadow"
+																: "bg-muted text-muted-foreground hover:bg-muted/70"
+															}
+                `}
+													>
+														{tag.label}
+													</button>
+												);
+											})}
+										</div>
+									</FormControl>
+
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+						<FormField
+							control={form.control}
 							name="startDate"
 							render={({ field }) => (
 								<DateTimePicker form={form} field={field} />
@@ -176,36 +211,6 @@ export function AddEditEventDialog({
 							render={({ field }) => (
 								<DateTimePicker form={form} field={field} />
 							)} />
-						<FormField
-							control={form.control}
-							name="tags"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Type</FormLabel>
-									<FormControl>
-										<Select
-											value={field.value}
-											onValueChange={field.onChange}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Select type" />
-											</SelectTrigger>
-											<SelectContent>
-												{TAGS.map((tag) => (
-													<SelectItem key={tag.id} value={tag.id}>
-														<div className="flex items-center gap-2">
-															{tag.label}
-														</div>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
 						<FormField
 							control={form.control}
 							name="color"

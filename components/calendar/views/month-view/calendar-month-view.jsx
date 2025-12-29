@@ -85,7 +85,7 @@ export function CalendarMonthView({
     >
       <motion.div
         className="overflow-hidden"
-        animate={{ height: isCollapsed ? "35%" : "100%" }}
+        animate={{ height: isCollapsed ? "50%" : "100%" }}
       >
         <div className="grid grid-cols-7">
           {WEEK_DAYS.map((day, index) => (
@@ -135,9 +135,9 @@ export function CalendarMonthView({
           <AgendaEvents scope={activeDate ? "day" : "month"} />
         </div>
       )}
-     {!isMobile&& <div className="h-[40%]">
+     {/* {!isMobile&& <div className="h-[40%]">
       <AgendaEvents />
-      </div>}
+      </div>} */}
     </motion.div>
   );
 }

@@ -1,13 +1,13 @@
 "use client";;
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
-import { useMediaQuery } from "@/components/calendar/hooks";
 import { Button } from "@/components/ui/button";
 import {
 	slideFromLeft,
 	slideFromRight,
 	transition,
 } from "@/components/calendar/animations";
+import { useState } from "react";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { DateNavigator } from "@/components/calendar/header/date-navigator";
@@ -19,6 +19,7 @@ import Views from "./view-tabs";
 
 export function CalendarHeader() {
 	const { view, events } = useCalendar();
+	const [open, setOpen] = useState(false);
 	return (
 		<div
 			className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
