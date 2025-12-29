@@ -13,7 +13,6 @@ import { CalendarYearView } from "@/components/calendar/views/year-view/calendar
 import MobileAddEventBar from "./mobile/MobileAddEventBar";
 import { useMediaQuery } from "./hooks";
 import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
-import { CalendarDragHandle } from "./mobile/CalendarDragHandle";
 
 export function CalendarBody() {
 	const { view, events, mobileLayer } = useCalendar();

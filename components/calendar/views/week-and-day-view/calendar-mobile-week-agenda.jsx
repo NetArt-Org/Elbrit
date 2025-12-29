@@ -14,8 +14,6 @@ import {
 } from "@/components/calendar/helpers";
 import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
-import { cn } from "@/lib/utils";
-import { CalendarDragHandle } from "../../mobile/CalendarDragHandle";
 import { useMediaQuery } from "../../hooks";
 
 const SWIPE_THRESHOLD = 80;
@@ -24,7 +22,7 @@ export function CalendarMobileWeekAgenda({
   singleDayEvents,
   multiDayEvents,
 }) {
-  const { selectedDate, setSelectedDate,activeDate, } = useCalendar();
+  const { selectedDate, setSelectedDate,activeDate,setActiveDate } = useCalendar();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const allEvents = [...multiDayEvents, ...singleDayEvents];
 
@@ -66,20 +64,37 @@ export function CalendarMobileWeekAgenda({
      Swipe → week navigation
   -------------------------------- */
   const handleDragEnd = (_, info) => {
+    if (!isMobile) return;
+  
     const offsetX = info.offset.x;
-
-    if (offsetX < -SWIPE_THRESHOLD) {
+    if (Math.abs(offsetX) < SWIPE_THRESHOLD) return;
+  
+    const direction = offsetX < 0 ? "next" : "previous";
+  
+    // 📱 DAY SWIPE (when a day is highlighted)
+    if (activeDate) {
       startTransition(() => {
-        setSelectedDate(navigateDate(selectedDate, "week", "next"));
+        const nextDay =
+          direction === "next"
+            ? addDays(activeDate, 1)
+            : addDays(activeDate, -1);
+  
+        // keep grid + agenda perfectly in sync
+        setActiveDate(nextDay);
+        setSelectedDate(nextDay);
       });
+  
+      return;
     }
-
-    if (offsetX > SWIPE_THRESHOLD) {
-      startTransition(() => {
-        setSelectedDate(navigateDate(selectedDate, "week", "previous"));
-      });
-    }
+  
+    // 📆 WEEK SWIPE (no active day)
+    startTransition(() => {
+      setSelectedDate((prev) =>
+        navigateDate(prev, "week", direction)
+      );
+    });
   };
+  
   const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return (
     <div className="flex flex-col h-[90vh] overflow-hidden">
@@ -119,7 +134,6 @@ export function CalendarMobileWeekAgenda({
           ))}
         </motion.div>
       </AnimatePresence>
-      {isMobile && <CalendarDragHandle />}
       {/* Agenda list */}
       <div className="flex-1 overflow-auto">
         <AgendaEvents scope={activeDate ? "day" : "week"} />

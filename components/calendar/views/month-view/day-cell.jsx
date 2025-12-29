@@ -114,7 +114,7 @@ export function DayCell({
   const cellContent = useMemo(() => (
     <motion.div
       className={cn(
-        "flex h-full lg:min-h-[10rem] flex-col gap-1 border-l border-t transition-colors",
+        "flex h-full lg:min-h-[7rem] flex-col gap-1 border-l border-t transition-colors",
         isSunday(date) && "border-l-0",
         isSelected &&
         "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"

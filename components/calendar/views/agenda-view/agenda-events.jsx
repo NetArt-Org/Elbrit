@@ -31,7 +31,6 @@ import {
   toCapitalize, navigateDate
 } from "@/components/calendar/helpers";
 import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
-import { CalendarDragHandle } from "../../mobile/CalendarDragHandle";
 
 export const AgendaEvents = ({ scope = "all" }) => {
   const {
@@ -121,7 +120,6 @@ export const AgendaEvents = ({ scope = "all" }) => {
   }, [agendaEvents, selectedDate, agendaModeGroupBy, scope]);
   return (
     <>
-      {isMobile && view === "agenda" && <CalendarDragHandle />}
       <motion.div
         drag={isMobile ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}

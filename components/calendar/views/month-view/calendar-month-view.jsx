@@ -1,5 +1,5 @@
 "use client";
-
+import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, startTransition, useEffect, useState } from "react";
 import {
@@ -17,7 +17,6 @@ import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
 import { useMediaQuery } from "@/components/calendar/hooks";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
-import { CalendarDragHandle } from "../../mobile/CalendarDragHandle";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SWIPE_THRESHOLD = 80;
@@ -27,7 +26,7 @@ export function CalendarMonthView({
   view,
   multiDayEvents,
 }) {
-  const { selectedDate, setSelectedDate, activeDate } = useCalendar();
+  const { selectedDate, setSelectedDate, activeDate,setActiveDate } = useCalendar();
   const allEvents = [...multiDayEvents, ...singleDayEvents];
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -61,20 +60,37 @@ export function CalendarMonthView({
      Horizontal swipe (month navigation)
   ================================ */
   const handleDragEnd = (_, info) => {
+    if (!isMobile) return;
+  
     const offsetX = info.offset.x;
-
-    if (offsetX < -SWIPE_THRESHOLD) {
+    if (Math.abs(offsetX) < SWIPE_THRESHOLD) return;
+  
+    const direction = offsetX < 0 ? "next" : "previous";
+  
+    // 📱 DAY SWIPE (when a day is selected)
+    if (activeDate) {
       startTransition(() => {
-        setSelectedDate(navigateDate(selectedDate, "month", "next"));
+        const nextDay =
+          direction === "next"
+            ? addDays(activeDate, 1)
+            : addDays(activeDate, -1);
+  
+        // update BOTH
+        setActiveDate(nextDay);
+        setSelectedDate(nextDay);
       });
+  
+      return;
     }
-
-    if (offsetX > SWIPE_THRESHOLD) {
-      startTransition(() => {
-        setSelectedDate(navigateDate(selectedDate, "month", "previous"));
-      });
-    }
+  
+    // 📅 MONTH SWIPE (no day selected)
+    startTransition(() => {
+      setSelectedDate((prev) =>
+        navigateDate(prev, "month", direction)
+      );
+    });
   };
+  
 
   return (
     <motion.div
@@ -128,7 +144,6 @@ export function CalendarMonthView({
           </motion.div>
         </AnimatePresence>
       </motion.div>
-      {isMobile && <CalendarDragHandle />}
       {!isMobile && <EventListDialog />}
 
       {isMobile && isCollapsed && (
