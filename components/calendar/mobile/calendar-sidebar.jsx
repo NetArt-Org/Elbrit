@@ -10,7 +10,7 @@ import {
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { cn } from "@/lib/utils";
 import { tabs } from "../header/view-tabs";
-
+import { UserSelect } from "@/components/calendar/header/user-select";
 const MOBILE_LAYER_MAP = {
   month: "month-expanded",
   week: "week",
@@ -55,6 +55,7 @@ export function CalendarSidebar({ open, onOpenChange }) {
                 </Button>
               );
             })}
+        <UserSelect/>
         </nav>
       </SheetContent>
     </Sheet>
