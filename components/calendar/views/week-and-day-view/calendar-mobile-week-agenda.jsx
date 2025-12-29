@@ -15,6 +15,8 @@ import {
 import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
 import { cn } from "@/lib/utils";
+import { CalendarDragHandle } from "../../mobile/CalendarDragHandle";
+import { useMediaQuery } from "../../hooks";
 
 const SWIPE_THRESHOLD = 80;
 
@@ -22,8 +24,8 @@ export function CalendarMobileWeekAgenda({
   singleDayEvents,
   multiDayEvents,
 }) {
-  const { selectedDate, setSelectedDate,activeDate } = useCalendar();
-
+  const { selectedDate, setSelectedDate,activeDate, } = useCalendar();
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const allEvents = [...multiDayEvents, ...singleDayEvents];
 
   /* --------------------------------
@@ -117,7 +119,7 @@ export function CalendarMobileWeekAgenda({
           ))}
         </motion.div>
       </AnimatePresence>
-
+      {isMobile && <CalendarDragHandle />}
       {/* Agenda list */}
       <div className="flex-1 overflow-auto">
         <AgendaEvents scope={activeDate ? "day" : "week"} />

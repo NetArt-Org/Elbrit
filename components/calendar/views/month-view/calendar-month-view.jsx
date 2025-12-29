@@ -17,6 +17,7 @@ import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
 import { useMediaQuery } from "@/components/calendar/hooks";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+import { CalendarDragHandle } from "../../mobile/CalendarDragHandle";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SWIPE_THRESHOLD = 80;
@@ -127,7 +128,7 @@ export function CalendarMonthView({
           </motion.div>
         </AnimatePresence>
       </motion.div>
-
+      {isMobile && <CalendarDragHandle />}
       {!isMobile && <EventListDialog />}
 
       {isMobile && isCollapsed && (
