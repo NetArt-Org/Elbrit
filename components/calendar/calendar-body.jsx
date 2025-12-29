@@ -1,9 +1,7 @@
 "use client";
 
 import { isSameDay, parseISO } from "date-fns";
-import { motion } from "framer-motion";
 import React from "react";
-import { fadeIn, transition } from "@/components/calendar/animations";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
 import { CalendarMonthView } from "@/components/calendar/views/month-view/calendar-month-view";
@@ -40,7 +38,7 @@ export function CalendarBody() {
   
 	// MOBILE
 	return (
-	  <div className="flex-1 min-h-0 flex flex-col pb-[80px]  overflow-hidden relative w-full custom-class" >
+	  <div className="flex-1 min-h-0 flex flex-col h-full pb-[80px]  overflow-hidden relative w-full custom-class" >
 		{mobileLayer === "year" && <CalendarYearView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
   
 		{(mobileLayer === "month-expanded" || mobileLayer === "month-agenda") && (
