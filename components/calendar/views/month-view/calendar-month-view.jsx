@@ -135,6 +135,9 @@ export function CalendarMonthView({
           <AgendaEvents scope={activeDate ? "day" : "month"} />
         </div>
       )}
+     {!isMobile&& <div className="h-[40%]">
+      <AgendaEvents />
+      </div>}
     </motion.div>
   );
 }

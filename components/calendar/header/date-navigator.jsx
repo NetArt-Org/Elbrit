@@ -24,7 +24,8 @@ export function DateNavigator({
     view,
     events
 }) {
-    const { selectedDate, setSelectedDate, setView } = useCalendar();
+    const { selectedDate, setSelectedDate, setView, setMobileLayer } = useCalendar();
+
     const isYearView = view === "year";
 
     const month = formatDate(selectedDate, "MMMM");
@@ -82,9 +83,10 @@ export function DateNavigator({
                     )}
                     onClick={() =>
                         startTransition(() => {
-                            setView("year");
+                          setView("year");
+                          setMobileLayer("year");
                         })
-                    }
+                      }                      
                 >
                     {month} {year}
                 </motion.button>

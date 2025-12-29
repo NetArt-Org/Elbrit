@@ -42,8 +42,13 @@ export function MobileCalendarHeader() {
   const handleTodayClick = () => {
     setSelectedDate(today);
 
-    // stay in current semantic view
+    // 👇 keep current semantic view
     setMobileLayer(MOBILE_LAYER_MAP[view] ?? "month-expanded");
+  };
+
+  const handleViewChange = (nextView) => {
+    setView(nextView);
+    setMobileLayer(MOBILE_LAYER_MAP[nextView]);
   };
 
   return (
@@ -91,10 +96,7 @@ export function MobileCalendarHeader() {
                 .map(({ name, value, icon: Icon }) => (
                   <DropdownMenuItem
                     key={value}
-                    onClick={() => {
-                      setView(value);
-                      setMobileLayer(MOBILE_LAYER_MAP[value]);
-                    }}
+                    onClick={() => handleViewChange(value)}
                     className={cn(
                       "flex items-center gap-2",
                       view === value && "bg-muted font-medium"

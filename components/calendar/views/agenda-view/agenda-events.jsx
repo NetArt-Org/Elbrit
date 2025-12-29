@@ -17,6 +17,7 @@ import {
     CommandList,
   } from "@/components/ui/command";
   import { useMemo } from "react";
+  import { useMediaQuery } from "@/components/calendar/hooks";
   import { motion } from "framer-motion";
   import { cn } from "@/lib/utils";
   import { useCalendar } from "@/components/calendar/contexts/calendar-context";
@@ -30,6 +31,7 @@ import {
     toCapitalize,navigateDate
   } from "@/components/calendar/helpers";
   import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+import { CalendarDragHandle } from "../../mobile/CalendarDragHandle";
   
   export const AgendaEvents = ({ scope = "all" }) => {
     const {
@@ -40,6 +42,7 @@ import {
       selectedDate,setSelectedDate,setActiveDate
     } = useCalendar();
     const SWIPE_THRESHOLD = 80;
+    const isMobile = useMediaQuery("(max-width: 768px)");
     const handleAgendaDragEnd = (_, info) => {
       const offsetX = info.offset.x;
     
@@ -116,8 +119,9 @@ import {
       );
       return entries;
     }, [agendaEvents, selectedDate, agendaModeGroupBy, scope]);
-  
     return (
+      <>
+      {isMobile && <CalendarDragHandle />}
       <motion.div
   drag="x"
   dragConstraints={{ left: 0, right: 0 }}
@@ -194,6 +198,7 @@ import {
         </CommandList>
       </Command>
       </motion.div>
+      </>
     );
   };
   

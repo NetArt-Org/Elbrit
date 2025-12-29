@@ -12,105 +12,50 @@ import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/
 import { CalendarYearView } from "@/components/calendar/views/year-view/calendar-year-view";
 import MobileAddEventBar from "./mobile/MobileAddEventBar";
 import { useMediaQuery } from "./hooks";
-import { getNextMobileLayer } from "./mobile/mobile-navigation";
 import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
+import { CalendarDragHandle } from "./mobile/CalendarDragHandle";
+
 export function CalendarBody() {
-	const { view, events, mobileLayer,
-		setMobileLayer, } = useCalendar();
+	const { view, events, mobileLayer } = useCalendar();
 	const isMobile = useMediaQuery("(max-width: 768px)");
-	const singleDayEvents = events.filter((event) => {
-		const startDate = parseISO(event.startDate);
-		const endDate = parseISO(event.endDate);
-		return isSameDay(startDate, endDate);
-	});
-	const SWIPE_Y_THRESHOLD = 80;
-	const multiDayEvents = events.filter((event) => {
-		const startDate = parseISO(event.startDate);
-		const endDate = parseISO(event.endDate);
-		return !isSameDay(startDate, endDate);
-	});
-	const handleVerticalDragEnd = (_, info) => {
-		if (!isMobile) return;
-	
-		if (info.offset.y < -SWIPE_Y_THRESHOLD) {
-		  setMobileLayer((prev) => getNextMobileLayer(prev, "up"));
-		}
-	
-		if (info.offset.y > SWIPE_Y_THRESHOLD) {
-		  setMobileLayer((prev) => getNextMobileLayer(prev, "down"));
-		}
-	  };
-	return (
-		// <div className="w-full h-[80vh] md:h-full md:pb-[80px] overflow-hidden relative">
-		<motion.div
-		drag={isMobile ? "y" : false}
-		dragConstraints={{ top: 0, bottom: 0 }}
-		dragElastic={0.15}
-		onDragEnd={handleVerticalDragEnd}
-		className="flex-1 min-h-0 flex flex-col md:pb-[80px] overflow-hidden relative w-full"
-	  >
-			<motion.div className="h-full overflow-hidden"
-				key={view}
-				initial="initial"
-				animate="animate"
-				exit="exit"
-				variants={fadeIn}
-				transition={transition}>
-					{isMobile ? (
-        <>
-          {mobileLayer === "year" && <CalendarYearView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
-
-          {(mobileLayer === "month-expanded" ||
-            mobileLayer === "month-agenda") && (
-            <CalendarMonthView
-              collapsed={mobileLayer === "month-agenda"} singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents}
-            />
-          )}
-
-          {mobileLayer === "week" && <CalendarMobileWeekAgenda singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents}/>}
-
-          {mobileLayer === "agenda" && <AgendaEvents />}
-        </>
-      ) : (
-        <>
-         	{view === "month" && (
-					<CalendarMonthView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />
-				)}
-				{view === "week" && (
-					isMobile ? (
-						<CalendarMobileWeekAgenda
-						singleDayEvents={singleDayEvents}
-						multiDayEvents={multiDayEvents}
-					  />
-					) : (
-						<CalendarWeekView
-							singleDayEvents={singleDayEvents}
-							multiDayEvents={multiDayEvents}
-						/>
-					)
-				)}
-
-				{view === "day" && (
-					<CalendarDayView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />
-				)}
-				{view === "year" && (
-					<CalendarYearView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />
-				)}
-				{view === "agenda" && (
-					<motion.div
-						key="agenda"
-						initial="initial"
-						animate="animate"
-						exit="exit"
-						variants={fadeIn}
-						transition={transition}>
-						<AgendaEvents />
-					</motion.div>
-				)}
-        </>
-      )}
-				<MobileAddEventBar />
-			</motion.div>
-		</motion.div>
+  
+	const singleDayEvents = events.filter((event) =>
+	  isSameDay(parseISO(event.startDate), parseISO(event.endDate))
 	);
-}
+  
+	const multiDayEvents = events.filter((event) =>
+	  !isSameDay(parseISO(event.startDate), parseISO(event.endDate))
+	);
+	if (!isMobile) {
+	  return (
+		<div className="flex-1 min-h-0 flex flex-col overflow-hidden relative w-full">
+		  {view === "month" && <CalendarMonthView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
+		  {view === "week" && <CalendarWeekView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
+		  {view === "day" && <CalendarDayView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
+		  {view === "year" && <CalendarYearView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
+		  {view === "agenda" && <AgendaEvents />}
+		  <MobileAddEventBar />
+		</div>
+	  );
+	}
+  
+	// MOBILE
+	return (
+	  <div className="flex-1 min-h-0 flex flex-col pb-[80px]  overflow-hidden relative w-full custom-class" >
+		{mobileLayer === "year" && <CalendarYearView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />}
+  
+		{(mobileLayer === "month-expanded" || mobileLayer === "month-agenda") && (
+		  <CalendarMonthView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />
+		)}
+  
+		{mobileLayer === "week" && (
+		  <CalendarMobileWeekAgenda singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />
+		)}
+  
+		{mobileLayer === "agenda" && <AgendaEvents />}
+  
+		<MobileAddEventBar />
+	  </div>
+	);
+  }
+  
