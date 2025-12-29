@@ -48,21 +48,21 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setEventListDate, isEventListOpen, setSelectedDate, selectedDate,activeDate, setActiveDate } = useCalendar();
+  const { setEventListDate, isEventListOpen, setSelectedDate, selectedDate, activeDate, setActiveDate } = useCalendar();
   const isSelected =
-  activeDate &&
-  startOfDay(activeDate).getTime() === startOfDay(date).getTime();
-
-const toggleDateSelection = () => {
-  const isSame =
     activeDate &&
     startOfDay(activeDate).getTime() === startOfDay(date).getTime();
 
-  setActiveDate(isSame ? null : date);
+  const toggleDateSelection = () => {
+    const isSame =
+      activeDate &&
+      startOfDay(activeDate).getTime() === startOfDay(date).getTime();
 
-  // keep navigation in sync
-  setSelectedDate(date);
-};
+    setActiveDate(isSame ? null : date);
+
+    // keep navigation in sync
+    setSelectedDate(date);
+  };
 
   // Memoize cellEvents and currentCellMonth for performance
   const { cellEvents, currentCellMonth } = useMemo(() => {
@@ -116,19 +116,18 @@ const toggleDateSelection = () => {
       className={cn(
         "flex h-full lg:min-h-[10rem] flex-col gap-1 border-l border-t transition-colors",
         isSunday(date) && "border-l-0",
-        isMobile &&
         isSelected &&
-        "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"        
+        "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"
       )}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={transition}>
-     <DroppableArea
-  date={date}
-  className="w-full h-full py-2 flex md:block pointer-events-none"
->
+      <DroppableArea
+        date={date}
+        className="w-full h-full py-2 flex md:block pointer-events-none"
+      >
         <motion.span
-            onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           className={cn(
             "h-6 px-1 text-xs font-semibold lg:px-2",
             !currentMonth && "opacity-20",
@@ -212,7 +211,24 @@ const toggleDateSelection = () => {
     renderEventAtPosition,
   ]);
   if (!isMobile || !currentMonth) {
-    return cellContent;
+    return (
+      <motion.div
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          if (!currentMonth) return;
+
+          const isSame =
+            activeDate &&
+            startOfDay(activeDate).getTime() === startOfDay(date).getTime();
+
+          setActiveDate(isSame ? null : date);
+          setSelectedDate(date);
+        }}
+      >
+        {cellContent}
+      </motion.div>
+    );
+
   }
   if (isMobile && currentMonth) {
     return (

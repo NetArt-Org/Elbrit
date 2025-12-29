@@ -123,10 +123,11 @@ export const AgendaEvents = ({ scope = "all" }) => {
     <>
       {isMobile && view === "agenda" && <CalendarDragHandle />}
       <motion.div
-        drag="x"
+        drag={isMobile ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.12}
-        onDragEnd={handleAgendaDragEnd}
+        onDragEnd={isMobile ? handleAgendaDragEnd : undefined}
+        className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] "
       >
         <Command className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-4 h-[80vh] bg-transparent">
           {scope === "all" && (
@@ -135,7 +136,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
             </div>
           )}
 
-          <CommandList className="max-h-max px-3 border-t">
+          <CommandList className="max-h-max px-2 border-t">
             {groupedAndSortedEvents.map(([groupKey, groupedEvents]) => (
               <CommandGroup
                 key={groupKey}
@@ -149,7 +150,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
                   <CommandItem
                     key={event.id}
                     className={cn(
-                      "mb-2 p-4 border rounded-md data-[selected=true]:bg-bg transition-all hover:cursor-pointer",
+                      "mb-2 p-2 border rounded-md data-[selected=true]:bg-bg transition-all hover:cursor-pointer",
                       {
                         [getColorClass(event.color)]: badgeVariant === "colored",
                         "hover:bg-zinc-200 dark:hover:bg-gray-900":
@@ -159,7 +160,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
                     )}
                   >
                     <EventDetailsDialog event={event}>
-                      <div className="w-full flex items-center justify-between gap-4">
+                      <div className="w-full flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           {badgeVariant === "dot" ? (
                             <EventBullet color={event.color} />
@@ -180,11 +181,11 @@ export const AgendaEvents = ({ scope = "all" }) => {
                         </div>
 
                         <div className="w-40 flex justify-center items-center gap-1">
-                          <p className="text-sm">
+                          <p className="text-xs">
                             {formatTime(event.startDate, use24HourFormat)}
                           </p>
                           <span className="text-muted-foreground">-</span>
-                          <p className="text-sm">
+                          <p className="text-xs">
                             {formatTime(event.endDate, use24HourFormat)}
                           </p>
                         </div>

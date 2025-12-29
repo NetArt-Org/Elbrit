@@ -7,7 +7,7 @@ import {
 	slideFromRight,
 	transition,
 } from "@/components/calendar/animations";
-import { useState } from "react";
+import { startOfDay,isBefore } from "date-fns";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { DateNavigator } from "@/components/calendar/header/date-navigator";
@@ -18,8 +18,16 @@ import { Settings } from "@/components/calendar/settings/settings";
 import Views from "./view-tabs";
 
 export function CalendarHeader() {
-	const { view, events } = useCalendar();
-	const [open, setOpen] = useState(false);
+	const { view, events,activeDate, selectedDate  } = useCalendar();
+	const today = startOfDay(new Date());
+
+const candidateDate = activeDate ?? selectedDate ?? null;
+
+const isPast =
+  candidateDate &&
+  isBefore(startOfDay(candidateDate), today);
+
+const startDateForDialog = isPast ? undefined : candidateDate;
 	return (
 		<div
 			className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -45,7 +53,7 @@ export function CalendarHeader() {
 				<div className="flex flex-row gap-4  lg:items-center lg:gap-1.5">
 					<UserSelect />
 					<div className="hidden md:block">
-						<AddEditEventDialog>
+						<AddEditEventDialog startDate={startDateForDialog}>
 							<Button>
 								<Plus className="h-4 w-4" />
 								Add Event
