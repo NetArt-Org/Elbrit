@@ -9,7 +9,6 @@ import { getEvents, getUsers } from "@/components/calendar/requests";
 import { MobileCalendarHeader } from "./mobile/mobile-calendar-header";
 import { useMediaQuery } from "@/components/calendar/hooks";
 import { AgendaSidebar } from "./views/agenda-view/agenda-sidebar";
-import { MobileGestureLayerWrapper } from "@/components/calendar/mobile/MobileGestureLayerWrapper";
 export function Calendar() {
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);
@@ -55,13 +54,7 @@ export function Calendar() {
             )}
 
             <main className="flex-1 overflow-hidden">
-              {isMobile ? (
-                <MobileGestureLayerWrapper>
-                  <CalendarBody />
-                </MobileGestureLayerWrapper>
-              ) : (
-                <CalendarBody />
-              )}
+            <CalendarBody />
             </main>
           </div>
         </div>

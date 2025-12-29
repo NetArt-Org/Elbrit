@@ -2,18 +2,9 @@
 
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
-import { cn } from "@/lib/utils";
 
 export function AgendaSidebar() {
   const {activeDate, view } = useCalendar();
-
-  const scopeMap = {
-    agenda: "all",
-    day: "day",
-    week: "week",
-    month: "month",
-    year: "all",
-  };
 
   const scope =
   view === "month"
