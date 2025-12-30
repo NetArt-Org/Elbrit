@@ -4,7 +4,7 @@ import {
   getYear,
   isSameDay,
   isSameMonth,
-  parseISO,
+  parseISO,startOfMonth,
   isWithinInterval,
 } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
@@ -32,7 +32,7 @@ export function CalendarYearView({ singleDayEvents, multiDayEvents }) {
     selectedDate,
     setSelectedDate,
     setView,
-    setMobileLayer,
+    setMobileLayer,setActiveDate
   } = useCalendar();
 
   const currentYear = getYear(selectedDate);
@@ -78,11 +78,15 @@ export function CalendarYearView({ singleDayEvents, multiDayEvents }) {
                 transition={{ delay: monthIndex * 0.04, ...transition }}
                 onClick={() => {
                   startTransition(() => {
-                    setSelectedDate(monthDate);
+                    const firstDayOfMonth = startOfMonth(monthDate);
+                
+                    setSelectedDate(firstDayOfMonth);
+                    setActiveDate(firstDayOfMonth); // 🔑 IMPORTANT
                     setView("month");
-                    setMobileLayer("month-expanded"); // 🔥 REQUIRED
+                    setMobileLayer("month-expanded");
                   });
                 }}
+                
               >
                 <div className="px-3 py-2 text-center font-semibold text-sm sm:text-base">
                   {month}
