@@ -85,7 +85,14 @@ export function UserSelect() {
 </PopoverTrigger>
 
 
-			<PopoverContent align="end" className="p-2 w-56">
+<PopoverContent
+	side="bottom"
+	align="start"
+	sideOffset={4}
+	avoidCollisions={false}
+	portalled={false}
+	className="p-2 w-[var(--radix-popover-trigger-width)]"
+>
 				{/* ✅ ALL */}
 				<div
 					className="flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-muted rounded-md"
