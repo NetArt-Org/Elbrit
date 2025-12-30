@@ -107,12 +107,11 @@ export const AgendaEvents = ({ scope = "all" }) => {
         }
   
         // 📆 WEEK swipe
-        setSelectedDate((prev) => {
-          const next = navigateDate(prev, "week", direction);
-          setActiveDate(next);
-          return next;
-        });
-        return;
+        // 📅 MONTH swipe — DO NOT create activeDate
+      setSelectedDate((prev) =>
+        navigateDate(prev, "week", direction)
+      );
+      return;
       }
   
       /* ============================
@@ -132,11 +131,9 @@ export const AgendaEvents = ({ scope = "all" }) => {
         }
   
         // 📅 MONTH swipe
-        setSelectedDate((prev) => {
-          const next = navigateDate(prev, "month", direction);
-          setActiveDate(next);
-          return next;
-        });
+        setSelectedDate((prev) =>
+          navigateDate(prev, "month", direction)
+        );
         return;
       }
     });
@@ -224,8 +221,8 @@ export const AgendaEvents = ({ scope = "all" }) => {
                   )}
                 >
                   <EventDetailsDialog event={event}>
-                    <div className="flex justify-between gap-2">
-                      <div className="flex gap-2 items-center">
+                    <div className="flex justify-between gap-2 w-full">
+                      <div className="flex gap-2 items-center w-full">
                         {badgeVariant === "dot" ? (
                           <EventBullet color={event.color} />
                         ) : (
@@ -237,14 +234,17 @@ export const AgendaEvents = ({ scope = "all" }) => {
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        <div>
-                          <p className="font-medium">{event.title}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-1">
+                        <div className="w-full">
+                          <p className="font-medium text-sm">{event.title}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
                             {event.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {event.user?.name}
                           </p>
                         </div>
                       </div>
-                      <div className="text-xs">
+                      <div className="text-xs flex items-center">
                         {formatTime(event.startDate, use24HourFormat)} –{" "}
                         {formatTime(event.endDate, use24HourFormat)}
                       </div>

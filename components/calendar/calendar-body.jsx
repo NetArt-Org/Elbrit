@@ -1,93 +1,107 @@
 "use client";
 
+import React, { useMemo } from "react";
 import { isSameDay, parseISO } from "date-fns";
-import React from "react";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
-import { CalendarMonthView } from "@/components/calendar/views/month-view/calendar-month-view";
-import { CalendarDayView } from "@/components/calendar/views/week-and-day-view/calendar-day-view";
-import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/calendar-week-view";
-import { CalendarYearView } from "@/components/calendar/views/year-view/calendar-year-view";
-import MobileAddEventBar from "./mobile/MobileAddEventBar";
 import { useMediaQuery } from "./hooks";
-import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
+
+import { CalendarMonthView } from "@/components/calendar/views/month-view/calendar-month-view";
+import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/calendar-week-view";
+import { CalendarDayView } from "@/components/calendar/views/week-and-day-view/calendar-day-view";
+import { CalendarYearView } from "@/components/calendar/views/year-view/calendar-year-view";
+
+import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
 import { AgendaEventsMobile } from "./views/agenda-view/AgendaEventsMobile";
+import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
+
+import MobileAddEventBar from "./mobile/MobileAddEventBar";
 
 export function CalendarBody() {
   const { view, events, mobileLayer } = useCalendar();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const singleDayEvents = events.filter((event) =>
-    isSameDay(parseISO(event.startDate), parseISO(event.endDate))
-  );
+  /* ===============================
+     EVENT NORMALIZATION
+  =============================== */
+  const { singleDayEvents, multiDayEvents } = useMemo(() => {
+    const single = [];
+    const multi = [];
 
-  const multiDayEvents = events.filter(
-    (event) =>
-      !isSameDay(parseISO(event.startDate), parseISO(event.endDate))
-  );
+    for (const event of events) {
+      const isSingleDay = isSameDay(
+        parseISO(event.startDate),
+        parseISO(event.endDate)
+      );
 
-  // DESKTOP — unchanged
+      isSingleDay ? single.push(event) : multi.push(event);
+    }
+
+    return { singleDayEvents: single, multiDayEvents: multi };
+  }, [events]);
+
+  const sharedProps = { singleDayEvents, multiDayEvents };
+
+  /* ===============================
+     SHARED VIEWS (DESKTOP + MOBILE)
+  =============================== */
+  const sharedViews = {
+    month: <CalendarMonthView {...sharedProps} />,
+    year: <CalendarYearView {...sharedProps} />,
+  };
+
+  /* ===============================
+     DESKTOP-SPECIFIC VIEWS
+  =============================== */
+  const desktopViews = {
+    week: <CalendarWeekView {...sharedProps} />,
+    day: <CalendarDayView {...sharedProps} />,
+    agenda: <AgendaEvents />,
+  };
+
+  /* ===============================
+     MOBILE-SPECIFIC VIEWS
+  =============================== */
+  const mobileViews = {
+    week: <CalendarMobileWeekAgenda {...sharedProps} />,
+    agenda: <AgendaEventsMobile />,
+  };
+
+  /* ===============================
+     VIEW RESOLUTION
+  =============================== */
+  const resolveDesktopView = () =>
+    sharedViews[view] ??
+    desktopViews[view] ??
+    null;
+
+  const resolveMobileView = () => {
+    if (mobileLayer === "month-expanded" || mobileLayer === "month-agenda") {
+      return sharedViews.month;
+    }
+
+    return (
+      sharedViews[mobileLayer] ??
+      mobileViews[mobileLayer] ??
+      null
+    );
+  };
+
+  /* ===============================
+     RENDER
+  =============================== */
   if (!isMobile) {
     return (
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative w-full">
-        {view === "month" && (
-          <CalendarMonthView
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-        {view === "week" && (
-          <CalendarWeekView
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-        {view === "day" && (
-          <CalendarDayView
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-        {view === "year" && (
-          <CalendarYearView
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-        {view === "agenda" && <AgendaEvents />}
+        {resolveDesktopView()}
         <MobileAddEventBar />
       </div>
     );
   }
 
-  // 📱 MOBILE — wrapped with vertical swipe
   return (
-      <div className="flex-1 min-h-0 flex flex-col h-full pb-[80px] overflow-hidden relative w-full custom-class">
-        {mobileLayer === "year" && (
-          <CalendarYearView
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-
-        {(mobileLayer === "month-expanded" ||
-          mobileLayer === "month-agenda") && (
-          <CalendarMonthView
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-
-        {mobileLayer === "week" && (
-          <CalendarMobileWeekAgenda
-            singleDayEvents={singleDayEvents}
-            multiDayEvents={multiDayEvents}
-          />
-        )}
-
-        {mobileLayer === "agenda" && <AgendaEventsMobile />}
-
-        <MobileAddEventBar />
-      </div>
+    <div className="flex-1 min-h-0 flex flex-col h-full pb-[80px] overflow-hidden relative w-full custom-class">
+      {resolveMobileView()}
+      <MobileAddEventBar />
+    </div>
   );
 }

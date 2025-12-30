@@ -130,7 +130,7 @@ export const AgendaEventsMobile = () => {
                   )}
                 >
                   <EventDetailsDialog event={event}>
-                    <div className="flex justify-between gap-2">
+                    <div className="flex justify-between gap-2 w-full">
                       <div className="flex gap-2 items-center">
                         {badgeVariant === "dot" ? (
                           <EventBullet color={event.color} />
@@ -143,14 +143,17 @@ export const AgendaEventsMobile = () => {
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        <div>
-                          <p className="font-medium">{event.title}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-1">
+                        <div className="w-full">
+                          <p className="font-medium text-sm">{event.title}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
                             {event.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {event.user?.name}
                           </p>
                         </div>
                       </div>
-                      <div className="text-xs">
+                      <div className="text-xs flex items-center">
                         {formatTime(event.startDate, use24HourFormat)} –{" "}
                         {formatTime(event.endDate, use24HourFormat)}
                       </div>
