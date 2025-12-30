@@ -21,8 +21,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarVerticalSwipeLayer } from "../../mobile/CalendarVerticalSwipeLayer";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+const PULL_THRESHOLD = 70;
 
 export const AgendaEventsMobile = () => {
   const {
@@ -30,17 +31,53 @@ export const AgendaEventsMobile = () => {
     use24HourFormat,
     badgeVariant,
     agendaModeGroupBy,
+    setMobileLayer,
+    setView,
   } = useCalendar();
+
   const scrollRef = useRef(null);
+  const startY = useRef(0);
+  const pulling = useRef(false);
   const [isAtTop, setIsAtTop] = useState(true);
-  
+
+  /* ===============================
+     SCROLL TRACKING
+  =============================== */
   const handleScroll = () => {
     if (!scrollRef.current) return;
     setIsAtTop(scrollRef.current.scrollTop === 0);
   };
-    
+
   /* ===============================
-     GROUP ALL EVENTS (PURE AGENDA)
+     TOUCH CAPTURE (CRITICAL)
+  =============================== */
+  const onTouchStartCapture = (e) => {
+    if (!isAtTop) return;
+    startY.current = e.touches[0].clientY;
+    pulling.current = false;
+  };
+
+  const onTouchMoveCapture = (e) => {
+    if (!isAtTop) return;
+    const deltaY = e.touches[0].clientY - startY.current;
+    if (deltaY > 10) pulling.current = true;
+  };
+
+  const onTouchEndCapture = (e) => {
+    if (!isAtTop || !pulling.current) return;
+
+    const deltaY =
+      e.changedTouches[0].clientY - startY.current;
+
+    if (deltaY < PULL_THRESHOLD) return;
+
+    // ✅ SWITCH TO WEEK
+    setMobileLayer("week");
+    setView("week");
+  };
+
+  /* ===============================
+     GROUP EVENTS
   =============================== */
   const agendaEvents = useMemo(() => {
     return Object.groupBy(events, (event) =>
@@ -56,19 +93,23 @@ export const AgendaEventsMobile = () => {
     );
   }, [agendaEvents]);
 
-  /* ===============================
-     RENDER (NO MOTION, NO SWIPE)
-  =============================== */
   return (
-    <CalendarVerticalSwipeLayer>
-    <div className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-      <Command className="overflow-y-scroll py-4 h-[80vh] bg-transparent"    ref={scrollRef}
-        onScroll={handleScroll}>
+    <div
+      className="[&::-webkit-scrollbar]:hidden"
+      onTouchStartCapture={onTouchStartCapture}
+      onTouchMoveCapture={onTouchMoveCapture}
+      onTouchEndCapture={onTouchEndCapture}
+    >
+      <Command
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="overflow-y-scroll py-4 h-[80vh] bg-transparent"
+      >
         <div className="mb-4 mx-4">
           <CommandInput placeholder="Type a command or search..." />
         </div>
 
-        <CommandList className="max-h-max px-2 border-t">
+        <CommandList className="px-2 border-t max-h-none overflow-visible">
           {groupedAndSortedEvents.map(([groupKey, groupedEvents]) => (
             <CommandGroup
               key={groupKey}
@@ -82,23 +123,19 @@ export const AgendaEventsMobile = () => {
                 <CommandItem
                   key={event.id}
                   className={cn(
-                    "mb-2 p-2 border rounded-md transition-all",
-                    {
-                      [getColorClass(event.color)]:
-                        badgeVariant === "colored",
-                      "hover:bg-zinc-200 dark:hover:bg-gray-900":
-                        badgeVariant === "dot",
-                    }
+                    "mb-2 p-2 border rounded-md",
+                    badgeVariant === "colored"
+                      ? getColorClass(event.color)
+                      : "hover:bg-zinc-200 dark:hover:bg-gray-900"
                   )}
                 >
                   <EventDetailsDialog event={event}>
-                    <div className="w-full flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex justify-between gap-2">
+                      <div className="flex gap-2 items-center">
                         {badgeVariant === "dot" ? (
                           <EventBullet color={event.color} />
                         ) : (
                           <Avatar>
-                            <AvatarImage src="" />
                             <AvatarFallback
                               className={getBgColor(event.color)}
                             >
@@ -106,23 +143,16 @@ export const AgendaEventsMobile = () => {
                             </AvatarFallback>
                           </Avatar>
                         )}
-
                         <div>
                           <p className="font-medium">{event.title}</p>
-                          <p className="text-sm text-muted-foreground line-clamp-1 w-32">
+                          <p className="text-sm text-muted-foreground line-clamp-1">
                             {event.description}
                           </p>
                         </div>
                       </div>
-
-                      <div className="flex gap-1 text-xs">
-                        <span>
-                          {formatTime(event.startDate, use24HourFormat)}
-                        </span>
-                        <span>-</span>
-                        <span>
-                          {formatTime(event.endDate, use24HourFormat)}
-                        </span>
+                      <div className="text-xs">
+                        {formatTime(event.startDate, use24HourFormat)} –{" "}
+                        {formatTime(event.endDate, use24HourFormat)}
                       </div>
                     </div>
                   </EventDetailsDialog>
@@ -135,6 +165,5 @@ export const AgendaEventsMobile = () => {
         </CommandList>
       </Command>
     </div>
-    </CalendarVerticalSwipeLayer>
   );
 };

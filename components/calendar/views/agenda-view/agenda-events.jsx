@@ -203,7 +203,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
           </div>
         )}
 
-        <CommandList className="px-2 border-t">
+        <CommandList className="px-2 border-t max-h-none overflow-visible">
           {groupedAndSortedEvents.map(([groupKey, groupedEvents]) => (
             <CommandGroup
               key={groupKey}
