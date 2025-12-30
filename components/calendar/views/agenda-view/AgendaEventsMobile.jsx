@@ -60,7 +60,7 @@ export const AgendaEventsMobile = () => {
      RENDER (NO MOTION, NO SWIPE)
   =============================== */
   return (
-    <CalendarVerticalSwipeLayer enabled={isAtTop}>
+    <CalendarVerticalSwipeLayer>
     <div className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <Command className="overflow-y-scroll py-4 h-[80vh] bg-transparent"    ref={scrollRef}
         onScroll={handleScroll}>
