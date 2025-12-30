@@ -18,6 +18,7 @@ import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { EventListDialog } from "@/components/calendar/dialogs/events-list-dialog";
 import { getCalendarCells, navigateDate } from "@/components/calendar/helpers";
 import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+import { CalendarVerticalSwipeLayer } from "../../mobile/CalendarVerticalSwipeLayer";
 
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -49,6 +50,7 @@ export function CalendarYearView({ singleDayEvents, multiDayEvents }) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 sm:p-6">
+      <CalendarVerticalSwipeLayer>
       <AnimatePresence initial={false}>
         <motion.div
           key={currentYear}
@@ -149,6 +151,7 @@ export function CalendarYearView({ singleDayEvents, multiDayEvents }) {
           })}
         </motion.div>
       </AnimatePresence>
+      </CalendarVerticalSwipeLayer>
     </div>
   );
 }

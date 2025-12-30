@@ -1,18 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useMotionValue, animate } from "framer-motion";
+import { useRef } from "react";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 
-const DRAG_THRESHOLD = 70;
+const DRAG_THRESHOLD = 60;
 
-/**
- * Vertical layer order:
- * year
- * month-expanded
- * month-agenda
- * week
- * agenda
- */
 const ORDER = [
   "year",
   "month-expanded",
@@ -29,15 +22,25 @@ const LAYER_TO_VIEW = {
   agenda: "agenda",
 };
 
-export function CalendarVerticalSwipeLayer({ children }) {
+export function CalendarVerticalSwipeLayer({ children, style, enabled = true }) {
   const { mobileLayer, setMobileLayer, setView } = useCalendar();
+  const y = useMotionValue(0);
+  const lockedAxisRef = useRef(null);
+
+  const handleDirectionLock = (axis) => {
+    lockedAxisRef.current = axis;
+  };
 
   const handleDragEnd = (_, info) => {
-    const offsetY = info.offset.y;
-    const offsetX = info.offset.x;
+    const axis = lockedAxisRef.current;
+    lockedAxisRef.current = null;
 
-    // ❌ Ignore horizontal intent
-    if (Math.abs(offsetY) < Math.abs(offsetX)) return;
+    animate(y, 0, { duration: 0.25, ease: "easeOut" });
+
+    if (!enabled) return;
+    if (axis !== "y") return;
+
+    const offsetY = info.offset.y;
     if (Math.abs(offsetY) < DRAG_THRESHOLD) return;
 
     const currentIndex = ORDER.indexOf(mobileLayer);
@@ -45,13 +48,9 @@ export function CalendarVerticalSwipeLayer({ children }) {
 
     let nextIndex = currentIndex;
 
-    // Swipe UP → deeper view
     if (offsetY < 0) {
       nextIndex = Math.min(currentIndex + 1, ORDER.length - 1);
-    }
-
-    // Swipe DOWN → higher view
-    if (offsetY > 0) {
+    } else {
       nextIndex = Math.max(currentIndex - 1, 0);
     }
 
@@ -59,17 +58,22 @@ export function CalendarVerticalSwipeLayer({ children }) {
 
     const nextLayer = ORDER[nextIndex];
 
-    setMobileLayer(nextLayer);
-    setView(LAYER_TO_VIEW[nextLayer]);
+    requestAnimationFrame(() => {
+      setMobileLayer(nextLayer);
+      setView(LAYER_TO_VIEW[nextLayer]);
+    });
   };
 
   return (
     <motion.div
-      drag="y"
+      drag={enabled ? "y" : false}
+      dragDirectionLock
+      onDirectionLock={enabled ? handleDirectionLock : undefined}
+      style={{ y, ...style }}
       dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={0.08}
-      onDragEnd={handleDragEnd}
-      className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
+      dragElastic={0.15}
+      dragMomentum={false}
+      onDragEnd={enabled ? handleDragEnd : undefined}
     >
       {children}
     </motion.div>

@@ -9,21 +9,11 @@ import {
   endOfWeek,
   isWithinInterval,
 } from "date-fns";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { useMemo } from "react";
-import { useMediaQuery } from "@/components/calendar/hooks";
+import { useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
+import { useMediaQuery } from "@/components/calendar/hooks";
 import {
   formatTime,
   getBgColor,
@@ -33,7 +23,17 @@ import {
   toCapitalize,
   navigateDate,
 } from "@/components/calendar/helpers";
+import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
 import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const SWIPE_THRESHOLD = 80;
 
@@ -45,45 +45,64 @@ export const AgendaEvents = ({ scope = "all" }) => {
     agendaModeGroupBy,
     selectedDate,
     setSelectedDate,
+    activeDate,
     setActiveDate,
+    view,
     mobileLayer,
   } = useCalendar();
 
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const lockedAxisRef = useRef(null);
 
-  /* --------------------------------
-     Disable swipe on full agenda screen
-  -------------------------------- */
-  const isAgendaScreen =
-    scope === "agenda" || mobileLayer === "agenda";
-
-  /* --------------------------------
-     Swipe handling (day/week/month only)
-  -------------------------------- */
+  /* ===============================
+     HORIZONTAL SWIPE HANDLER
+  =============================== */
   const handleAgendaDragEnd = (_, info) => {
-    if (isAgendaScreen) return;
+    const axis = lockedAxisRef.current;
+    lockedAxisRef.current = null;
 
-    const offsetX = info.offset.x;
-    if (Math.abs(offsetX) < SWIPE_THRESHOLD) return;
+    if (axis !== "x") return;
+    if (Math.abs(info.offset.x) < SWIPE_THRESHOLD) return;
 
-    const direction = offsetX < 0 ? "next" : "previous";
+    const direction = info.offset.x < 0 ? "next" : "previous";
 
     setSelectedDate((prev) => {
-      const nextDate = navigateDate(prev, scope, direction);
+      let nextDate;
 
-      if (scope === "day") {
+      /* -----------------------------
+         DAY PRIORITY
+      ----------------------------- */
+      if (activeDate || selectedDate) {
+        nextDate = navigateDate(prev, "day", direction);
         setActiveDate(nextDate);
-      } else {
-        setActiveDate(null);
+        return nextDate;
       }
 
+      /* -----------------------------
+         CONTEXT AWARE FALLBACK
+      ----------------------------- */
+      if (view === "week") {
+        nextDate = navigateDate(prev, "week", direction);
+        setActiveDate(startOfWeek(nextDate));
+        return nextDate;
+      }
+
+      if (view === "month") {
+        nextDate = navigateDate(prev, "month", direction);
+        setActiveDate(nextDate);
+        return nextDate;
+      }
+
+      /* Agenda mobile fallback */
+      nextDate = navigateDate(prev, "day", direction);
+      setActiveDate(nextDate);
       return nextDate;
     });
   };
 
-  /* --------------------------------
-     Scope filtering
-  -------------------------------- */
+  /* ===============================
+     EVENT FILTERING
+  =============================== */
   const scopedEvents = useMemo(() => {
     if (scope === "day") {
       return events.filter((event) =>
@@ -95,11 +114,11 @@ export const AgendaEvents = ({ scope = "all" }) => {
     }
 
     if (scope === "week") {
-      const start = startOfWeek(selectedDate);
-      const end = endOfWeek(selectedDate);
-
       return events.filter((event) =>
-        isWithinInterval(parseISO(event.startDate), { start, end })
+        isWithinInterval(parseISO(event.startDate), {
+          start: startOfWeek(selectedDate),
+          end: endOfWeek(selectedDate),
+        })
       );
     }
 
@@ -110,9 +129,9 @@ export const AgendaEvents = ({ scope = "all" }) => {
     return events;
   }, [events, selectedDate, scope]);
 
-  /* --------------------------------
-     Group events
-  -------------------------------- */
+  /* ===============================
+     GROUP EVENTS
+  =============================== */
   const agendaEvents = Object.groupBy(scopedEvents, (event) =>
     agendaModeGroupBy === "date"
       ? format(parseISO(event.startDate), "yyyy-MM-dd")
@@ -125,16 +144,18 @@ export const AgendaEvents = ({ scope = "all" }) => {
     );
   }, [agendaEvents]);
 
+  /* ===============================
+     RENDER
+  =============================== */
   return (
     <motion.div
-      drag={isMobile && !isAgendaScreen ? "x" : false}
-      dragConstraints={
-        isMobile && !isAgendaScreen ? { left: 0, right: 0 } : undefined
-      }
-      dragElastic={isMobile && !isAgendaScreen ? 0.12 : 0}
-      onDragEnd={
-        isMobile && !isAgendaScreen ? handleAgendaDragEnd : undefined
-      }
+      drag={isMobile ? "x" : false}
+      dragDirectionLock
+      onDirectionLock={(axis) => (lockedAxisRef.current = axis)}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.12}
+      onDragEnd={isMobile ? handleAgendaDragEnd : undefined}
+      style={{ touchAction: "pan-y" }}
       className="[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
     >
       <Command className="overflow-y-scroll py-4 h-[80vh] bg-transparent">
@@ -158,14 +179,12 @@ export const AgendaEvents = ({ scope = "all" }) => {
                 <CommandItem
                   key={event.id}
                   className={cn(
-                    "mb-2 p-2 border rounded-md transition-all hover:cursor-pointer",
+                    "mb-2 p-2 border rounded-md transition-all",
                     {
                       [getColorClass(event.color)]:
                         badgeVariant === "colored",
                       "hover:bg-zinc-200 dark:hover:bg-gray-900":
                         badgeVariant === "dot",
-                      "hover:opacity-60":
-                        badgeVariant === "colored",
                     }
                   )}
                 >
@@ -176,37 +195,25 @@ export const AgendaEvents = ({ scope = "all" }) => {
                           <EventBullet color={event.color} />
                         ) : (
                           <Avatar>
-                            <AvatarImage src="" alt="" />
-                            <AvatarFallback
-                              className={getBgColor(event.color)}
-                            >
+                            <AvatarImage src="" />
+                            <AvatarFallback className={getBgColor(event.color)}>
                               {getFirstLetters(event.title)}
                             </AvatarFallback>
                           </Avatar>
                         )}
 
-                        <div className="flex flex-col">
+                        <div>
                           <p className="font-medium">{event.title}</p>
-                          <p className="text-muted-foreground text-sm line-clamp-1 w-1/3">
+                          <p className="text-sm text-muted-foreground line-clamp-1 w-32">
                             {event.description}
                           </p>
                         </div>
                       </div>
 
-                      <div className="w-40 flex justify-center items-center gap-1">
-                        <p className="text-xs">
-                          {formatTime(
-                            event.startDate,
-                            use24HourFormat
-                          )}
-                        </p>
-                        <span className="text-muted-foreground">-</span>
-                        <p className="text-xs">
-                          {formatTime(
-                            event.endDate,
-                            use24HourFormat
-                          )}
-                        </p>
+                      <div className="flex gap-1 text-xs">
+                        <span>{formatTime(event.startDate, use24HourFormat)}</span>
+                        <span>-</span>
+                        <span>{formatTime(event.endDate, use24HourFormat)}</span>
                       </div>
                     </div>
                   </EventDetailsDialog>

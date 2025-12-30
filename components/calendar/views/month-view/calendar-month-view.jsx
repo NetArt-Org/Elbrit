@@ -17,6 +17,7 @@ import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
 import { useMediaQuery } from "@/components/calendar/hooks";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+import { CalendarVerticalSwipeLayer } from "../../mobile/CalendarVerticalSwipeLayer";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SWIPE_THRESHOLD = 80;
@@ -102,7 +103,7 @@ export function CalendarMonthView({
     >
       <motion.div
         className="overflow-hidden"
-        animate={{ height: isCollapsed ? "50%" : "100%" }}
+        animate={{ height: isCollapsed ? "70%" : "100%" }}
       >
         <div className="grid grid-cols-7">
           {WEEK_DAYS.map((day, index) => (
@@ -119,8 +120,9 @@ export function CalendarMonthView({
             </motion.div>
           ))}
         </div>
-
+    
         {/* Swipeable month grid */}
+        <CalendarVerticalSwipeLayer style={{height:"100%"}}>
         <AnimatePresence initial={false}>
           <motion.div
             variants={SwipeFadeVariants}
@@ -133,6 +135,7 @@ export function CalendarMonthView({
             onDragEnd={handleDragEnd}
             className="grid grid-cols-7 grid-rows-6 h-full min-h-0"
           >
+            {/* <CalendarVerticalSwipeLayer> */}
             {cells.map((cell, index) => (
               <DayCell
                 key={index}
@@ -141,8 +144,10 @@ export function CalendarMonthView({
                 eventPositions={eventPositions}
               />
             ))}
+            {/* </CalendarVerticalSwipeLayer> */}
           </motion.div>
         </AnimatePresence>
+        </CalendarVerticalSwipeLayer>
       </motion.div>
       {!isMobile && <EventListDialog />}
 

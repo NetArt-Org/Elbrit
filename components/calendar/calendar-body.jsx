@@ -11,7 +11,7 @@ import { CalendarYearView } from "@/components/calendar/views/year-view/calendar
 import MobileAddEventBar from "./mobile/MobileAddEventBar";
 import { useMediaQuery } from "./hooks";
 import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
-import { CalendarVerticalSwipeLayer } from "@/components/calendar/mobile/CalendarVerticalSwipeLayer";
+import { AgendaEventsMobile } from "./views/agenda-view/AgendaEventsMobile";
 
 export function CalendarBody() {
   const { view, events, mobileLayer } = useCalendar();
@@ -62,7 +62,6 @@ export function CalendarBody() {
 
   // 📱 MOBILE — wrapped with vertical swipe
   return (
-    <CalendarVerticalSwipeLayer>
       <div className="flex-1 min-h-0 flex flex-col h-full pb-[80px] overflow-hidden relative w-full custom-class">
         {mobileLayer === "year" && (
           <CalendarYearView
@@ -86,10 +85,9 @@ export function CalendarBody() {
           />
         )}
 
-        {mobileLayer === "agenda" && <AgendaEvents />}
+        {mobileLayer === "agenda" && <AgendaEventsMobile />}
 
         <MobileAddEventBar />
       </div>
-    </CalendarVerticalSwipeLayer>
   );
 }

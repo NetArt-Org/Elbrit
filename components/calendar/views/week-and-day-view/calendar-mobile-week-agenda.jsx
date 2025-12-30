@@ -15,7 +15,7 @@ import {
 import { DayCell } from "@/components/calendar/views/month-view/day-cell";
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
 import { useMediaQuery } from "../../hooks";
-
+import { CalendarVerticalSwipeLayer } from "@/components/calendar/mobile/CalendarVerticalSwipeLayer";
 const SWIPE_THRESHOLD = 80;
 
 export function CalendarMobileWeekAgenda({
@@ -99,6 +99,7 @@ export function CalendarMobileWeekAgenda({
   return (
     <div className="flex flex-col h-[90vh] overflow-hidden">
       {/* Week day cells */}
+      <CalendarVerticalSwipeLayer>
       <AnimatePresence initial={false}>
       <div className="grid grid-cols-7">
 				{WEEK_DAYS.map((day, index) => (
@@ -134,6 +135,7 @@ export function CalendarMobileWeekAgenda({
           ))}
         </motion.div>
       </AnimatePresence>
+      </CalendarVerticalSwipeLayer>
       {/* Agenda list */}
       <div className="flex-1 overflow-auto">
         <AgendaEvents scope={activeDate ? "day" : "week"} />
