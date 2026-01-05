@@ -101,22 +101,41 @@ export function CalendarProvider({
 	};
 
 	const addEvent = (event) => {
-		setAllEvents((prev) => [...prev, event]);
-		setFilteredEvents((prev) => [...prev, event]);
-	};
-
-	const updateEvent = (event) => {
-		const updated = {
-			...event,
-			startDate: new Date(event.startDate).toISOString(),
-			endDate: new Date(event.endDate).toISOString(),
+		const normalized = {
+		  ...event,
+		  startDate: new Date(event.startDate).toISOString(),
+		  endDate: new Date(event.endDate).toISOString(),
 		};
-
-		setAllEvents((prev) => prev.map((e) => (e.id === event.id ? updated : e)));
+	  
+		setAllEvents((prev) => [...prev, normalized]);
+		setFilteredEvents((prev) => [...prev, normalized]);
+	  };
+	  
+	  const updateEvent = (updatedEvent) => {
+		if (!updatedEvent.erpName) {
+		  console.warn("Attempted to update event without erpName", updatedEvent);
+		  return;
+		}
+	  
+		const normalized = {
+		  ...updatedEvent,
+		  startDate: new Date(updatedEvent.startDate).toISOString(),
+		  endDate: new Date(updatedEvent.endDate).toISOString(),
+		};
+	  
+		setAllEvents((prev) =>
+		  prev.map((e) =>
+			e.erpName === normalized.erpName ? normalized : e
+		  )
+		);
+	  
 		setFilteredEvents((prev) =>
-			prev.map((e) => (e.id === event.id ? updated : e)));
-	};
-
+		  prev.map((e) =>
+			e.erpName === normalized.erpName ? normalized : e
+		  )
+		);
+	  };
+	  
 	const removeEvent = (eventId) => {
 		setAllEvents((prev) => prev.filter((e) => e.id !== eventId));
 		setFilteredEvents((prev) => prev.filter((e) => e.id !== eventId));

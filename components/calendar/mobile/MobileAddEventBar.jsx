@@ -17,11 +17,11 @@ import { TAGS } from "@/components/calendar/mocks";
 import { motion, AnimatePresence } from "framer-motion";
 
 const ICON_MAP = {
-  birthday: Cake,
-  ooo: CalendarCheck,
-  work_location: MapPin,
-  task: CheckSquare,
-  event: Calendar,
+  Event: Calendar,
+  Birthday: Cake,
+  Meeting: CalendarCheck,
+  Visit: MapPin,
+  Other: CheckSquare,
 };
 
 export default function MobileAddEventBar({ date: propDate }) {

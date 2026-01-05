@@ -5,6 +5,9 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TAGS } from "@/components/calendar/mocks";
+import { mapFormToErpEvent } from "@/services/event.mapper";
+import { saveEvent } from "@/services/event.service";
+import { CURRENT_USER } from "@/components/auth/current-user";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
 	Form,
@@ -95,36 +98,41 @@ export function AddEditEventDialog({
 	}, [event, initialDates, defaultTag, form]);
 
 
-	const onSubmit = (values) => {
+	const onSubmit = async (values) => {
+		if (isEditing && !event?.erpName) {
+			toast.error("This event cannot be edited");
+			return;
+		}
 		try {
-			const formattedEvent = {
-				...values,
-				startDate: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
-				endDate: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
-				id: isEditing ? event.id : Math.floor(Math.random() * 1000000),
-				user: isEditing
-					? event.user
-					: {
-						id: Math.floor(Math.random() * 1000000).toString(),
-						name: "Jeraidi Yassir",
-						picturePath: null,
-					},
+			const erpDoc = mapFormToErpEvent(values, {
+				erpName: event?.erpName,
+			});
+
+			const saved = await saveEvent(erpDoc);
+
+			const calendarEvent = {
+				...(event ?? {}),
+				erpName: saved.name,
+				title: values.title,
+				description: values.description,
+				startDate: erpDoc.starts_on,
+				endDate: erpDoc.ends_on,
 				color: values.color,
+				tags: values.tags,
+				// 👇 owner is always present
+				owner: CURRENT_USER,
 			};
 
-			if (isEditing) {
-				updateEvent(formattedEvent);
-				toast.success("Event updated successfully");
-			} else {
-				addEvent(formattedEvent);
-				toast.success("Event created successfully");
-			}
+			event?.erpName ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 
+			toast.success("Event saved successfully");
 			onClose();
 			form.reset();
 		} catch (error) {
-			console.error(`Error ${isEditing ? "editing" : "adding"} event:`, error);
-			toast.error(`Failed to ${isEditing ? "edit" : "add"} event`);
+			console.error("Save Event failed:", error);
+			toast.error(
+				error.message || "Unable to save event. Please try again."
+			);
 		}
 	};
 

@@ -48,7 +48,7 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setEventListDate, isEventListOpen, setSelectedDate, selectedDate, activeDate, setActiveDate } = useCalendar();
+  const { setEventListDate, isEventListOpen, setSelectedDate,activeDate, setActiveDate } = useCalendar();
   const isSelected =
     activeDate &&
     startOfDay(activeDate).getTime() === startOfDay(date).getTime();
