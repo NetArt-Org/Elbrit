@@ -10,8 +10,7 @@ import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { useEffect, useState } from "react";
 
 export function UserSelect() {
-	const { users, selectedUserId, filterEventsBySelectedUser } = useCalendar();
-
+	const { users = [], selectedUserId, filterEventsBySelectedUser } = useCalendar();
 	// UI-only checkbox state
 	const [checkedIds, setCheckedIds] = useState([]);
 
@@ -56,7 +55,7 @@ export function UserSelect() {
 		className="w-full inline-flex items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm cursor-pointer"
 	>
 		<AvatarGroup className="flex items-center" max={3}>
-			{users.slice(0, 3).map((user) => (
+			{users.CALENDAR_USERS.slice(0, 3).map((user) => (
 				<Avatar key={user.id} className="size-5 text-xxs">
 					<AvatarImage
 						src={user.picturePath ?? undefined}
@@ -91,7 +90,7 @@ export function UserSelect() {
 	sideOffset={4}
 	avoidCollisions={false}
 	portalled={false}
-	className="p-2 w-[var(--radix-popover-trigger-width)]"
+	className="p-2 w-[var(--radix-popover-trigger-width)] md:w-full"
 >
 				{/* ✅ ALL */}
 				<div
@@ -103,7 +102,7 @@ export function UserSelect() {
 				</div>
 
 				{/* USERS */}
-				{users.map((user) => {
+				{users.CALENDAR_USERS.map((user) => {
 					const checked = checkedIds.includes(user.id);
 
 					return (

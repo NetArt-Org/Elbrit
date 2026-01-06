@@ -18,9 +18,9 @@ export function mapFormToErpEvent(values, options = {}) {
     event_category: values.tags,
     color: COLOR_HEX_MAP[values.color] ?? COLOR_HEX_MAP.blue,
     all_day: 0,
-    event_type: "Private",
+    event_type: "Public",
     status: "Open",
-    docstatus: 1,
+    docstatus: 0,
   };
 
   // Only include name for UPDATE

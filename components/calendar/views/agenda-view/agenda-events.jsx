@@ -240,7 +240,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
                             {event.description}
                           </p>
                           <p className="text-xs text-muted-foreground line-clamp-1">
-                            {event.user?.name}
+                            {event.owner?.name}
                           </p>
                         </div>
                       </div>

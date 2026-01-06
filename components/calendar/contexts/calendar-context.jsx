@@ -1,7 +1,7 @@
 "use client";;
 import { createContext, useContext, useState } from "react";
 import { useLocalStorage } from "@/components/calendar/hooks";
-
+import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",
 	view: "day",
@@ -13,7 +13,7 @@ const CalendarContext = createContext({});
 
 export function CalendarProvider({
 	children,
-	users,
+	users = [],
 	events,
 	badge = "colored",
 	view = "day"
@@ -90,7 +90,7 @@ export function CalendarProvider({
 		if (userId === "all") {
 			setFilteredEvents(allEvents);
 		} else {
-			const filtered = allEvents.filter((event) => event.user.id === userId);
+			const filtered = allEvents.filter((event) => event.owner?.id === userId);
 			setFilteredEvents(filtered);
 		}
 	};
@@ -154,7 +154,7 @@ export function CalendarProvider({
 		setSelectedUserId,
 		badgeVariant,
 		setBadgeVariant,
-		users,
+		users: { CALENDAR_USERS },
 		selectedColors,
 		filterEventsBySelectedColors,
 		filterEventsBySelectedUser,

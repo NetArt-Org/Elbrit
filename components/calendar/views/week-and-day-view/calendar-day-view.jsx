@@ -210,7 +210,7 @@ export function CalendarDayView({
 								>
 									<div className="space-y-6 pb-4">
 										{currentEvents.map((event) => {
-											const user = users.find((user) => user.id === event.user.id);
+											const user = users.find((user) => user.id === event.owner?.id);
 
 											return (
 												<div key={event.id} className="space-y-1.5">

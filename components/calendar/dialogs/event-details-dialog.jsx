@@ -32,6 +32,7 @@ export function EventDetailsDialog({
 			toast.error("Error deleting event.");
 		}
 	};
+	console.log(event);
 
 	return (
         <Dialog>
@@ -48,7 +49,7 @@ export function EventDetailsDialog({
 							<div>
 								<p className="text-sm font-medium">Responsible</p>
 								<p className="text-sm text-muted-foreground">
-									{event.user.name??event.user.name}
+									{event.owner.name??event.owner.name}
 								</p>
 							</div>
 						</div>

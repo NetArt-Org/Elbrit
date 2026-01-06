@@ -54,7 +54,7 @@ export function DateTimePicker({
             <FormLabel>
 				{field.name === "startDate" ? "Start Date" : "End Date"}
 			</FormLabel>
-            <Popover modal={true}>
+            <Popover modal={false}>
 				<PopoverTrigger asChild>
 					<FormControl>
 						<Button

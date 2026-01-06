@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event.mapper";
 import { saveEvent } from "@/services/event.service";
-import { CURRENT_USER } from "@/components/auth/current-user";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { CURRENT_USER } from "@/components/auth/calendar-users";
 import {
 	Form,
 	FormControl,
@@ -82,62 +82,74 @@ export function AddEditEventDialog({
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
 			color: event?.color ?? "blue",
-			tags: event?.tags ?? defaultTag ?? "event",
+			tags: event?.tags ?? defaultTag ?? "Event",
 		},
 	});
 
 	useEffect(() => {
+		if (!isOpen) return;
+	  
 		form.reset({
-			title: event?.title ?? "",
-			description: event?.description ?? "",
-			startDate: initialDates.startDate,
-			endDate: initialDates.endDate,
-			color: event?.color ?? "blue",
-			tags: event?.tags ?? defaultTag ?? "event",
+		  title: event?.title ?? "",
+		  description: event?.description ?? "",
+		  startDate: initialDates.startDate,
+		  endDate: initialDates.endDate,
+		  color: event?.color ?? "blue",
+		  tags: event?.tags ?? defaultTag ?? "Event",
 		});
-	}, [event, initialDates, defaultTag, form]);
+	  }, [isOpen, event]);
+	  
 
-
-	const onSubmit = async (values) => {
+	  const onSubmit = async (values) => {
 		if (isEditing && !event?.erpName) {
-			toast.error("This event cannot be edited");
-			return;
+		  toast.error("This event cannot be edited");
+		  return;
 		}
+	  
 		try {
-			const erpDoc = mapFormToErpEvent(values, {
-				erpName: event?.erpName,
-			});
-
-			const saved = await saveEvent(erpDoc);
-
-			const calendarEvent = {
-				...(event ?? {}),
-				erpName: saved.name,
-				title: values.title,
-				description: values.description,
-				startDate: erpDoc.starts_on,
-				endDate: erpDoc.ends_on,
-				color: values.color,
-				tags: values.tags,
-				// 👇 owner is always present
-				owner: CURRENT_USER,
-			};
-
-			event?.erpName ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-
-			toast.success("Event saved successfully");
-			onClose();
+		  const erpDoc = mapFormToErpEvent(values, {
+			erpName: event?.erpName,
+		  });
+	  
+		  const saved = await saveEvent(erpDoc);
+	  
+		  const calendarEvent = {
+			...(event ?? {}),
+			erpName: saved.name,
+			title: values.title,
+			description: values.description,
+			startDate: erpDoc.starts_on,
+			endDate: erpDoc.ends_on,
+			color: values.color,
+			tags: values.tags,
+			owner: CURRENT_USER,
+		  };
+	  
+		  event?.erpName
+			? updateEvent(calendarEvent)
+			: addEvent(calendarEvent);
+	  
+		  toast.success("Event saved successfully");
+	  
+		  // ✅ CLOSE FIRST
+		  onClose();
+	  
+		  // ✅ RESET AFTER CLOSE (next tick)
+		  setTimeout(() => {
 			form.reset();
+		  }, 0);
+	  
 		} catch (error) {
-			console.error("Save Event failed:", error);
-			toast.error(
-				error.message || "Unable to save event. Please try again."
-			);
+		  console.error("Save Event failed:", error);
+		  toast.error(
+			error?.message || "Unable to save event. Please try again."
+		  );
 		}
-	};
+	  };
+	  
 
 	return (
-		<Modal open={isOpen} onOpenChange={onToggle} modal={false}>
+		<Modal open={isOpen} onOpenChange={onToggle} modal={true}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
 			<ModalContent>
 				<ModalHeader>
@@ -181,8 +193,7 @@ export function AddEditEventDialog({
 									<FormControl>
 										<div className="flex flex-wrap gap-2">
 											{TAGS.map((tag) => {
-												const isActive = field.value === tag.id;
-
+												const isActive = String(field.value) === tag.id;
 												return (
 													<button
 														key={tag.id}
