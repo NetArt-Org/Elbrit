@@ -46,7 +46,6 @@ export function UserSelect() {
 			return next;
 		});
 	};
-
 	return (
 		<Popover>
 			{/* 🔒 Trigger remains unchanged */}
@@ -55,7 +54,7 @@ export function UserSelect() {
 		className="w-full inline-flex items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm cursor-pointer"
 	>
 		<AvatarGroup className="flex items-center" max={3}>
-			{users.CALENDAR_USERS.slice(0, 3).map((user) => (
+			{users?.slice(0, 3).map((user) => (
 				<Avatar key={user.id} className="size-5 text-xxs">
 					<AvatarImage
 						src={user.picturePath ?? undefined}
@@ -102,7 +101,7 @@ export function UserSelect() {
 				</div>
 
 				{/* USERS */}
-				{users.CALENDAR_USERS.map((user) => {
+				{users?.map((user) => {
 					const checked = checkedIds.includes(user.id);
 
 					return (

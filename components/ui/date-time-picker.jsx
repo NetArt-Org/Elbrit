@@ -59,6 +59,7 @@ export function DateTimePicker({
 					<FormControl>
 						<Button
                             variant={"outline"}
+							onMouseDown={(e) => e.preventDefault()}
                             className={cn(
                                 "w-full pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
@@ -87,6 +88,7 @@ export function DateTimePicker({
 										<Button
                                             key={hour}
                                             size="icon"
+											onMouseDown={(e) => e.preventDefault()}
                                             variant={
 												field.value &&
 												field.value.getHours() % (use24HourFormat ? 24 : 12) ===
@@ -107,6 +109,7 @@ export function DateTimePicker({
 									{Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
 										<Button
                                             key={minute}
+											onMouseDown={(e) => e.preventDefault()}
                                             size="icon"
                                             variant={
 												field.value && field.value.getMinutes() === minute

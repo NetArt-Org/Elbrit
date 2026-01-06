@@ -1,7 +1,10 @@
 "use client";;
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState,useEffect } from "react";
 import { useLocalStorage } from "@/components/calendar/hooks";
 import { CALENDAR_USERS } from "@/components/auth/calendar-users";
+import { fetchEventsByRange } from "@/services/event.service";
+import { resolveCalendarRange } from "@/lib/calendar/range";
+
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",
 	view: "day",
@@ -13,7 +16,6 @@ const CalendarContext = createContext({});
 
 export function CalendarProvider({
 	children,
-	users = [],
 	events,
 	badge = "colored",
 	view = "day"
@@ -146,6 +148,35 @@ export function CalendarProvider({
 		setSelectedColors([]);
 		setSelectedUserId("all");
 	};
+	useEffect(() => {
+		let cancelled = false;
+	  
+		async function hydrateFromGraphql() {
+		  const { start, end } = resolveCalendarRange(currentView, selectedDate);
+	  
+		  try {
+			const events = await fetchEventsByRange(
+			  start,
+			  end,
+			  currentView
+			);
+	  
+			if (!cancelled) {
+			  setAllEvents(events);
+			  setFilteredEvents(events);
+			}
+		  } catch (err) {
+			console.error("Failed to fetch events", err);
+		  }
+		}
+	  
+		hydrateFromGraphql();
+	  
+		return () => {
+		  cancelled = true;
+		};
+	  }, [currentView, selectedDate]);
+	  
 
 	const value = {
 		selectedDate,
@@ -154,7 +185,7 @@ export function CalendarProvider({
 		setSelectedUserId,
 		badgeVariant,
 		setBadgeVariant,
-		users: { CALENDAR_USERS },
+		users: CALENDAR_USERS,
 		selectedColors,
 		filterEventsBySelectedColors,
 		filterEventsBySelectedUser,

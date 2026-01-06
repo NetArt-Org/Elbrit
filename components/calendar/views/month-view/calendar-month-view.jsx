@@ -24,7 +24,6 @@ const SWIPE_THRESHOLD = 80;
 
 export function CalendarMonthView({
   singleDayEvents,
-  view,
   multiDayEvents,
 }) {
   const { selectedDate, setSelectedDate, activeDate,setActiveDate } = useCalendar();
