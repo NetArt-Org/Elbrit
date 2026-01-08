@@ -82,3 +82,42 @@ export async function fetchEventsByRange(startDate, endDate, view) {
   setCachedEvents(cacheKey, events);
   return events;
 }
+
+const DELETE_EVENT_MUTATION = `
+mutation DeleteEvent($doctype: String!, $name: String!) {
+  deleteDoc(doctype: $doctype, name: $name) {
+    name
+  }
+}
+`;
+
+export async function deleteEventFromErp(erpName) {
+  if (!erpName) return true;
+
+  try {
+    const data = await graphqlRequest(DELETE_EVENT_MUTATION, {
+      doctype: "Event",
+      name: erpName,
+    });
+
+    // Success path
+    clearEventCache();
+    return true;
+
+  } catch (error) {
+    const message = error?.message || "";
+
+    // ✅ ERP already deleted → treat as success
+    if (
+      message.includes("not found") ||
+      message.includes("does not exist") ||
+      message.includes("Missing document")
+    ) {
+      clearEventCache();
+      return true;
+    }
+
+    // ❌ real error
+    throw error;
+  }
+}

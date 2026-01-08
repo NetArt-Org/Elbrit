@@ -1,5 +1,6 @@
 "use client";;
 import { format, parseISO } from "date-fns";
+import { useState, useRef } from "react";
 import { Calendar, Clock, Text, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,29 +16,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { formatTime } from "@/components/calendar/helpers";
-
+import { deleteEventFromErp } from "@/services/event.service";
 export function EventDetailsDialog({
-    event,
-    children
+	event,
+	children
 }) {
+	const [open, setOpen] = useState(false);
 	const startDate = parseISO(event.startDate);
 	const endDate = parseISO(event.endDate);
 	const { use24HourFormat, removeEvent } = useCalendar();
-
-	const deleteEvent = (eventId) => {
-		try {
-			removeEvent(eventId);
-			toast.success("Event deleted successfully.");
-		} catch {
-			toast.error("Error deleting event.");
-		}
-	};
-	console.log(event);
+	const deleteLockRef = useRef(false);
 
 	return (
-        <Dialog>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent>
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
+			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{event.title}</DialogTitle>
 				</DialogHeader>
@@ -49,7 +42,7 @@ export function EventDetailsDialog({
 							<div>
 								<p className="text-sm font-medium">Responsible</p>
 								<p className="text-sm text-muted-foreground">
-									{event.owner.name??event.owner.name}
+									{event.owner.name ?? event.owner.name}
 								</p>
 							</div>
 						</div>
@@ -94,15 +87,28 @@ export function EventDetailsDialog({
 						<Button variant="outline">Edit</Button>
 					</AddEditEventDialog>
 					<Button
-                        variant="destructive"
-                        onClick={() => {
-							deleteEvent(event.id);
-						}}>
+						variant="destructive"
+						onClick={async () => {
+							if (deleteLockRef.current) return;
+							deleteLockRef.current = true;
+						  
+							try {
+							  await deleteEventFromErp(event.erpName); // SINGLE SOURCE
+							  removeEvent(event.erpName);              // UI update
+							  setOpen(false);
+							  toast.success("Event deleted successfully.");
+							} catch (e) {
+							  toast.error("Error deleting event.");
+							} finally {
+							  deleteLockRef.current = false;
+							}
+						  }}
+						  
+					>
 						Delete
 					</Button>
 				</div>
-				<DialogClose />
 			</DialogContent>
-        </Dialog>
-    );
+		</Dialog>
+	);
 }

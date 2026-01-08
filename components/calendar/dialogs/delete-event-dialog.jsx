@@ -15,20 +15,20 @@ import { Button } from "@/components/ui/button";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 
 export default function DeleteEventDialog({
-    eventId
+    erpName
 }) {
 	const { removeEvent } = useCalendar();
 
 	const deleteEvent = () => {
 		try {
-			removeEvent(eventId);
+			removeEvent(erpName);
 			toast.success("Event deleted successfully.");
 		} catch {
 			toast.error("Error deleting event.");
 		}
 	};
 
-	if (!eventId) {
+	if (!erpName) {
 		return null;
 	}
 

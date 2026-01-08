@@ -1,9 +1,10 @@
 "use client";;
-import { createContext, useContext, useState,useEffect } from "react";
+import { createContext, useContext, useState,useEffect,useRef } from "react";
 import { useLocalStorage } from "@/components/calendar/hooks";
 import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 import { fetchEventsByRange } from "@/services/event.service";
 import { resolveCalendarRange } from "@/lib/calendar/range";
+import { deleteEventFromErp } from "@/services/event.service";
 
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",
@@ -138,11 +139,16 @@ export function CalendarProvider({
 		);
 	  };
 	  
-	const removeEvent = (eventId) => {
-		setAllEvents((prev) => prev.filter((e) => e.id !== eventId));
-		setFilteredEvents((prev) => prev.filter((e) => e.id !== eventId));
-	};
+	  const deletingRef = useRef(new Set());
 
+	  const removeEvent = (erpName) => {
+		if (!erpName) return;
+	  
+		setAllEvents(prev => prev.filter(e => e.erpName !== erpName));
+		setFilteredEvents(prev => prev.filter(e => e.erpName !== erpName));
+	  };
+	  
+	  
 	const clearFilter = () => {
 		setFilteredEvents(allEvents);
 		setSelectedColors([]);
