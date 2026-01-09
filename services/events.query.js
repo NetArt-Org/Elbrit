@@ -28,3 +28,30 @@ query EventsByRange(
   }
 }
 `;
+
+export const EMPLOYEES_QUERY = `
+query GetEmployees($first: Int!) {
+  Employees(
+    first: $first
+  ) {
+    edges {
+      node {
+        name
+        employee_name
+      }
+    }
+  }
+}
+`;
+
+export const SALES_PARTNERS_QUERY = `
+query GetSalesPartners($first: Int!) {
+  SalesPartners(first: $first) {
+    edges {
+      node {
+        name
+      }
+    }
+  }
+}
+`;

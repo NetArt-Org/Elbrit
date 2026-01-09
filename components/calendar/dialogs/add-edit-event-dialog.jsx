@@ -1,10 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addMinutes, format, set } from "date-fns";
-import { useEffect, useMemo } from "react";
+import { addMinutes, set } from "date-fns";
+import { useEffect, useMemo,useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { TAGS } from "@/components/calendar/mocks";
+import { TAGS,PARTICIPANT_SOURCE_BY_TAG } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event.mapper";
 import { saveEvent } from "@/services/event.service";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -40,6 +40,8 @@ import { COLORS } from "@/components/calendar/constants";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { useDisclosure } from "@/components/calendar/hooks";
 import { eventSchema } from "@/components/calendar/schemas";
+import { fetchEmployees, fetchDoctors } from "@/services/participants.service";
+
 
 export function AddEditEventDialog({
 	children,
@@ -50,7 +52,9 @@ export function AddEditEventDialog({
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
-
+	const [employeeOptions, setEmployeeOptions] = useState([]);
+	const [doctorOptions, setDoctorOptions] = useState([]);
+	
 	const initialDates = useMemo(() => {
 		if (!isEditing && !event) {
 			if (!startDate) {
@@ -99,7 +103,22 @@ export function AddEditEventDialog({
 		});
 	  }, [isOpen, event]);
 	  
-
+	  const selectedTag = form.watch("tags");
+	  useEffect(() => {
+		if (!selectedTag) return;
+	  
+		const sources = PARTICIPANT_SOURCE_BY_TAG[selectedTag] || [];
+	  
+		if (sources.includes("EMPLOYEE") && employeeOptions.length === 0) {
+		  fetchEmployees().then(setEmployeeOptions);
+		}
+	  
+		if (sources.includes("DOCTOR") && doctorOptions.length === 0) {
+		  fetchDoctors().then(setDoctorOptions);
+		}
+	  }, [selectedTag]);
+	  
+			
 	  const onSubmit = async (values) => {
 		if (isEditing && !event?.erpName) {
 		  toast.error("This event cannot be edited");
@@ -218,18 +237,66 @@ export function AddEditEventDialog({
 								</FormItem>
 							)}
 						/>
+						<div className="grid grid-cols-2 gap-3">
 						<FormField
 							control={form.control}
 							name="startDate"
 							render={({ field }) => (
-								<DateTimePicker form={form} field={field} />
+								<DateTimePicker form={form} field={field}  hideTime
+								defaultHour={0}
+								defaultMinute={0} />
 							)} />
 						<FormField
 							control={form.control}
 							name="endDate"
 							render={({ field }) => (
-								<DateTimePicker form={form} field={field} />
+								<DateTimePicker form={form} field={field}  hideTime
+								defaultHour={0}
+								defaultMinute={0} />
 							)} />
+						</div>
+						{PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("EMPLOYEE") && (
+  <FormField
+    control={form.control}
+    name="employees"
+    render={({ field }) => (
+      <Select onValueChange={field.onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select Employee" />
+        </SelectTrigger>
+        <SelectContent>
+          {employeeOptions.map(opt => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )}
+  />
+)}
+
+{PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("DOCTOR") && (
+  <FormField
+    control={form.control}
+    name="doctors"
+    render={({ field }) => (
+      <Select onValueChange={field.onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select Doctor / Institute" />
+        </SelectTrigger>
+        <SelectContent>
+          {doctorOptions.map(opt => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )}
+  />
+)}
+
 						<FormField
 							control={form.control}
 							name="color"

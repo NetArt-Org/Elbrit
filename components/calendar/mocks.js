@@ -17,6 +17,13 @@ export const TAGS = [
   { id: "Visit", label: "Visit" },
   { id: "Other", label: "Other" },
 ];
+export const PARTICIPANT_SOURCE_BY_TAG = {
+  Event: ["EMPLOYEE"],
+  Birthday: ["DOCTOR"],
+  Meeting: ["EMPLOYEE"],
+  Visit: ["EMPLOYEE", "DOCTOR"],
+  Other: ["EMPLOYEE", "DOCTOR"],
+};
 
 /* =========================================================
    MOCK GENERATOR
