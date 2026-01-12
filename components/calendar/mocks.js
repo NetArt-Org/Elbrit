@@ -19,10 +19,10 @@ export const TAGS = [
 ];
 export const PARTICIPANT_SOURCE_BY_TAG = {
   Event: ["EMPLOYEE"],
-  Birthday: ["DOCTOR"],
+  Birthday: ["SALESPARTNER"],
   Meeting: ["EMPLOYEE"],
-  Visit: ["EMPLOYEE", "DOCTOR"],
-  Other: ["EMPLOYEE", "DOCTOR"],
+  Visit: ["EMPLOYEE", "SALESPARTNER"],
+  Other: ["EMPLOYEE", "SALESPARTNER"],
 };
 
 /* =========================================================

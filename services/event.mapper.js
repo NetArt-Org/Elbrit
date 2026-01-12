@@ -7,7 +7,29 @@ import { COLOR_HEX_MAP } from "@/components/calendar/constants";
  * - Adds name only when editing
  */
 export function mapFormToErpEvent(values, options = {}) {
+  
   const { erpName } = options;
+
+  function buildParticipants(values) {
+    const participants = [];
+  
+    if (values.employees) {
+      participants.push({
+        reference_doctype: "Employee",
+        reference_docname: values.employees,
+      });
+    }
+  
+    if (values.salesPartner) {
+      participants.push({
+        reference_doctype: "Sales Partner",
+        reference_docname: values.salesPartner,
+      });
+    }
+  
+    return participants;
+  }
+  
 
   const doc = {
     doctype: "Event",
@@ -21,6 +43,7 @@ export function mapFormToErpEvent(values, options = {}) {
     event_type: "Public",
     status: "Open",
     docstatus: 0,
+    event_participants: buildParticipants(values),
   };
 
   // Only include name for UPDATE

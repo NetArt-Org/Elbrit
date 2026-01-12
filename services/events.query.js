@@ -19,6 +19,12 @@ query EventsByRange(
           full_name
           email
         }
+          event_participants {
+          reference_doctype {
+            name
+          }
+          reference_docname__name
+        }
       }
     }
     pageInfo {

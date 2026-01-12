@@ -13,19 +13,21 @@ export async function fetchEmployees() {
 
   return (
     data?.Employees?.edges.map(({ node }) => ({
-      value: node.name,
-      label: node.employee_name,
+      doctype: "Employee",
+      value: node.name,          // ERP ID → saved
+      label: node.employee_name, // UI text
     })) || []
   );
 }
 
-export async function fetchDoctors() {
+export async function fetchSalesPartner() {
   const data = await graphqlRequest(SALES_PARTNERS_QUERY, {
     first: MAX_ROWS,
   });
 
   return (
     data?.SalesPartners?.edges.map(({ node }) => ({
+      doctype: "Sales Partner",
       value: node.name,
       label: node.name,
     })) || []

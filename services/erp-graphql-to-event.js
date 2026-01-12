@@ -5,6 +5,12 @@ import { COLOR_HEX_MAP } from "@/components/calendar/constants";
  * Ensures startDate / endDate are ISO STRINGS
  */
 export function mapErpGraphqlEventToCalendar(node) {
+  const participants =
+  node.event_participants?.map(p => ({
+    type: p.reference_doctype?.name, // "Employee" | "Sales Partner"
+    id: p.reference_docname__name,    // "E00851" | "SP-0003"
+  })) ?? [];
+
     if (!node) return null;
   
     const startDate = parseErpDate(node.starts_on);
@@ -31,6 +37,7 @@ export function mapErpGraphqlEventToCalendar(node) {
         startDate &&
         endDate &&
         startDate.toDateString() !== endDate.toDateString(),
+        participants,
     };
   
     const parsed = eventSchema.safeParse({

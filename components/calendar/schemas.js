@@ -13,4 +13,6 @@ export const eventSchema = z.object({
 		required_error: "Variant is required",
 	}),
 	tags: z.string(),
+	employees: z.string().optional(),
+	salesPartner: z.string().optional(),
 });
