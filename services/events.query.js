@@ -44,6 +44,8 @@ query GetEmployees($first: Int!) {
       node {
         name
         employee_name
+        company_email
+        idx
       }
     }
   }

@@ -4,7 +4,10 @@ import { useLocalStorage } from "@/components/calendar/hooks";
 import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 import { fetchEventsByRange } from "@/services/event.service";
 import { resolveCalendarRange } from "@/lib/calendar/range";
-import { deleteEventFromErp } from "@/services/event.service";
+import { EMPLOYEES_QUERY } from "@/services/events.query";
+import { mapEmployeesToCalendarUsers } from "@/lib/employee-to-calendar-user";
+import { graphqlRequest } from "@/lib/graphql-client";
+
 
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",
@@ -21,6 +24,7 @@ export function CalendarProvider({
 	badge = "colored",
 	view = "day"
 }) {
+	console.log("CalendarProvider RENDERED");
 	const [settings, setSettings] = useLocalStorage("calendar-settings", {
 		...DEFAULT_SETTINGS,
 		badgeVariant: badge,
@@ -36,6 +40,8 @@ export function CalendarProvider({
 	const [selectedColors, setSelectedColors] = useState([]);
 	const [allEvents, setAllEvents] = useState(events || []);
 	const [filteredEvents, setFilteredEvents] = useState(events || []);
+	const [users, setUsers] = useState([]);
+	const [usersLoading, setUsersLoading] = useState(true);
 
 	const [eventListDate, setEventListDate] = useState(null);
 	const [activeDate, setActiveDate] = useState(null);
@@ -139,7 +145,6 @@ export function CalendarProvider({
 		);
 	  };
 	  
-	  const deletingRef = useRef(new Set());
 
 	  const removeEvent = (erpName) => {
 		if (!erpName) return;
@@ -183,7 +188,41 @@ export function CalendarProvider({
 		};
 	  }, [currentView, selectedDate]);
 	  
-
+	  useEffect(() => {
+		let cancelled = false;
+	  
+		console.log("Employee effect START");
+	  
+		async function hydrateEmployees() {
+		  try {
+			const data = await graphqlRequest(EMPLOYEES_QUERY, {
+			  first: 50,
+			});
+	  
+			const employees =
+			  data?.Employees?.edges?.map(e => e.node) ?? [];
+	  
+			const mappedUsers = mapEmployeesToCalendarUsers(employees);
+	  
+			if (!cancelled) {
+			  setUsers(mappedUsers);
+			  setUsersLoading(false);
+			}
+	  
+			console.log("Employee data", employees, mappedUsers);
+		  } catch (err) {
+			console.error("Failed to fetch employees", err);
+			setUsersLoading(false);
+		  }
+		}
+	  
+		hydrateEmployees();
+		return () => {
+		  cancelled = true;
+		};
+	  }, []);
+	  
+	  
 	const value = {
 		selectedDate,
 		setSelectedDate: handleSelectDate,
@@ -191,7 +230,8 @@ export function CalendarProvider({
 		setSelectedUserId,
 		badgeVariant,
 		setBadgeVariant,
-		users: CALENDAR_USERS,
+		users,
+		usersLoading,
 		selectedColors,
 		filterEventsBySelectedColors,
 		filterEventsBySelectedUser,

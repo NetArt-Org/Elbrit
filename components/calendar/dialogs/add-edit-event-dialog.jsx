@@ -103,6 +103,8 @@ export function AddEditEventDialog({
 			endDate: initialDates.endDate,
 			color: event?.color ?? "blue",
 			tags: event?.tags ?? defaultTag ?? "Event",
+			employees: undefined,
+			salesPartner: undefined,
 		});
 	}, [isOpen, event]);
 
