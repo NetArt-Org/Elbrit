@@ -13,13 +13,13 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea, } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { useState,useEffect } from "react";
 
 export function DateTimePicker({
-	form,
+	form,label,
 	field,
 	hideTime = false,
 	defaultHour = 0,
@@ -90,7 +90,7 @@ export function DateTimePicker({
 	return (
 		<FormItem className="flex flex-col">
 			<FormLabel>
-				{field.name === "startDate" ? "Start Date" : "End Date"}
+				{label ? label : field.name === "startDate" ? "Start Date" : "End Date"}
 			</FormLabel>
 			<Popover open={open} onOpenChange={setOpen} modal={false}>
 				<PopoverTrigger asChild>

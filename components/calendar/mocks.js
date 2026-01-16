@@ -21,7 +21,7 @@ export const TAGS = [
 ];
 export const PARTICIPANT_SOURCE_BY_TAG = {
   "Leave": ["EMPLOYEE"],
-  "HQ Tour Plan": ["EMPLOYEE"],
+  "HQ Tour Plan": ["EMPLOYEE","SALESPARTNER"],
   "Meeting": ["EMPLOYEE"],
   "Birthday": ["SALESPARTNER"],
   "Doctor Visit Plan": ["EMPLOYEE", "SALESPARTNER"],

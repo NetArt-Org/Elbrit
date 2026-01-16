@@ -43,6 +43,7 @@ import { eventSchema } from "@/components/calendar/schemas";
 import { buildCalendarParticipants } from "@/lib/utils";
 import { RHFCombobox } from "@/components/ui/RHFCombobox";
 import { loadParticipantOptionsByTag, setParticipantFormDefaults } from "@/lib/participants";
+import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 
 export function AddEditEventDialog({
 	children,
@@ -50,6 +51,9 @@ export function AddEditEventDialog({
 	startTime,
 	event, defaultTag,
 }) {
+	const getTagConfig = (tag) =>
+		TAG_FORM_CONFIG[tag] ?? TAG_FORM_CONFIG.DEFAULT;
+
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
@@ -92,7 +96,6 @@ export function AddEditEventDialog({
 			salesPartner: undefined,
 		},
 	});
-
 	useEffect(() => {
 		if (!isOpen) return;
 
@@ -109,15 +112,29 @@ export function AddEditEventDialog({
 	}, [isOpen, event]);
 
 	const selectedTag = form.watch("tags");
+	const tagConfig = useMemo(
+		() => getTagConfig(selectedTag),
+		[selectedTag]
+	);
+	useEffect(() => {
+		if (!isOpen) return;
+
+		tagConfig.hide.forEach((field) => {
+			form.setValue(field, undefined);
+			form.clearErrors(field);
+		});
+	}, [tagConfig, isOpen, selectedTag]);
+
+
 	useEffect(() => {
 		loadParticipantOptionsByTag({
-		  tag: selectedTag,
-		  employeeOptions,
-		  salesPartnerOptions,
-		  setEmployeeOptions,
-		  setSalesPartnerOptions,
+			tag: selectedTag,
+			employeeOptions,
+			salesPartnerOptions,
+			setEmployeeOptions,
+			setSalesPartnerOptions,
 		});
-	  }, [selectedTag]);
+	}, [selectedTag]);
 
 	const onSubmit = async (values) => {
 		if (isEditing && !event?.erpName) {
@@ -172,8 +189,8 @@ export function AddEditEventDialog({
 	};
 	useEffect(() => {
 		setParticipantFormDefaults({ isOpen, event, form });
-	  }, [isOpen, event]);
-	  
+	}, [isOpen, event]);
+
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle} modal={true}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -249,55 +266,70 @@ export function AddEditEventDialog({
 								control={form.control}
 								name="startDate"
 								render={({ field }) => (
-									<DateTimePicker form={form} field={field} hideTime
+									<DateTimePicker
+									    label={selectedTag=="Birthday"?"Birthday":false}
+										form={form}
+										field={field}
+										hideTime={tagConfig.dateOnly}
 										defaultHour={0}
-										defaultMinute={0} />
-								)} />
-							<FormField
-								control={form.control}
-								name="endDate"
-								render={({ field }) => (
-									<DateTimePicker form={form} field={field} hideTime
-										defaultHour={0}
-										defaultMinute={0} />
-								)} />
-						</div>
-						{PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("EMPLOYEE") && (
-							<FormField
-								control={form.control}
-								name="employees"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Employee</FormLabel>
-										<FormControl>
-											<RHFCombobox
-												value={field.value}
-												onChange={field.onChange}
-												options={employeeOptions}
-												placeholder="Select employee"
-												searchPlaceholder="Search employee..."
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
+										defaultMinute={0}
+									/>
 								)}
 							/>
-						)}
+							{!tagConfig.hide.includes("endDate") && (
+								<FormField
+									control={form.control}
+									name="endDate"
+									render={({ field }) => (
+										<DateTimePicker
+											form={form}
+											field={field}
+											hideTime={tagConfig.dateOnly}
+											defaultHour={0}
+											defaultMinute={0}
+										/>
+									)}
+								/>
+							)}
+						</div>
+						{!tagConfig.hide.includes("employees") &&
+							PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("EMPLOYEE") && (
+								<FormField
+									control={form.control}
+									name="employees"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Employee</FormLabel>
+											<FormControl>
+												<RHFCombobox
+													value={field.value}
+													onChange={field.onChange}
+													options={employeeOptions}
+													placeholder="Select Employee"
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
 
-						{PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("SALESPARTNER") && (
+						{!tagConfig.hide.includes("salesPartner") &&
+						PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("SALESPARTNER") && (
 							<FormField
 								control={form.control}
 								name="salesPartner"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Doctor / Institute</FormLabel>
+										<FormLabel>
+										Doctor / Institute
+										</FormLabel>
 										<FormControl>
 											<RHFCombobox
 												value={field.value}
 												onChange={field.onChange}
 												options={salesPartnerOptions}
 												placeholder="Select doctor / institute"
-												searchPlaceholder="Search doctor / institute..."
 											/>
 										</FormControl>
 										<FormMessage />
@@ -305,7 +337,6 @@ export function AddEditEventDialog({
 								)}
 							/>
 						)}
-
 						<FormField
 							control={form.control}
 							name="color"
@@ -334,21 +365,22 @@ export function AddEditEventDialog({
 									<FormMessage />
 								</FormItem>
 							)} />
-						<FormField
-							control={form.control}
-							name="description"
-							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel className="required">Description</FormLabel>
-									<FormControl>
-										<Textarea
-											{...field}
-											placeholder="Enter a description"
-											className={fieldState.invalid ? "border-red-500" : ""} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)} />
+						{!tagConfig.hide.includes("description") && (
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Description</FormLabel>
+										<FormControl>
+											<Textarea {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						)}
+
 					</form>
 				</Form>
 				<ModalFooter className="flex justify-end gap-2">
