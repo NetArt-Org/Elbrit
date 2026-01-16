@@ -22,7 +22,7 @@ const MOBILE_LAYER_MAP = {
   month: "month-expanded",
   week: "week",
   agenda: "agenda",
-  year: "year",
+  // year: "year",
 };
 
 export function MobileCalendarHeader() {

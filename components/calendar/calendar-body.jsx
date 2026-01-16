@@ -8,7 +8,6 @@ import { useMediaQuery } from "./hooks";
 import { CalendarMonthView } from "@/components/calendar/views/month-view/calendar-month-view";
 import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/calendar-week-view";
 import { CalendarDayView } from "@/components/calendar/views/week-and-day-view/calendar-day-view";
-import { CalendarYearView } from "@/components/calendar/views/year-view/calendar-year-view";
 
 import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
 import { AgendaEventsMobile } from "./views/agenda-view/AgendaEventsMobile";
@@ -43,10 +42,10 @@ export function CalendarBody() {
 
   /* ===============================
      SHARED VIEWS (DESKTOP + MOBILE)
+     Year view intentionally removed
   =============================== */
   const sharedViews = {
     month: <CalendarMonthView {...sharedProps} />,
-    year: <CalendarYearView {...sharedProps} />,
   };
 
   /* ===============================
@@ -75,7 +74,10 @@ export function CalendarBody() {
     null;
 
   const resolveMobileView = () => {
-    if (mobileLayer === "month-expanded" || mobileLayer === "month-agenda") {
+    if (
+      mobileLayer === "month-expanded" ||
+      mobileLayer === "month-agenda"
+    ) {
       return sharedViews.month;
     }
 

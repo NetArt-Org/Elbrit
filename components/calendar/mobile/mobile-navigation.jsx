@@ -1,5 +1,5 @@
 export const MOBILE_LAYERS = [
-    "year",
+    // "year",
     "month-expanded",
     "month-agenda",
     "week",

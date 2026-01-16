@@ -34,11 +34,11 @@ export const tabs = [
     value: "month",
     icon: () => <Grid3X3 className="h-4 w-4" />,
   },
-  {
-    name: "Year",
-    value: "year",
-    icon: () => <Grid2X2 className="h-4 w-4" />,
-  },
+  // {
+  //   name: "Year",
+  //   value: "year",
+  //   icon: () => <Grid2X2 className="h-4 w-4" />,
+  // },
 ];
 
 function Views() {

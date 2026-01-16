@@ -11,18 +11,22 @@ import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 ========================================================= */
 
 export const TAGS = [
-  { id: "Event", label: "Event" },
-  { id: "Birthday", label: "Birthday" },
+  { id: "Leave", label: "Leave" },
+  { id: "HQ Tour Plan", label: "HQ Tour Plan" },
   { id: "Meeting", label: "Meeting" },
-  { id: "Visit", label: "Visit" },
+  { id: "Birthday", label: "Birthday" },
+  { id: "Doctor Visit Plan", label: "Doctor Visit Plan" },
+  { id: "Todo List", label: "Todo List" },
   { id: "Other", label: "Other" },
 ];
 export const PARTICIPANT_SOURCE_BY_TAG = {
-  Event: ["EMPLOYEE"],
-  Birthday: ["SALESPARTNER"],
-  Meeting: ["EMPLOYEE"],
-  Visit: ["EMPLOYEE", "SALESPARTNER"],
-  Other: ["EMPLOYEE", "SALESPARTNER"],
+  "Leave": ["EMPLOYEE"],
+  "HQ Tour Plan": ["EMPLOYEE"],
+  "Meeting": ["EMPLOYEE"],
+  "Birthday": ["SALESPARTNER"],
+  "Doctor Visit Plan": ["EMPLOYEE", "SALESPARTNER"],
+  "Todo List": ["EMPLOYEE"],
+  "Other": ["EMPLOYEE", "SALESPARTNER"],
 };
 
 /* =========================================================

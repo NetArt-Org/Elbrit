@@ -7,7 +7,7 @@ import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 const DRAG_THRESHOLD = 60;
 
 const ORDER = [
-  "year",
+  // "year",
   "month-expanded",
   "month-agenda",
   "week",
@@ -15,7 +15,7 @@ const ORDER = [
 ];
 
 const LAYER_TO_VIEW = {
-  year: "year",
+  // year: "year",
   "month-expanded": "month",
   "month-agenda": "month",
   week: "week",

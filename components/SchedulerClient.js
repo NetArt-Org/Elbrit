@@ -7,7 +7,6 @@ import dynamic from "next/dynamic";
 
 import { Button } from "smart-webcomponents-react/button";
 import { Calendar } from "smart-webcomponents-react/calendar";
-import { Input } from "smart-webcomponents-react/input";
 import { Tree, TreeItem, TreeItemsGroup } from "smart-webcomponents-react/tree";
 
 // Import Scheduler only on the client
