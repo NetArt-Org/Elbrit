@@ -5,60 +5,67 @@ import { COLOR_HEX_MAP } from "@/components/calendar/constants";
  * Ensures startDate / endDate are ISO STRINGS
  */
 export function mapErpGraphqlEventToCalendar(node) {
+  if (!node) return null;
+
   const participants =
-  node.event_participants?.map(p => ({
-    type: p.reference_doctype?.name, // "Employee" | "Sales Partner"
-    id: p.reference_docname__name,    // "E00851" | "SP-0003"
-  })) ?? [];
+    node.event_participants?.map(p => ({
+      type: p.reference_doctype?.name,
+      id: p.reference_docname__name,
+    })) ?? [];
 
-    if (!node) return null;
-  
-    const startDate = parseErpDate(node.starts_on);
+  // ✅ extract sales partner explicitly
+  const salesPartner =
+    participants.find(p => p.type === "Sales Partner")?.id;
 
-// ERP drops ends_on when same-day → normalize here
-const endDate =
-  parseErpDate(node.ends_on) ?? startDate;
+  const startDate = parseErpDate(node.starts_on);
 
-  
-    const event = {
-      erpName: node.name,
-      title: node.subject || "",
-      // ERP may return null
-      description: node.description ?? "",
-      // ✅ MUST be ISO strings (not Date objects)
-      startDate: startDate ? startDate.toISOString() : null,
-      endDate: endDate ? endDate.toISOString() : null,
-      color: mapHexToColor(node.color),
-      tags: node.event_category || "Other",
-      hqTerritory: node.fsl_territory?.name ?? "",
-      owner: node.owner
-        ? {
-            id: node.owner.name,
-            name: node.owner.full_name || node.owner.name,
-            email: node.owner.email,
-          }
-        : undefined,
-      isMultiDay:
-        startDate &&
-        endDate &&
-        startDate.toDateString() !== endDate.toDateString(),
-        participants,
-    };
-  
-    const parsed = eventSchema.safeParse({
-      ...event,
-      // Zod expects Date objects → validate separately
-      startDate: startDate,
-      endDate: endDate,
-    });
-  
-    if (!parsed.success) {
-      console.error("Invalid ERP event ZodError:", parsed.error.issues, node);
-      return null;
-    }
-  
-    return event; // ← return ISO-string version
+  // ERP drops ends_on for same-day
+  const endDate = parseErpDate(node.ends_on) ?? startDate;
+
+  const event = {
+    erpName: node.name,
+    title: node.subject || "",
+    description: node.description ?? "",
+    startDate: startDate ? startDate.toISOString() : null,
+    endDate: endDate ? endDate.toISOString() : null,
+    color: mapHexToColor(node.color),
+    tags: node.event_category || "Other",
+
+    // ✅ FIXED
+    salesPartner,
+
+    hqTerritory: node.fsl_territory?.name ?? "",
+
+    owner: node.owner
+      ? {
+          id: node.owner.name,
+          name: node.owner.full_name || node.owner.name,
+          email: node.owner.email,
+        }
+      : undefined,
+
+    isMultiDay:
+      startDate &&
+      endDate &&
+      startDate.toDateString() !== endDate.toDateString(),
+
+    participants,
+  };
+
+  const parsed = eventSchema.safeParse({
+    ...event,
+    startDate,
+    endDate,
+  });
+
+  if (!parsed.success) {
+    console.error("Invalid ERP event ZodError:", parsed.error.issues, node);
+    return null;
   }
+
+  return event;
+}
+
   
   /**
    * ERP format: "YYYY-MM-DD HH:mm:ss"

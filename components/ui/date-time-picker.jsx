@@ -21,6 +21,7 @@ import { useState,useEffect } from "react";
 export function DateTimePicker({
 	form,label,
 	field,
+	allowAllDates = false,
 	hideTime = false,
 	defaultHour = 0,
 	defaultMinute = 0,
@@ -155,25 +156,33 @@ export function DateTimePicker({
 				</PopoverTrigger>
 				<PopoverContent className="w-auto p-0">
 					<div className="sm:flex">
-						<Calendar
-							mode="single"
-							selected={field.value}
-							onSelect={handleDateSelect}
-							initialFocus
-							disabled={(date) => {
-								// START DATE: disable past dates
-								if (field.name === "startDate") {
-									return date < today;
-								}
+					<Calendar
+  mode="single"
+  selected={field.value}
+  onSelect={handleDateSelect}
+  initialFocus
 
-								// END DATE: disable before startDate
-								if (field.name === "endDate" && normalizedStartDate) {
-									return date < normalizedStartDate;
-								}
+  {...(allowAllDates && {
+    captionLayout: "dropdown",
+    fromYear: 1940,
+    toYear: 2100,
+  })}
 
-								return false;
-							}}
-						/>
+  disabled={(date) => {
+    if (allowAllDates) return false;
+
+    if (field.name === "startDate") {
+      return date < today;
+    }
+
+    if (field.name === "endDate" && normalizedStartDate) {
+      return date < normalizedStartDate;
+    }
+
+    return false;
+  }}
+/>
+
 						{!hideTime && (
 							<div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x">
 								{/* HOURS */}

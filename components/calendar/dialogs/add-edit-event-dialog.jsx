@@ -102,13 +102,25 @@ export function AddEditEventDialog({
 		  (p) => p.type === "Employee"
 		);
 	  
+		const salesPartner = event.participants.find(
+		  (p) => p.type === "Sales Partner"
+		);
+	  
 		if (employee) {
 		  form.setValue("employees", employee.id, {
 			shouldDirty: false,
 			shouldValidate: false,
 		  });
 		}
+	  
+		if (salesPartner) {
+		  form.setValue("salesPartner", salesPartner.id, {
+			shouldDirty: false,
+			shouldValidate: false,
+		  });
+		}
 	  }, [isOpen, event?.participants]);
+	  
 	  
 	useEffect(() => {
 		if (!isOpen) return;
@@ -309,6 +321,8 @@ export function AddEditEventDialog({
 										form={form}
 										field={field}
 										hideTime={tagConfig.dateOnly}
+										label={selectedTag === "Birthday" ? "Select Birthdate" : undefined}
+										allowAllDates={selectedTag === "Birthday"} 
 									/>
 								)}
 							/>

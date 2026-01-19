@@ -30,7 +30,7 @@ export function mapFormToErpEvent(values, options = {}) {
   
     return participants;
   }
-
+  const isBirthday = values.tags === "Birthday";
   const doc = {
     doctype: "Event",
     subject: values.title,
@@ -46,6 +46,13 @@ export function mapFormToErpEvent(values, options = {}) {
     event_participants: buildParticipants(values),
     fsl_territory:values.hqTerritory || "",
   };
+  /* ------------------------------------
+     🎂 Birthday repeat logic (ERP)
+  ------------------------------------ */
+  if (isBirthday) {
+    doc.repeat_this_event = 1;
+    doc.repeat_on = "Yearly";
+  }
   if (!erpName) {
     doc.owner = LOGGED_IN_USER.id;
   }
