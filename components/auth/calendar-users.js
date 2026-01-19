@@ -2,7 +2,6 @@
  * Temporary ERP users
  * Replace this file when ERP user integration is ready
  */
-
 export const CALENDAR_USERS = [
     {
       id: "kavitha99@gmail.com",
@@ -19,8 +18,8 @@ export const CALENDAR_USERS = [
       status: "Active",
     },
     {
-      id: "sanjay@elbrit.org",
-      name: "Sanjay P",
+      id: "E00920",
+      name: "Sanjay S P",
       email: "sanjay@elbrit.org",
       role: "System User",
       status: "Active",
@@ -28,5 +27,7 @@ export const CALENDAR_USERS = [
   ];
   
   // default selected / logged-in user
-  export const CURRENT_USER = CALENDAR_USERS[0];
+  export const CURRENT_USER = CALENDAR_USERS[2];
+
+  export const LOGGED_IN_USER = CALENDAR_USERS[2];
   

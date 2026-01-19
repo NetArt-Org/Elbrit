@@ -30,12 +30,45 @@ export function DateTimePicker({
 	useEffect(() => {
 		const start = form.getValues("startDate");
 		const end = form.getValues("endDate");
-	
-		if (start && end && end < start) {
-			form.setValue("endDate", start);
+	  
+		if (!start) return;
+	  
+		// ⛑ Restore endDate if RHF clears it
+		if (!end) {
+		  form.setValue("endDate", start, { shouldDirty: false });
+		  return;
 		}
-	}, [form.watch("startDate")]);
-	
+	  
+		// ⛑ Prevent endDate < startDate
+		if (end < start) {
+		  form.setValue("endDate", start, { shouldDirty: false });
+		}
+	  }, [
+		form.watch("startDate"),
+		form.watch("endDate"),
+	  ]);
+	  
+	  useEffect(() => {
+		if (!hideTime) return;
+	  
+		const value = form.getValues(field.name);
+		if (!value) return;
+	  
+		const normalized = new Date(value);
+		normalized.setHours(defaultHour);
+		normalized.setMinutes(0);
+		normalized.setSeconds(0);
+	  
+		if (
+		  value.getHours() !== normalized.getHours() ||
+		  value.getMinutes() !== 0 ||
+		  value.getSeconds() !== 0
+		) {
+		  form.setValue(field.name, normalized, { shouldDirty: false });
+		}
+	  }, [hideTime]);
+	  
+	  
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 
@@ -51,13 +84,16 @@ export function DateTimePicker({
 
 			// ✅ close immediately for date-only picker
 			setOpen(false);
-		} else if (field.value) {
-			newDate.setHours(field.value.getHours());
-			newDate.setMinutes(field.value.getMinutes());
-		}
-
+		} else {
+			const current = field.value ?? new Date();
+		  
+			newDate.setHours(current.getHours());
+			newDate.setMinutes(current.getMinutes());
+			newDate.setSeconds(0);
+		  }		  
 		form.setValue(field.name, newDate);
 	}
+	
 
 	function handleTimeChange(type, value) {
 		const currentDate = form.getValues(field.name) || new Date();

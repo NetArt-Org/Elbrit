@@ -1,5 +1,5 @@
 import { graphqlRequest } from "@/lib/graphql-client";
-import { serializeEventDoc } from "./event.mapper";
+import { serializeEventDoc } from "./event-to-erp-graphql";
 import { EVENTS_BY_RANGE_QUERY } from "@/services/events.query";
 import { mapErpGraphqlEventToCalendar } from "@/services/erp-graphql-to-event";
 import { getCachedEvents, setCachedEvents } from "@/lib/calendar/event-cache";

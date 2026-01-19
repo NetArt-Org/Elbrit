@@ -19,6 +19,9 @@ query EventsByRange(
           full_name
           email
         }
+          fsl_territory {
+          name
+        }
           event_participants {
           reference_doctype {
             name
@@ -62,4 +65,16 @@ query GetSalesPartners($first: Int!) {
     }
   }
 }
+`;
+
+export const HQ_TERRITORIES_QUERY = `
+query GetHQTerritories($first: Int!){
+  Territorys(first: $first)  {
+    edges {
+      node {
+        name
+      }
+    }
+  }
+  }
 `;

@@ -1,23 +1,27 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addMinutes, set } from "date-fns";
+import { addMinutes, differenceInCalendarDays, set } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
 import { Button } from "@/components/ui/button";
-import { TAGS, PARTICIPANT_SOURCE_BY_TAG } from "@/components/calendar/mocks";
-import { mapFormToErpEvent } from "@/services/event.mapper";
-import { saveEvent } from "@/services/event.service";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { CURRENT_USER } from "@/components/auth/calendar-users";
+import { TAGS } from "@/components/calendar/mocks";
+import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
+import { saveEvent } from "@/services/event.service";
+
 import {
 	Form,
 	FormControl,
 	FormField,
 	FormItem,
 	FormLabel,
-	FormMessage,
 } from "@/components/ui/form";
+
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import {
 	Modal,
 	ModalClose,
@@ -28,6 +32,7 @@ import {
 	ModalTitle,
 	ModalTrigger,
 } from "@/components/ui/responsive-modal";
+
 import {
 	Select,
 	SelectContent,
@@ -35,53 +40,41 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { COLORS } from "@/components/calendar/constants";
+
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { useDisclosure } from "@/components/calendar/hooks";
 import { eventSchema } from "@/components/calendar/schemas";
 import { buildCalendarParticipants } from "@/lib/utils";
 import { RHFCombobox } from "@/components/ui/RHFCombobox";
-import { loadParticipantOptionsByTag, setParticipantFormDefaults } from "@/lib/participants";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
+import { loadParticipantOptionsByTag } from "@/lib/participants";
 
 export function AddEditEventDialog({
 	children,
-	startDate,
-	startTime,
-	event, defaultTag,
+	event,
+	defaultTag,
 }) {
-	const getTagConfig = (tag) =>
-		TAG_FORM_CONFIG[tag] ?? TAG_FORM_CONFIG.DEFAULT;
-
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
+	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
+
 	const [employeeOptions, setEmployeeOptions] = useState([]);
 	const [salesPartnerOptions, setSalesPartnerOptions] = useState([]);
 
 	const initialDates = useMemo(() => {
-		if (!isEditing && !event) {
-			if (!startDate) {
-				const now = new Date();
-				return { startDate: now, endDate: addMinutes(now, 30) };
-			}
-			const start = startTime
-				? set(new Date(startDate), {
-					hours: startTime.hour,
-					minutes: startTime.minute,
-					seconds: 0,
-				})
-				: new Date(startDate);
-			const end = addMinutes(start, 30);
-			return { startDate: start, endDate: end };
+		if (!event) {
+			const now = new Date();
+			return {
+				startDate: now,
+				endDate: addMinutes(now, 60),
+			};
 		}
-
 		return {
 			startDate: new Date(event.startDate),
 			endDate: new Date(event.endDate),
 		};
-	}, [startDate, startTime, event, isEditing]);
+	}, [event]);
 
 	const form = useForm({
 		resolver: zodResolver(eventSchema),
@@ -90,193 +83,236 @@ export function AddEditEventDialog({
 			description: event?.description ?? "",
 			startDate: initialDates.startDate,
 			endDate: initialDates.endDate,
-			color: event?.color ?? "blue",
-			tags: event?.tags ?? defaultTag ?? "Event",
+			tags: event?.tags ?? defaultTag ?? "Other",
+			hqTerritory: event?.hqTerritory ?? "",
 			employees: undefined,
 			salesPartner: undefined,
+			// Leave
+			leaveType: undefined,
+			reportTo: undefined,
+			medicalAttachment: undefined,
+			// Todo
+			hasDeadline: false,
 		},
 	});
 	useEffect(() => {
+		if (!isOpen || !event?.participants?.length) return;
+	  
+		const employee = event.participants.find(
+		  (p) => p.type === "Employee"
+		);
+	  
+		if (employee) {
+		  form.setValue("employees", employee.id, {
+			shouldDirty: false,
+			shouldValidate: false,
+		  });
+		}
+	  }, [isOpen, event?.participants]);
+	  
+	useEffect(() => {
 		if (!isOpen) return;
-
-		form.reset({
-			title: event?.title ?? "",
-			description: event?.description ?? "",
-			startDate: initialDates.startDate,
-			endDate: initialDates.endDate,
-			color: event?.color ?? "blue",
-			tags: event?.tags ?? defaultTag ?? "Event",
-			employees: undefined,
-			salesPartner: undefined,
-		});
-	}, [isOpen, event]);
+		form.reset(form.getValues());
+	}, [isOpen]);
 
 	const selectedTag = form.watch("tags");
-	const tagConfig = useMemo(
-		() => getTagConfig(selectedTag),
-		[selectedTag]
-	);
+	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
+
+
+	/* --------------------------------------------------
+	   AUTO TITLE (SAFE)
+	-------------------------------------------------- */
 	useEffect(() => {
-		if (!isOpen) return;
+		if (isEditing) return;
+		if (!tagConfig.autoTitle) return;
 
-		tagConfig.hide.forEach((field) => {
-			form.setValue(field, undefined);
-			form.clearErrors(field);
-		});
-	}, [tagConfig, isOpen, selectedTag]);
+		const values = form.getValues();
+		const title = tagConfig.autoTitle(values);
 
-
-	useEffect(() => {
-		loadParticipantOptionsByTag({
-			tag: selectedTag,
-			employeeOptions,
-			salesPartnerOptions,
-			setEmployeeOptions,
-			setSalesPartnerOptions,
-		});
-	}, [selectedTag]);
-
-	const onSubmit = async (values) => {
-		if (isEditing && !event?.erpName) {
-			toast.error("This event cannot be edited");
-			return;
-		}
-
-		try {
-			const erpDoc = mapFormToErpEvent(values, {
-				erpName: event?.erpName,
+		if (title && values.title !== title) {
+			form.setValue("title", title, {
+				shouldDirty: false,
+				shouldValidate: false,
 			});
-			// ✅ TESTING ONLY — log payload
-			const saved = await saveEvent(erpDoc);
-
-			const calendarEvent = {
-				...(event ?? {}),
-				erpName: saved.name,
-				title: values.title,
-				description: values.description,
-				startDate: erpDoc.starts_on,
-				endDate: erpDoc.ends_on,
-				color: values.color,
-				tags: values.tags,
-				owner: CURRENT_USER,
-				participants: buildCalendarParticipants(
-					values,
-					employeeOptions,
-					salesPartnerOptions
-				),
-			};
-
-			event?.erpName
-				? updateEvent(calendarEvent)
-				: addEvent(calendarEvent);
-
-			toast.success("Event saved successfully");
-
-			// ✅ CLOSE FIRST
-			onClose();
-
-			// ✅ RESET AFTER CLOSE (next tick)
-			setTimeout(() => {
-				form.reset();
-			}, 0);
-
-		} catch (error) {
-			console.error("Save Event failed:", error);
-			toast.error(
-				error?.message || "Unable to save event. Please try again."
-			);
 		}
-	};
+	}, [
+		form.watch("startDate"),
+		form.watch("salesPartner"),
+		form.watch("leaveType"),
+		form.watch("employees"),
+		selectedTag,
+	]);
+
+	/* --------------------------------------------------
+	   AUTO SELECT LOGGED IN USER
+	-------------------------------------------------- */
 	useEffect(() => {
-		setParticipantFormDefaults({ isOpen, event, form });
-	}, [isOpen, event]);
+		if (!selectedTag) return;
+	  
+		// 1️⃣ Load required options for the selected tag
+		loadParticipantOptionsByTag({
+		  tag: selectedTag,
+		  employeeOptions,
+		  hqTerritoryOptions,
+		  salesPartnerOptions,
+		  setEmployeeOptions,
+		  setSalesPartnerOptions,
+		  setHqTerritoryOptions,
+		});
+	  
+		// 2️⃣ Auto-select logged-in employee (only when enabled)
+		if (!tagConfig.employee?.autoSelectLoggedIn) return;
+	  
+		// 3️⃣ Do NOT override employee in edit mode
+		if (event?.participants?.length) return;
+	  
+		const value = tagConfig.employee.multiselect
+		  ? [LOGGED_IN_USER.id]
+		  : LOGGED_IN_USER.id;
+	  
+		form.setValue("employees", value, { shouldDirty: false });
+	  }, [
+		selectedTag,
+		tagConfig.employee,
+		event?.participants?.length,
+	  ]);
+	  
+	/* --------------------------------------------------
+	   SUBMIT
+	-------------------------------------------------- */
+	const onSubmit = async (values) => {
+		if (selectedTag === "Leave") {
+			const days =
+				differenceInCalendarDays(values.endDate, values.startDate) + 1;
+
+			if (days > 2 && !values.medicalAttachment) {
+				toast.error("Medical certificate required");
+				return;
+			}
+		}
+
+		const erpDoc = mapFormToErpEvent(values, {
+			erpName: event?.erpName,
+		});
+		console.log("ERP DOC",erpDoc)
+
+		const saved = await saveEvent(erpDoc);
+
+		const calendarEvent = {
+			...(event ?? {}),
+			erpName: saved.name,
+			title: values.title,
+			description: values.description,
+			startDate: erpDoc.starts_on,
+			endDate: erpDoc.ends_on,
+			color: tagConfig.fixedColor,
+			tags: values.tags,
+			owner: isEditing ? event.owner : LOGGED_IN_USER.id,
+			hqTerritory: values.hqTerritory || "",
+			participants: isEditing
+  ? event.participants
+  : buildCalendarParticipants(
+      values,
+      employeeOptions,
+      salesPartnerOptions
+    ),
+		};
+
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+
+		toast.success("Event saved");
+		onClose();
+	};
 
 	return (
-		<Modal open={isOpen} onOpenChange={onToggle} modal={true}>
+		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
+
 			<ModalContent>
 				<ModalHeader>
-					<ModalTitle>{isEditing ? "Edit Event" : "Add New Event"}</ModalTitle>
-					<ModalDescription>
-						{isEditing
-							? "Modify your existing event."
-							: "Create a new event for your calendar."}
-					</ModalDescription>
+					<ModalTitle>{isEditing ? "Edit Event" : "Add Event"}</ModalTitle>
+					<ModalDescription />
 				</ModalHeader>
 
 				<Form {...form}>
 					<form
 						id="event-form"
 						onSubmit={form.handleSubmit(onSubmit)}
-						className="grid gap-4 py-4">
-
-						<FormField
-							control={form.control}
-							name="title"
-							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel htmlFor="title" className="required">
-										Title
-									</FormLabel>
-									<FormControl>
-										<Input
-											id="title"
-											placeholder="Enter a title"
-											{...field}
-											className={fieldState.invalid ? "border-red-500" : ""} />
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)} />
+						className="grid gap-4"
+					>
+						{/* TAGS */}
 						<FormField
 							control={form.control}
 							name="tags"
 							render={({ field }) => (
-								<FormItem>
-									<FormControl>
-										<div className="flex flex-wrap gap-2">
-											{TAGS.map((tag) => {
-												const isActive = String(field.value) === tag.id;
-												return (
-													<button
-														key={tag.id}
-														type="button"
-														onClick={() => field.onChange(tag.id)}
-														className={`
-                  rounded-full px-4 py-1.5 text-sm font-medium transition
-                  ${isActive
-																? "bg-black text-white shadow"
-																: "bg-muted text-muted-foreground hover:bg-muted/70"
-															}
-                `}
-													>
-														{tag.label}
-													</button>
-												);
-											})}
-										</div>
-									</FormControl>
-
-									<FormMessage />
-								</FormItem>
+								<div className="flex flex-wrap gap-2">
+									{TAGS.map((tag) => (
+										<button
+											key={tag.id}
+											type="button"
+											onClick={() => field.onChange(tag.id)}
+											className={`px-4 py-1 rounded-full ${field.value === tag.id
+												? "bg-black text-white"
+												: "bg-muted"
+												}`}
+										>
+											{tag.label}
+										</button>
+									))}
+								</div>
 							)}
 						/>
+
+						{/* TITLE ALWAYS BELOW TAGS */}
+						{!tagConfig.hide?.includes("title") && (
+							<FormField
+								control={form.control}
+								name="title"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Title</FormLabel>
+										<FormControl>
+											<Input placeholder="Enter title" {...field} />
+										</FormControl>
+									</FormItem>
+								)}
+							/>
+						)}
+
+						{/* DOCTOR FIRST */}
+						{!tagConfig.hide?.includes("salesPartner") && (
+							<FormField
+								control={form.control}
+								name="salesPartner"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Doctor / Institute</FormLabel>
+										<FormControl>
+											<RHFCombobox
+												options={salesPartnerOptions}
+												value={field.value}
+												onChange={field.onChange}
+												placeholder="Select doctor"
+											/>
+										</FormControl>
+									</FormItem>
+								)}
+							/>
+						)}
 						<div className="grid grid-cols-2 gap-3">
+							{/* DATE */}
 							<FormField
 								control={form.control}
 								name="startDate"
 								render={({ field }) => (
 									<DateTimePicker
-									    label={selectedTag=="Birthday"?"Birthday":false}
 										form={form}
 										field={field}
 										hideTime={tagConfig.dateOnly}
-										defaultHour={0}
-										defaultMinute={0}
 									/>
 								)}
 							/>
-							{!tagConfig.hide.includes("endDate") && (
+							{!tagConfig.hide?.includes("endDate") && (
 								<FormField
 									control={form.control}
 									name="endDate"
@@ -285,114 +321,140 @@ export function AddEditEventDialog({
 											form={form}
 											field={field}
 											hideTime={tagConfig.dateOnly}
-											defaultHour={0}
-											defaultMinute={0}
 										/>
 									)}
 								/>
 							)}
 						</div>
-						{!tagConfig.hide.includes("employees") &&
-							PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("EMPLOYEE") && (
-								<FormField
-									control={form.control}
-									name="employees"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Employee</FormLabel>
-											<FormControl>
-												<RHFCombobox
-													value={field.value}
-													onChange={field.onChange}
-													options={employeeOptions}
-													placeholder="Select Employee"
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							)}
+						{/* EMPLOYEES */}
+						{!tagConfig.hide?.includes("employees") &&
+ !tagConfig.employee?.autoSelectLoggedIn && (
+  <FormField
+    control={form.control}
+    name="employees"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Employees</FormLabel>
+        <FormControl>
+          <RHFCombobox
+            multiple={tagConfig.employee?.multiselect}
+            options={employeeOptions}
+            value={field.value}
+            onChange={field.onChange}
+            placeholder="Select employees"
+          />
+        </FormControl>
+      </FormItem>
+    )}
+  />
+)}
 
-						{!tagConfig.hide.includes("salesPartner") &&
-						PARTICIPANT_SOURCE_BY_TAG[selectedTag]?.includes("SALESPARTNER") && (
+						{selectedTag === "HQ Tour Plan" && (
 							<FormField
 								control={form.control}
-								name="salesPartner"
+								name="hqTerritory"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>
-										Doctor / Institute
-										</FormLabel>
+										<FormLabel>HQ Territory</FormLabel>
 										<FormControl>
 											<RHFCombobox
+												options={hqTerritoryOptions}
 												value={field.value}
 												onChange={field.onChange}
-												options={salesPartnerOptions}
-												placeholder="Select doctor / institute"
+												placeholder="Select HQ Territory"
 											/>
 										</FormControl>
-										<FormMessage />
 									</FormItem>
 								)}
 							/>
 						)}
-						<FormField
-							control={form.control}
-							name="color"
-							render={({ field, fieldState }) => (
-								<FormItem>
-									<FormLabel className="required">Variant</FormLabel>
-									<FormControl>
-										<Select value={field.value} onValueChange={field.onChange}>
-											<SelectTrigger
-												className={`w-full ${fieldState.invalid ? "border-red-500" : ""
-													}`}>
-												<SelectValue placeholder="Select a variant" />
-											</SelectTrigger>
-											<SelectContent>
-												{COLORS.map((color) => (
-													<SelectItem value={color} key={color}>
-														<div className="flex items-center gap-2">
-															<div className={`size-3.5 rounded-full bg-${color}-600 dark:bg-${color}-700`} />
-															{color}
-														</div>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)} />
-						{!tagConfig.hide.includes("description") && (
+
+						{/* LEAVE EXTRA */}
+						{selectedTag === "Leave" && (
+							<>
+								<FormField
+									control={form.control}
+									name="leaveType"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Leave Type</FormLabel>
+											<Select
+												value={field.value}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="Select leave type" />
+												</SelectTrigger>
+												<SelectContent>
+													{["SL", "PL", "CL", "ML"].map((t) => (
+														<SelectItem key={t} value={t}>
+															{t}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormItem>
+									)}
+								/>
+
+								<div className="text-sm text-muted-foreground">
+									Balance: 10 / 12
+								</div>
+
+								<FormField
+									control={form.control}
+									name="medicalAttachment"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Medical Certificate</FormLabel>
+											<Input type="file" onChange={field.onChange} />
+										</FormItem>
+									)}
+								/>
+							</>
+						)}
+
+						{/* TODO DEADLINE */}
+						{selectedTag === "Todo List" && (
+							<FormField
+								control={form.control}
+								name="hasDeadline"
+								render={({ field }) => (
+									<FormItem className="flex gap-2 items-center">
+										<Checkbox
+											checked={field.value}
+											onCheckedChange={field.onChange}
+										/>
+										<FormLabel>Has Deadline</FormLabel>
+									</FormItem>
+								)}
+							/>
+						)}
+
+						{!tagConfig.hide?.includes("description") && (
 							<FormField
 								control={form.control}
 								name="description"
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Description</FormLabel>
-										<FormControl>
-											<Textarea {...field} />
-										</FormControl>
-										<FormMessage />
+										<Textarea {...field} />
 									</FormItem>
 								)}
 							/>
 						)}
-
 					</form>
 				</Form>
-				<ModalFooter className="flex justify-end gap-2">
+                <div className="pt-4">
+				<ModalFooter>
 					<ModalClose asChild>
-						<Button type="button" variant="outline">
-							Cancel
-						</Button>
+						<Button variant="outline">Cancel</Button>
 					</ModalClose>
-					<Button form="event-form" type="submit">
-						{isEditing ? "Save Changes" : "Create Event"}
+					<Button type="submit" form="event-form">
+						Create Event
 					</Button>
 				</ModalFooter>
+				</div>
 			</ModalContent>
 		</Modal>
 	);

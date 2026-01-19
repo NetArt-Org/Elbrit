@@ -1,7 +1,7 @@
 import { graphqlRequest } from "@/lib/graphql-client";
 import {
   EMPLOYEES_QUERY,
-  SALES_PARTNERS_QUERY,
+  SALES_PARTNERS_QUERY,HQ_TERRITORIES_QUERY
 } from "@/services/events.query";
 
 const MAX_ROWS = 1000; // safe upper bound
@@ -30,6 +30,19 @@ export async function fetchSalesPartner() {
       doctype: "Sales Partner",
       value: node.name,
       label: node.name,
+    })) || []
+  );
+}
+export async function fetchHQTerritories() {
+  const data = await graphqlRequest(HQ_TERRITORIES_QUERY, {
+    first: MAX_ROWS,
+  });
+
+  return (
+    data?.Territorys?.edges.map(({ node }) => ({
+      doctype: "Territory",
+      value: node.name, // ERP value
+      label: node.name, // UI label (same)
     })) || []
   );
 }

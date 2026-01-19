@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Calendar, Clock, Text, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import {
 	Dialog,
 	DialogClose,
@@ -26,6 +27,10 @@ export function EventDetailsDialog({
 	const endDate = parseISO(event.endDate);
 	const { use24HourFormat, removeEvent } = useCalendar();
 	const deleteLockRef = useRef(false);
+	const tagConfig =
+		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
+
+	const isDateOnly = tagConfig.dateOnly;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -52,9 +57,15 @@ export function EventDetailsDialog({
 							<div>
 								<p className="text-sm font-medium">Start Date</p>
 								<p className="text-sm text-muted-foreground">
-									{format(startDate, "EEEE dd MMMM")}
-									<span className="mx-1">at</span>
-									{formatTime(parseISO(event.startDate), use24HourFormat)}
+									{isDateOnly
+										? format(startDate, "EEEE dd MMMM")
+										: (
+											<>
+												{format(startDate, "EEEE dd MMMM")}
+												<span className="mx-1">at</span>
+												{formatTime(startDate, use24HourFormat)}
+											</>
+										)}
 								</p>
 							</div>
 						</div>
@@ -64,9 +75,15 @@ export function EventDetailsDialog({
 							<div>
 								<p className="text-sm font-medium">End Date</p>
 								<p className="text-sm text-muted-foreground">
-									{format(endDate, "EEEE dd MMMM")}
-									<span className="mx-1">at</span>
-									{formatTime(parseISO(event.endDate), use24HourFormat)}
+									{isDateOnly
+										? format(endDate, "EEEE dd MMMM")
+										: (
+											<>
+												{format(endDate, "EEEE dd MMMM")}
+												<span className="mx-1">at</span>
+												{formatTime(endDate, use24HourFormat)}
+											</>
+										)}
 								</p>
 							</div>
 						</div>
@@ -91,19 +108,19 @@ export function EventDetailsDialog({
 						onClick={async () => {
 							if (deleteLockRef.current) return;
 							deleteLockRef.current = true;
-						  
+
 							try {
-							  await deleteEventFromErp(event.erpName); // SINGLE SOURCE
-							  removeEvent(event.erpName);              // UI update
-							  setOpen(false);
-							  toast.success("Event deleted successfully.");
+								await deleteEventFromErp(event.erpName); // SINGLE SOURCE
+								removeEvent(event.erpName);              // UI update
+								setOpen(false);
+								toast.success("Event deleted successfully.");
 							} catch (e) {
-							  toast.error("Error deleting event.");
+								toast.error("Error deleting event.");
 							} finally {
-							  deleteLockRef.current = false;
+								deleteLockRef.current = false;
 							}
-						  }}
-						  
+						}}
+
 					>
 						Delete
 					</Button>

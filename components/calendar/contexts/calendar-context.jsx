@@ -1,11 +1,10 @@
 "use client";;
 import { createContext, useContext, useState,useEffect,useRef } from "react";
 import { useLocalStorage } from "@/components/calendar/hooks";
-import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 import { fetchEventsByRange } from "@/services/event.service";
 import { resolveCalendarRange } from "@/lib/calendar/range";
 import { EMPLOYEES_QUERY } from "@/services/events.query";
-import { mapEmployeesToCalendarUsers } from "@/lib/employee-to-calendar-user";
+import { mapEmployeesToCalendarUsers } from "@/services/employee-to-calendar-user";
 import { graphqlRequest } from "@/lib/graphql-client";
 
 
@@ -24,7 +23,6 @@ export function CalendarProvider({
 	badge = "colored",
 	view = "day"
 }) {
-	console.log("CalendarProvider RENDERED");
 	const [settings, setSettings] = useLocalStorage("calendar-settings", {
 		...DEFAULT_SETTINGS,
 		badgeVariant: badge,
@@ -102,6 +100,11 @@ export function CalendarProvider({
 			const filtered = allEvents.filter((event) => event.owner?.id === userId);
 			setFilteredEvents(filtered);
 		}
+		console.log(
+			"ALL:", allEvents.length,
+			"FILTERED:", filteredEvents.length,
+			"USER:", selectedUserId
+		  );		  
 	};
 
 	const handleSelectDate = (date) => {
@@ -191,12 +194,10 @@ export function CalendarProvider({
 	  useEffect(() => {
 		let cancelled = false;
 	  
-		console.log("Employee effect START");
-	  
 		async function hydrateEmployees() {
 		  try {
 			const data = await graphqlRequest(EMPLOYEES_QUERY, {
-			  first: 50,
+			  first: 1000,
 			});
 	  
 			const employees =
@@ -209,7 +210,6 @@ export function CalendarProvider({
 			  setUsersLoading(false);
 			}
 	  
-			console.log("Employee data", employees, mappedUsers);
 		  } catch (err) {
 			console.error("Failed to fetch employees", err);
 			setUsersLoading(false);

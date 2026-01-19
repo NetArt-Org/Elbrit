@@ -14,7 +14,11 @@ export function mapErpGraphqlEventToCalendar(node) {
     if (!node) return null;
   
     const startDate = parseErpDate(node.starts_on);
-    const endDate = parseErpDate(node.ends_on);
+
+// ERP drops ends_on when same-day → normalize here
+const endDate =
+  parseErpDate(node.ends_on) ?? startDate;
+
   
     const event = {
       erpName: node.name,
@@ -26,6 +30,7 @@ export function mapErpGraphqlEventToCalendar(node) {
       endDate: endDate ? endDate.toISOString() : null,
       color: mapHexToColor(node.color),
       tags: node.event_category || "Other",
+      hqTerritory: node.fsl_territory?.name ?? "",
       owner: node.owner
         ? {
             id: node.owner.name,

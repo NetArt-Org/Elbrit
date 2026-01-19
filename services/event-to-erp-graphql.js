@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { COLOR_HEX_MAP } from "@/components/calendar/constants";
+import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
 
 /**
  * Maps form values to an ERP Event document
@@ -29,7 +30,6 @@ export function mapFormToErpEvent(values, options = {}) {
   
     return participants;
   }
-  
 
   const doc = {
     doctype: "Event",
@@ -44,8 +44,11 @@ export function mapFormToErpEvent(values, options = {}) {
     status: "Open",
     docstatus: 0,
     event_participants: buildParticipants(values),
+    fsl_territory:values.hqTerritory || "",
   };
-
+  if (!erpName) {
+    doc.owner = LOGGED_IN_USER.id;
+  }
   // Only include name for UPDATE
   if (erpName) {
     doc.name = erpName;
