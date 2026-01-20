@@ -23,10 +23,10 @@ export const PARTICIPANT_SOURCE_BY_TAG = {
   "Leave": ["EMPLOYEE"],
   "HQ Tour Plan": ["HQ_TERRITORY"],
   "Meeting": ["EMPLOYEE"],
-  "Birthday": ["SALESPARTNER"],
-  "Doctor Visit Plan": ["EMPLOYEE", "SALESPARTNER"],
+  "Birthday": ["DOCTOR"],
+  "Doctor Visit Plan": ["EMPLOYEE", "DOCTOR"],
   "Todo List": ["EMPLOYEE"],
-  "Other": ["EMPLOYEE", "SALESPARTNER"],
+  "Other": ["EMPLOYEE", "DOCTOR"],
 };
 
 /* =========================================================

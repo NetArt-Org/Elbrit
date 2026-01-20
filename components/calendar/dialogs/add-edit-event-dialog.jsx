@@ -58,9 +58,8 @@ export function AddEditEventDialog({
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
 	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
-
+	const [doctorOptions, setDoctorOptions] = useState([]);
 	const [employeeOptions, setEmployeeOptions] = useState([]);
-	const [salesPartnerOptions, setSalesPartnerOptions] = useState([]);
 
 	const initialDates = useMemo(() => {
 		if (!event) {
@@ -86,7 +85,7 @@ export function AddEditEventDialog({
 			tags: event?.tags ?? defaultTag ?? "Other",
 			hqTerritory: event?.hqTerritory ?? "",
 			employees: undefined,
-			salesPartner: undefined,
+			doctor: undefined,
 			// Leave
 			leaveType: undefined,
 			reportTo: undefined,
@@ -102,8 +101,8 @@ export function AddEditEventDialog({
 		  (p) => p.type === "Employee"
 		);
 	  
-		const salesPartner = event.participants.find(
-		  (p) => p.type === "Sales Partner"
+		const doctor = event.participants.find(
+		  (p) => p.type === "Lead"
 		);
 	  
 		if (employee) {
@@ -113,8 +112,8 @@ export function AddEditEventDialog({
 		  });
 		}
 	  
-		if (salesPartner) {
-		  form.setValue("salesPartner", salesPartner.id, {
+		if (doctor) {
+		  form.setValue("doctor", doctor.id, {
 			shouldDirty: false,
 			shouldValidate: false,
 		  });
@@ -149,7 +148,7 @@ export function AddEditEventDialog({
 		}
 	}, [
 		form.watch("startDate"),
-		form.watch("salesPartner"),
+		form.watch("doctor"),
 		form.watch("leaveType"),
 		form.watch("employees"),
 		selectedTag,
@@ -166,10 +165,10 @@ export function AddEditEventDialog({
 		  tag: selectedTag,
 		  employeeOptions,
 		  hqTerritoryOptions,
-		  salesPartnerOptions,
+		  doctorOptions,
 		  setEmployeeOptions,
-		  setSalesPartnerOptions,
 		  setHqTerritoryOptions,
+		  setDoctorOptions
 		});
 	  
 		// 2️⃣ Auto-select logged-in employee (only when enabled)
@@ -212,7 +211,7 @@ export function AddEditEventDialog({
 
 		const calendarEvent = {
 			...(event ?? {}),
-			erpName: saved.name,
+			// erpName: saved.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -221,15 +220,13 @@ export function AddEditEventDialog({
 			tags: values.tags,
 			owner: isEditing ? event.owner : LOGGED_IN_USER.id,
 			hqTerritory: values.hqTerritory || "",
-			participants: isEditing
-  ? event.participants
-  : buildCalendarParticipants(
-      values,
-      employeeOptions,
-      salesPartnerOptions
-    ),
+			participants: buildCalendarParticipants(
+				values,
+				employeeOptions,
+				doctorOptions
+			  ),
 		};
-
+		console.log("Calendar DOC",calendarEvent)
 		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 
 		toast.success("Event saved");
@@ -292,16 +289,16 @@ export function AddEditEventDialog({
 						)}
 
 						{/* DOCTOR FIRST */}
-						{!tagConfig.hide?.includes("salesPartner") && (
+						{!tagConfig.hide?.includes("doctor") && (
 							<FormField
 								control={form.control}
-								name="salesPartner"
+								name="doctor"
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Doctor / Institute</FormLabel>
 										<FormControl>
 											<RHFCombobox
-												options={salesPartnerOptions}
+												options={doctorOptions}
 												value={field.value}
 												onChange={field.onChange}
 												placeholder="Select doctor"

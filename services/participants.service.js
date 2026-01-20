@@ -1,7 +1,6 @@
 import { graphqlRequest } from "@/lib/graphql-client";
 import {
-  EMPLOYEES_QUERY,
-  SALES_PARTNERS_QUERY,HQ_TERRITORIES_QUERY
+  EMPLOYEES_QUERY,DOCTOR_QUERY,HQ_TERRITORIES_QUERY
 } from "@/services/events.query";
 
 const MAX_ROWS = 1000; // safe upper bound
@@ -20,19 +19,21 @@ export async function fetchEmployees() {
   );
 }
 
-export async function fetchSalesPartner() {
-  const data = await graphqlRequest(SALES_PARTNERS_QUERY, {
+
+export async function fetchDoctors() {
+  const data = await graphqlRequest(DOCTOR_QUERY, {
     first: MAX_ROWS,
   });
 
   return (
-    data?.SalesPartners?.edges.map(({ node }) => ({
-      doctype: "Sales Partner",
+    data?.Leads?.edges.map(({ node }) => ({
+      doctype: "Lead",
       value: node.name,
-      label: node.name,
+      label: node.lead_name,
     })) || []
   );
 }
+
 export async function fetchHQTerritories() {
   const data = await graphqlRequest(HQ_TERRITORIES_QUERY, {
     first: MAX_ROWS,

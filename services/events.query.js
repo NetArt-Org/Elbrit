@@ -49,23 +49,28 @@ query GetEmployees($first: Int!) {
         employee_name
         company_email
         idx
+        designation{
+        name
+        }
       }
     }
   }
 }
 `;
 
-export const SALES_PARTNERS_QUERY = `
-query GetSalesPartners($first: Int!) {
-  SalesPartners(first: $first) {
+
+export const DOCTOR_QUERY=`
+query Doctors($first: Int) {
+  Leads(first: $first) {
     edges {
       node {
         name
+        lead_name
       }
     }
   }
 }
-`;
+`
 
 export const HQ_TERRITORIES_QUERY = `
 query GetHQTerritories($first: Int!){

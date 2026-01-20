@@ -6,6 +6,7 @@ import { COLOR_HEX_MAP } from "@/components/calendar/constants";
  */
 export function mapErpGraphqlEventToCalendar(node) {
   if (!node) return null;
+  const isBirthday = node.event_category === "Birthday";
 
   const participants =
     node.event_participants?.map(p => ({
@@ -14,13 +15,22 @@ export function mapErpGraphqlEventToCalendar(node) {
     })) ?? [];
 
   // ✅ extract sales partner explicitly
-  const salesPartner =
-    participants.find(p => p.type === "Sales Partner")?.id;
+  const doctor =
+    participants.find(p => p.type === "Lead")?.id;
 
-  const startDate = parseErpDate(node.starts_on);
-
-  // ERP drops ends_on for same-day
-  const endDate = parseErpDate(node.ends_on) ?? startDate;
+    let startDate = parseErpDate(node.starts_on);
+    let endDate = parseErpDate(node.ends_on) ?? startDate;
+    
+    if (isBirthday && startDate) {
+      const currentYear = new Date().getFullYear();
+    
+      const normalized = new Date(startDate);
+      normalized.setFullYear(currentYear);
+    
+      startDate = normalized;
+      endDate = normalized;
+    }
+    
 
   const event = {
     erpName: node.name,
@@ -32,7 +42,7 @@ export function mapErpGraphqlEventToCalendar(node) {
     tags: node.event_category || "Other",
 
     // ✅ FIXED
-    salesPartner,
+    doctor,
 
     hqTerritory: node.fsl_territory?.name ?? "",
 

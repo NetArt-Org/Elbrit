@@ -21,10 +21,10 @@ export function mapFormToErpEvent(values, options = {}) {
       });
     }
   
-    if (values.salesPartner) {
+    if (values.doctor) {
       participants.push({
-        reference_doctype: "Sales Partner",
-        reference_docname: values.salesPartner,
+        reference_doctype: "Lead",
+        reference_docname: values.doctor,
       });
     }
   
