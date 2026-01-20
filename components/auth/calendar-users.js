@@ -26,8 +26,6 @@ export const CALENDAR_USERS = [
     },
   ];
   
-  // default selected / logged-in user
-  export const CURRENT_USER = CALENDAR_USERS[2];
 
   export const LOGGED_IN_USER = CALENDAR_USERS[2];
   

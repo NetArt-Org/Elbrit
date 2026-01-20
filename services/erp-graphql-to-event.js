@@ -1,5 +1,7 @@
 import { eventSchema } from "@/components/calendar/schemas";
 import { COLOR_HEX_MAP } from "@/components/calendar/constants";
+import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
+
 /**
  * ERP GraphQL → Calendar Event
  * Ensures startDate / endDate are ISO STRINGS
@@ -18,19 +20,19 @@ export function mapErpGraphqlEventToCalendar(node) {
   const doctor =
     participants.find(p => p.type === "Lead")?.id;
 
-    let startDate = parseErpDate(node.starts_on);
-    let endDate = parseErpDate(node.ends_on) ?? startDate;
-    
-    if (isBirthday && startDate) {
-      const currentYear = new Date().getFullYear();
-    
-      const normalized = new Date(startDate);
-      normalized.setFullYear(currentYear);
-    
-      startDate = normalized;
-      endDate = normalized;
-    }
-    
+  let startDate = parseErpDate(node.starts_on);
+  let endDate = parseErpDate(node.ends_on) ?? startDate;
+
+  if (isBirthday && startDate) {
+    const currentYear = new Date().getFullYear();
+
+    const normalized = new Date(startDate);
+    normalized.setFullYear(currentYear);
+
+    startDate = normalized;
+    endDate = normalized;
+  }
+
 
   const event = {
     erpName: node.name,
@@ -38,7 +40,10 @@ export function mapErpGraphqlEventToCalendar(node) {
     description: node.description ?? "",
     startDate: startDate ? startDate.toISOString() : null,
     endDate: endDate ? endDate.toISOString() : null,
-    color: mapHexToColor(node.color),
+    color:
+      TAG_FORM_CONFIG[node.event_category]?.fixedColor
+      ?? mapHexToColor(node.color)
+      ?? "blue",
     tags: node.event_category || "Other",
 
     // ✅ FIXED
@@ -48,10 +53,10 @@ export function mapErpGraphqlEventToCalendar(node) {
 
     owner: node.owner
       ? {
-          id: node.owner.name,
-          name: node.owner.full_name || node.owner.name,
-          email: node.owner.email,
-        }
+        id: node.owner.name,
+        name: node.owner.full_name || node.owner.name,
+        email: node.owner.email,
+      }
       : undefined,
 
     isMultiDay:
@@ -76,26 +81,26 @@ export function mapErpGraphqlEventToCalendar(node) {
   return event;
 }
 
-  
-  /**
-   * ERP format: "YYYY-MM-DD HH:mm:ss"
-   * Convert safely to Date
-   */
-  function parseErpDate(value) {
-    if (!value || typeof value !== "string") return null;
-  
-    const isoLike = value.replace(" ", "T");
-    const date = new Date(isoLike);
-  
-    return isNaN(date.getTime()) ? null : date;
-  }
-  
-  function mapHexToColor(hex) {
-    if (!hex) return "blue";
-  
-    const entry = Object.entries(COLOR_HEX_MAP).find(
-      ([, value]) => value.toLowerCase() === hex.toLowerCase()
-    );
-  
-    return entry ? entry[0] : "blue";
-  }
+
+/**
+ * ERP format: "YYYY-MM-DD HH:mm:ss"
+ * Convert safely to Date
+ */
+function parseErpDate(value) {
+  if (!value || typeof value !== "string") return null;
+
+  const isoLike = value.replace(" ", "T");
+  const date = new Date(isoLike);
+
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function mapHexToColor(hex) {
+  if (!hex) return "blue";
+
+  const entry = Object.entries(COLOR_HEX_MAP).find(
+    ([, value]) => value.toLowerCase() === hex.toLowerCase()
+  );
+
+  return entry ? entry[0] : "blue";
+}

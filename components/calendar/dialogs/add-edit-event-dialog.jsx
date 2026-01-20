@@ -154,6 +154,7 @@ export function AddEditEventDialog({
 		form.watch("doctor"),
 		selectedTag,
 		doctorOptions,
+		employeeOptions
 	  ]);
 	  
 
@@ -210,11 +211,11 @@ export function AddEditEventDialog({
 		});
 		console.log("ERP DOC",erpDoc)
 
-		const saved = await saveEvent(erpDoc);
+		// const saved = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			erpName: saved.name,
+			// erpName: saved.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -230,9 +231,9 @@ export function AddEditEventDialog({
 			  ),
 		};
 		console.log("Calendar DOC",calendarEvent)
-		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 
-		toast.success("Event saved");
+		// toast.success("Event saved");
 		onClose();
 	};
 
@@ -290,7 +291,25 @@ export function AddEditEventDialog({
 								)}
 							/>
 						)}
-
+	{selectedTag === "HQ Tour Plan" && (
+							<FormField
+								control={form.control}
+								name="hqTerritory"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>HQ Territory</FormLabel>
+										<FormControl>
+											<RHFCombobox
+												options={hqTerritoryOptions}
+												value={field.value}
+												onChange={field.onChange}
+												placeholder="Select HQ Territory"
+											/>
+										</FormControl>
+									</FormItem>
+								)}
+							/>
+						)}
 						{/* DOCTOR FIRST */}
 						{!tagConfig.hide?.includes("doctor") && (
 							<FormField
@@ -298,7 +317,7 @@ export function AddEditEventDialog({
 								name="doctor"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Doctor / Institute</FormLabel>
+										<FormLabel>Doctor</FormLabel>
 										<FormControl>
 											<RHFCombobox
 												options={doctorOptions}
@@ -362,26 +381,6 @@ export function AddEditEventDialog({
     )}
   />
 )}
-
-						{selectedTag === "HQ Tour Plan" && (
-							<FormField
-								control={form.control}
-								name="hqTerritory"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>HQ Territory</FormLabel>
-										<FormControl>
-											<RHFCombobox
-												options={hqTerritoryOptions}
-												value={field.value}
-												onChange={field.onChange}
-												placeholder="Select HQ Territory"
-											/>
-										</FormControl>
-									</FormItem>
-								)}
-							/>
-						)}
 
 						{/* LEAVE EXTRA */}
 						{selectedTag === "Leave" && (
@@ -465,7 +464,7 @@ export function AddEditEventDialog({
 						<Button variant="outline">Cancel</Button>
 					</ModalClose>
 					<Button type="submit" form="event-form">
-						Create Event
+						{isEditing?"Update Event":"Create Event"}
 					</Button>
 				</ModalFooter>
 				</div>

@@ -14,7 +14,8 @@ export async function fetchEmployees() {
     data?.Employees?.edges.map(({ node }) => ({
       doctype: "Employee",
       value: node.name,          // ERP ID → saved
-      label: node.employee_name, // UI text
+      label: node.employee_name, 
+      designation: node.designation?.name ?? null,// UI text
     })) || []
   );
 }
