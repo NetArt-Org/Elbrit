@@ -136,23 +136,26 @@ export function AddEditEventDialog({
 	useEffect(() => {
 		if (isEditing) return;
 		if (!tagConfig.autoTitle) return;
-
+	  
 		const values = form.getValues();
-		const title = tagConfig.autoTitle(values);
-
+		const title = tagConfig.autoTitle(values, {
+		  doctorOptions,
+		  employeeOptions,
+		});
+	  
 		if (title && values.title !== title) {
-			form.setValue("title", title, {
-				shouldDirty: false,
-				shouldValidate: false,
-			});
+		  form.setValue("title", title, {
+			shouldDirty: false,
+			shouldValidate: false,
+		  });
 		}
-	}, [
+	  }, [
 		form.watch("startDate"),
 		form.watch("doctor"),
-		form.watch("leaveType"),
-		form.watch("employees"),
 		selectedTag,
-	]);
+		doctorOptions,
+	  ]);
+	  
 
 	/* --------------------------------------------------
 	   AUTO SELECT LOGGED IN USER
@@ -211,7 +214,7 @@ export function AddEditEventDialog({
 
 		const calendarEvent = {
 			...(event ?? {}),
-			// erpName: saved.name,
+			erpName: saved.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
