@@ -11,6 +11,7 @@ export const eventSchema = z.object({
 	color: z.string().optional(),
 	employees: z.any().optional(),
 	hqTerritory: z.string().optional(),
+	allDay: z.boolean().optional(),
 	doctor: z.any().optional(),
   }).superRefine((data, ctx) => {
 	const config = TAG_FORM_CONFIG[data.tags] ?? TAG_FORM_CONFIG.DEFAULT;

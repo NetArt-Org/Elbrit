@@ -14,12 +14,19 @@ export function mapFormToErpEvent(values, options = {}) {
   function buildParticipants(values) {
     const participants = [];
   
-    if (values.employees) {
+    // Employees
+  if (values.employees) {
+    const employeeIds = Array.isArray(values.employees)
+      ? values.employees
+      : [values.employees];
+
+    employeeIds.forEach((empId) => {
       participants.push({
         reference_doctype: "Employee",
-        reference_docname: values.employees,
+        reference_docname: empId,
       });
-    }
+    });
+  }
   
     if (values.doctor) {
       participants.push({

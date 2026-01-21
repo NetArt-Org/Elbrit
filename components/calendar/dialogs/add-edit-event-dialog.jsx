@@ -48,6 +48,7 @@ import { buildCalendarParticipants } from "@/lib/utils";
 import { RHFCombobox } from "@/components/ui/RHFCombobox";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@/lib/participants";
+import { TimePicker } from "@/components/ui/TimePicker";
 
 export function AddEditEventDialog({
 	children,
@@ -60,7 +61,6 @@ export function AddEditEventDialog({
 	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
 	const [doctorOptions, setDoctorOptions] = useState([]);
 	const [employeeOptions, setEmployeeOptions] = useState([]);
-
 	const initialDates = useMemo(() => {
 		if (!event) {
 			const now = new Date();
@@ -92,8 +92,12 @@ export function AddEditEventDialog({
 			medicalAttachment: undefined,
 			// Todo
 			hasDeadline: false,
+			allDay: false,
 		},
 	});
+
+	const { allDay, startDate } = form.watch();
+
 	useEffect(() => {
 		if (!isOpen || !event?.participants?.length) return;
 	  
@@ -128,6 +132,8 @@ export function AddEditEventDialog({
 
 	const selectedTag = form.watch("tags");
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
+	const isMulti =
+  tagConfig?.employee?.multiselect === true;
 
 
 	/* --------------------------------------------------
@@ -191,6 +197,39 @@ export function AddEditEventDialog({
 		tagConfig.employee,
 		event?.participants?.length,
 	  ]);
+
+	  /* ---------------------------------------------
+     MEETING TIME LOGIC (MERGED)
+  --------------------------------------------- */
+  useEffect(() => {
+	if (selectedTag !== "Meeting") return;
+  
+	// ❗ Do NOT auto-modify times in edit mode
+	if (isEditing) return;
+  
+	const now = new Date();
+  
+	if (allDay) {
+	  form.setValue(
+		"startDate",
+		set(now, { seconds: 0, milliseconds: 0 }),
+		{ shouldDirty: false }
+	  );
+	  form.setValue(
+		"endDate",
+		set(now, { hours: 23, minutes: 59, seconds: 59 }),
+		{ shouldDirty: false }
+	  );
+	} else if (startDate) {
+	  form.setValue(
+		"endDate",
+		addMinutes(startDate, 60),
+		{ shouldDirty: false }
+	  );
+	}
+  }, [selectedTag, allDay, startDate, isEditing]);
+  
+	  
 	  
 	/* --------------------------------------------------
 	   SUBMIT
@@ -211,11 +250,11 @@ export function AddEditEventDialog({
 		});
 		console.log("ERP DOC",erpDoc)
 
-		// const saved = await saveEvent(erpDoc);
+		const saved = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			// erpName: saved.name,
+			erpName: saved.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -231,9 +270,9 @@ export function AddEditEventDialog({
 			  ),
 		};
 		console.log("Calendar DOC",calendarEvent)
-		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 
-		// toast.success("Event saved");
+		toast.success("Event saved");
 		onClose();
 	};
 
@@ -330,35 +369,120 @@ export function AddEditEventDialog({
 								)}
 							/>
 						)}
-						<div className="grid grid-cols-2 gap-3">
-							{/* DATE */}
-							<FormField
-								control={form.control}
-								name="startDate"
-								render={({ field }) => (
-									<DateTimePicker
-										form={form}
-										field={field}
-										hideTime={tagConfig.dateOnly}
-										label={selectedTag === "Birthday" ? "Select Birthdate" : undefined}
-										allowAllDates={selectedTag === "Birthday"} 
-									/>
-								)}
-							/>
-							{!tagConfig.hide?.includes("endDate") && (
-								<FormField
-									control={form.control}
-									name="endDate"
-									render={({ field }) => (
-										<DateTimePicker
-											form={form}
-											field={field}
-											hideTime={tagConfig.dateOnly}
-										/>
-									)}
-								/>
-							)}
-						</div>
+						{selectedTag === "Meeting" ? (
+  <>
+    {/* DATE ROW */}
+    <div className="grid grid-cols-2 gap-3">
+      <FormField
+        control={form.control}
+        name="startDate"
+        render={({ field }) => (
+          <DateTimePicker
+            form={form}
+            field={field}
+            hideTime={true}
+            label="Start Date"
+          />
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="endDate"
+        render={({ field }) => (
+          <DateTimePicker
+            form={form}
+            field={field}
+            hideTime={true}
+            label="End Date"
+          />
+        )}
+      />
+    </div>
+
+    {/* ALL DAY */}
+    <FormField
+      control={form.control}
+      name="allDay"
+      render={({ field }) => (
+        <FormItem className="flex items-center gap-2">
+          <Checkbox
+            checked={field.value}
+            onCheckedChange={field.onChange}
+          />
+          <FormLabel style={{marginTop:0}}>All day</FormLabel>
+        </FormItem>
+      )}
+    />
+
+    {/* TIME ROW */}
+    {!form.watch("allDay") && (
+      <div className="grid grid-cols-2 gap-3">
+        {/* START TIME */}
+        <FormField
+          control={form.control}
+          name="startDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Start Time</FormLabel>
+              <TimePicker
+                value={field.value}
+                onChange={(date) => field.onChange(date)}
+                use24Hour={useCalendar().use24HourFormat}
+              />
+            </FormItem>
+          )}
+        />
+
+        {/* END TIME */}
+        <FormField
+          control={form.control}
+          name="endDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>End Time</FormLabel>
+              <TimePicker
+                value={field.value}
+                onChange={(date) => field.onChange(date)}
+                use24Hour={useCalendar().use24HourFormat}
+              />
+            </FormItem>
+          )}
+        />
+      </div>
+    )}
+  </>
+) : (
+  /* EXISTING NON-MEETING LOGIC (UNCHANGED) */
+  <div className="grid grid-cols-2 gap-3">
+    <FormField
+      control={form.control}
+      name="startDate"
+      render={({ field }) => (
+        <DateTimePicker
+          form={form}
+          field={field}
+          hideTime={tagConfig.dateOnly}
+        />
+      )}
+    />
+    {!tagConfig.hide?.includes("endDate") && (
+      <FormField
+        control={form.control}
+        name="endDate"
+        render={({ field }) => (
+          <DateTimePicker
+            form={form}
+            field={field}
+            hideTime={tagConfig.dateOnly}
+          />
+        )}
+      />
+    )}
+  </div>
+)}
+
+
 						{/* EMPLOYEES */}
 						{!tagConfig.hide?.includes("employees") &&
  !tagConfig.employee?.autoSelectLoggedIn && (
@@ -369,13 +493,14 @@ export function AddEditEventDialog({
       <FormItem>
         <FormLabel>Employees</FormLabel>
         <FormControl>
-          <RHFCombobox
-            multiple={tagConfig.employee?.multiselect}
-            options={employeeOptions}
-            value={field.value}
-            onChange={field.onChange}
-            placeholder="Select employees"
-          />
+		<RHFCombobox
+  value={field.value}
+  onChange={field.onChange}
+  options={employeeOptions}
+  placeholder="Select employees"
+  searchPlaceholder="Search employee"
+  multiple={isMulti}
+/>
         </FormControl>
       </FormItem>
     )}

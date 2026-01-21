@@ -23,33 +23,63 @@ export function RHFCombobox({
   placeholder,
   searchPlaceholder,
   disabled = false,
+  multiple = false, // 🔑 NEW (default false)
 }) {
   const [open, setOpen] = useState(false);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const isSelected = (val) =>
+    multiple ? value?.includes(val) : value === val;
+
+  const handleSelect = (val) => {
+    if (!multiple) {
+      onChange(val);
+      setOpen(false);
+      return;
+    }
+
+    // multi-select logic
+    if (value?.includes(val)) {
+      onChange(value.filter(v => v !== val));
+    } else {
+      onChange([...(value || []), val]);
+    }
+  };
+
+  const selectedLabel = multiple
+    ? options
+        .filter(o => value?.includes(o.value))
+        .map(o => o.label)
+        .join(", ")
+    : options.find(o => o.value === value)?.label;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
-          aria-expanded={open}
           disabled={disabled}
           className="w-full justify-between"
         >
-          {selectedOption ? selectedOption.label : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        <span className="block max-w-full truncate">
+  {multiple && value?.length > 0
+    ? `${value.length} employee${value.length > 1 ? "s" : ""} selected`
+    : selectedLabel || placeholder}
+</span>
+
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-full p-0">
+      {/* ✅ SCROLL FIX IS HERE */}
+      <PopoverContent
+        className="w-[--radix-popover-trigger-width] p-0"
+        align="start"
+      >
         <Command>
-          {/* ✅ SEARCH INPUT — FIXED AT TOP */}
           <CommandInput placeholder={searchPlaceholder} />
 
-          {/* ✅ SCROLLABLE LIST */}
-          <CommandList className="max-h-56 overflow-y-auto">
+          <CommandList className="max-h-60 overflow-y-auto overscroll-contain">
             <CommandEmpty>No results found.</CommandEmpty>
 
             <CommandGroup>
@@ -57,15 +87,15 @@ export function RHFCombobox({
                 <CommandItem
                   key={opt.value}
                   value={opt.label}
-                  onSelect={() => {
-                    onChange(opt.value); // update RHF
-                    setOpen(false);      // close dropdown
-                  }}
+                  onSelect={() => handleSelect(opt.value)}
+                  className="flex items-center"
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      opt.value === value ? "opacity-100" : "opacity-0"
+                      isSelected(opt.value)
+                        ? "opacity-100"
+                        : "opacity-0"
                     )}
                   />
                   {opt.label}

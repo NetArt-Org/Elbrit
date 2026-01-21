@@ -51,7 +51,7 @@ export function DateTimePicker({
 	  
 	  useEffect(() => {
 		if (!hideTime) return;
-	  
+		if (form.formState.isDirty === false) return; 
 		const value = form.getValues(field.name);
 		if (!value) return;
 	  
