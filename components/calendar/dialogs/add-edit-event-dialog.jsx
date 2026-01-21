@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addMinutes, differenceInCalendarDays, set } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState,useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
@@ -56,12 +56,13 @@ export function AddEditEventDialog({
 	event,
 	defaultTag,
 }) {
-	const { isOpen, onClose, onToggle } = useDisclosure();
+	const { isOpen, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
 	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
 	const [doctorOptions, setDoctorOptions] = useState([]);
 	const [employeeOptions, setEmployeeOptions] = useState([]);
+	const endDateTouchedRef = useRef(false); // existing
 	const initialDates = useMemo(() => {
 		if (!event) {
 			const now = new Date();
@@ -100,8 +101,20 @@ export function AddEditEventDialog({
 	const startDate = useWatch({ control: form.control, name: "startDate" });
 const endDate = useWatch({ control: form.control, name: "endDate" });
 const allDay = useWatch({ control: form.control, name: "allDay" });
+const selectedTag = form.watch("tags");
+const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
+const isMulti = tagConfig?.employee?.multiselect === true;
 
-
+/* ---------------------------------------------
+     RESET MANUAL FLAG ONLY WHEN START DATE CHANGES
+     ✅ FIX – prevents overwriting manual edits
+  --------------------------------------------- */
+  useEffect(() => {
+    endDateTouchedRef.current = false;
+  }, [startDate]);
+  /* ---------------------------------------------
+     LOAD PARTICIPANTS (UNCHANGED)
+  --------------------------------------------- */
 useEffect(() => {
 	if (!isOpen || !event?.participants?.length) return;
   
@@ -139,14 +152,7 @@ useEffect(() => {
 		  form.reset(form.getValues());
 		}
 	  }, [isOpen, isEditing]);
-	  
-	  
-
-	const selectedTag = form.watch("tags");
-	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
-	const isMulti =
-  tagConfig?.employee?.multiselect === true;
-
+	
 
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
@@ -168,8 +174,7 @@ useEffect(() => {
 		  });
 		}
 	  }, [
-		form.watch("startDate"),
-		form.watch("doctor"),
+		startDate,
 		selectedTag,
 		doctorOptions,
 		employeeOptions
@@ -204,64 +209,48 @@ useEffect(() => {
 		form.setValue("employees", value, { shouldDirty: false });
 	  }, [selectedTag]);
 
-	   /* ---------------------------------------------
-     Date  LOGIC (MERGED)
+	  /* ---------------------------------------------
+     NON-MEETING DATE LOGIC (MEETING-LIKE)
+     ✅ FIX – guarded writes only
   --------------------------------------------- */
-	  useEffect(() => {
-		if (!startDate || !endDate) return;
-	  
-		// Compare DATE ONLY (ignore time)
-		const startDay = new Date(
-		  startDate.getFullYear(),
-		  startDate.getMonth(),
-		  startDate.getDate()
-		);
-	  
-		const endDay = new Date(
-		  endDate.getFullYear(),
-		  endDate.getMonth(),
-		  endDate.getDate()
-		);
-	  
-		// ✅ Auto-adjust ONLY if end date is before start date
-		if (endDay < startDay) {
-		  form.setValue("endDate", startDate, { shouldDirty: true });
-		}
-	  }, [startDate, endDate]);
-	    /* ---------------------------------------------
-      TIME LOGIC (For Other tags)
-  --------------------------------------------- */
-	  useEffect(() => {
-		if (!startDate) return;
-		if (selectedTag === "Meeting") return;
-		if (!tagConfig.dateOnly) return;
-	  
-		const now = new Date();
-	  
-		const startWithTime = set(startDate, {
-		  hours: now.getHours(),
-		  minutes: now.getMinutes(),
-		  seconds: 0,
-		});
-	  
-		const endOfDay = set(startDate, {
-		  hours: 23,
-		  minutes: 59,
-		  seconds: 59,
-		});
-	  
-		form.setValue("startDate", startWithTime, { shouldDirty: false });
-		form.setValue("endDate", endOfDay, { shouldDirty: false });
-	  
-	  }, [selectedTag, startDate]);
-	  
+  useEffect(() => {
+    if (!startDate) return;
+    if (selectedTag === "Meeting" || selectedTag === "Birthday") return;
+    if (endDateTouchedRef.current) return;
+
+    const now = new Date();
+
+    const normalizedStart = set(startDate, {
+      hours: now.getHours(),
+      minutes: now.getMinutes(),
+      seconds: 0,
+    });
+
+    if (startDate.getTime() !== normalizedStart.getTime()) {
+      form.setValue("startDate", normalizedStart, { shouldDirty: false });
+      return;
+    }
+
+    if (!form.getValues("endDate")) return;
+
+    const normalizedEnd = set(startDate, {
+      hours: 23,
+      minutes: 59,
+      seconds: 59,
+    });
+
+    if (endDate?.getTime() !== normalizedEnd.getTime()) {
+      form.setValue("endDate", normalizedEnd, { shouldDirty: false });
+    }
+  }, [startDate, selectedTag]);
 	  /* ---------------------------------------------
      MEETING TIME LOGIC (MERGED)
   --------------------------------------------- */
   useEffect(() => {
 	if (selectedTag !== "Meeting") return;
 	if (!startDate) return;
-  
+  // ❌ DO NOT override manual edits
+  if (endDateTouchedRef.current) return;
 	// 🟢 ALL DAY LOGIC
 	if (allDay) {
 	  const now = new Date();
@@ -294,6 +283,9 @@ useEffect(() => {
 	   SUBMIT
 	-------------------------------------------------- */
 	const onSubmit = async (values) => {
+		if (values.tags === "Birthday" && !values.endDate) {
+			values.endDate = values.startDate;
+		  }
 		if (selectedTag === "Leave") {
 			const days =
 				differenceInCalendarDays(values.endDate, values.startDate) + 1;
@@ -309,11 +301,11 @@ useEffect(() => {
 		});
 		console.log("ERP DOC",erpDoc)
 
-		const saved = await saveEvent(erpDoc);
+		// const saved = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			erpName: saved.name,
+			// erpName: saved.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -329,10 +321,10 @@ useEffect(() => {
 			  ),
 		};
 		console.log("Calendar DOC",calendarEvent)
-		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 
-		toast.success("Event saved");
-		onClose();
+		// toast.success("Event saved");
+		// onClose();
 	};
 
 	return (
@@ -449,12 +441,19 @@ useEffect(() => {
         control={form.control}
         name="endDate"
         render={({ field }) => (
-          <DateTimePicker
-            form={form}
-            field={field}
-            hideTime={true}
-            label="End Date"
-          />
+			<DateTimePicker
+			form={form}
+			field={{
+			  ...field,
+			  onChange: (date) => {
+				endDateTouchedRef.current = true;
+				field.onChange(date);
+			  },
+			}}
+			hideTime={true}
+			label="End Date"
+		  />
+		  
         )}
       />
     </div>
@@ -502,7 +501,10 @@ useEffect(() => {
               <FormLabel>End Time</FormLabel>
               <TimePicker
                 value={field.value}
-                onChange={(date) => field.onChange(date)}
+                onChange={(date) => {
+					endDateTouchedRef.current = true;
+					field.onChange(date);
+				  }}
 				use24Hour={false}
 				minTime={startDate} 
               />
@@ -521,8 +523,10 @@ useEffect(() => {
       render={({ field }) => (
         <DateTimePicker
           form={form}
-          field={field}
+		  field={field}
           hideTime={tagConfig.dateOnly}
+		  allowAllDates={selectedTag=="Birthday"}
+		  
         />
       )}
     />
@@ -531,11 +535,17 @@ useEffect(() => {
         control={form.control}
         name="endDate"
         render={({ field }) => (
-          <DateTimePicker
-            form={form}
-            field={field}
-            hideTime={tagConfig.dateOnly}
-          />
+			<DateTimePicker
+			form={form}
+			field={{
+			  ...field,
+			  onChange: (date) => {
+				endDateTouchedRef.current = true;
+				field.onChange(date);
+			  },
+			}}
+			hideTime={tagConfig.dateOnly}
+		  />
         )}
       />
     )}
