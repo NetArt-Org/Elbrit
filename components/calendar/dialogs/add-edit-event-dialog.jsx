@@ -9,6 +9,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
 import { saveEvent } from "@/services/event.service";
+import { useWatch } from "react-hook-form";
 
 import {
 	Form,
@@ -96,39 +97,50 @@ export function AddEditEventDialog({
 		},
 	});
 
-	const { allDay, startDate } = form.watch();
+	const startDate = useWatch({ control: form.control, name: "startDate" });
+const endDate = useWatch({ control: form.control, name: "endDate" });
+const allDay = useWatch({ control: form.control, name: "allDay" });
 
-	useEffect(() => {
-		if (!isOpen || !event?.participants?.length) return;
-	  
-		const employee = event.participants.find(
-		  (p) => p.type === "Employee"
-		);
-	  
-		const doctor = event.participants.find(
-		  (p) => p.type === "Lead"
-		);
-	  
-		if (employee) {
-		  form.setValue("employees", employee.id, {
-			shouldDirty: false,
-			shouldValidate: false,
-		  });
-		}
-	  
-		if (doctor) {
-		  form.setValue("doctor", doctor.id, {
-			shouldDirty: false,
-			shouldValidate: false,
-		  });
-		}
-	  }, [isOpen, event?.participants]);
-	  
-	  
-	useEffect(() => {
+
+useEffect(() => {
+	if (!isOpen || !event?.participants?.length) return;
+  
+	const employeeIds = event.participants
+	  .filter((p) => p.type === "Employee")
+	  .map((p) => p.id);
+  
+	const doctor = event.participants.find(
+	  (p) => p.type === "Lead"
+	);
+  
+	if (employeeIds.length) {
+	  form.setValue(
+		"employees",
+		tagConfig.employee?.multiselect
+		  ? employeeIds
+		  : employeeIds[0],
+		{ shouldDirty: false, shouldValidate: false }
+	  );
+	}
+  
+	if (doctor) {
+	  form.setValue("doctor", doctor.id, {
+		shouldDirty: false,
+		shouldValidate: false,
+	  });
+	}
+  }, [isOpen, event?.participants]);
+  
+	  useEffect(() => {
 		if (!isOpen) return;
-		form.reset(form.getValues());
-	}, [isOpen]);
+	  
+		// ❗ NEVER reset in edit mode
+		if (!isEditing) {
+		  form.reset(form.getValues());
+		}
+	  }, [isOpen, isEditing]);
+	  
+	  
 
 	const selectedTag = form.watch("tags");
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
@@ -170,7 +182,6 @@ export function AddEditEventDialog({
 	useEffect(() => {
 		if (!selectedTag) return;
 	  
-		// 1️⃣ Load required options for the selected tag
 		loadParticipantOptionsByTag({
 		  tag: selectedTag,
 		  employeeOptions,
@@ -178,59 +189,107 @@ export function AddEditEventDialog({
 		  doctorOptions,
 		  setEmployeeOptions,
 		  setHqTerritoryOptions,
-		  setDoctorOptions
+		  setDoctorOptions,
 		});
 	  
-		// 2️⃣ Auto-select logged-in employee (only when enabled)
-		if (!tagConfig.employee?.autoSelectLoggedIn) return;
+		// 🔒 ABSOLUTE GUARD
+		if (isEditing) return;
 	  
-		// 3️⃣ Do NOT override employee in edit mode
-		if (event?.participants?.length) return;
+		if (!tagConfig.employee?.autoSelectLoggedIn) return;
 	  
 		const value = tagConfig.employee.multiselect
 		  ? [LOGGED_IN_USER.id]
 		  : LOGGED_IN_USER.id;
 	  
 		form.setValue("employees", value, { shouldDirty: false });
-	  }, [
-		selectedTag,
-		tagConfig.employee,
-		event?.participants?.length,
-	  ]);
+	  }, [selectedTag]);
 
+	   /* ---------------------------------------------
+     Date  LOGIC (MERGED)
+  --------------------------------------------- */
+	  useEffect(() => {
+		if (!startDate || !endDate) return;
+	  
+		// Compare DATE ONLY (ignore time)
+		const startDay = new Date(
+		  startDate.getFullYear(),
+		  startDate.getMonth(),
+		  startDate.getDate()
+		);
+	  
+		const endDay = new Date(
+		  endDate.getFullYear(),
+		  endDate.getMonth(),
+		  endDate.getDate()
+		);
+	  
+		// ✅ Auto-adjust ONLY if end date is before start date
+		if (endDay < startDay) {
+		  form.setValue("endDate", startDate, { shouldDirty: true });
+		}
+	  }, [startDate, endDate]);
+	    /* ---------------------------------------------
+      TIME LOGIC (For Other tags)
+  --------------------------------------------- */
+	  useEffect(() => {
+		if (!startDate) return;
+		if (selectedTag === "Meeting") return;
+		if (!tagConfig.dateOnly) return;
+	  
+		const now = new Date();
+	  
+		const startWithTime = set(startDate, {
+		  hours: now.getHours(),
+		  minutes: now.getMinutes(),
+		  seconds: 0,
+		});
+	  
+		const endOfDay = set(startDate, {
+		  hours: 23,
+		  minutes: 59,
+		  seconds: 59,
+		});
+	  
+		form.setValue("startDate", startWithTime, { shouldDirty: false });
+		form.setValue("endDate", endOfDay, { shouldDirty: false });
+	  
+	  }, [selectedTag, startDate]);
+	  
 	  /* ---------------------------------------------
      MEETING TIME LOGIC (MERGED)
   --------------------------------------------- */
   useEffect(() => {
 	if (selectedTag !== "Meeting") return;
+	if (!startDate) return;
   
-	// ❗ Do NOT auto-modify times in edit mode
-	if (isEditing) return;
-  
-	const now = new Date();
-  
+	// 🟢 ALL DAY LOGIC
 	if (allDay) {
-	  form.setValue(
-		"startDate",
-		set(now, { seconds: 0, milliseconds: 0 }),
-		{ shouldDirty: false }
-	  );
-	  form.setValue(
-		"endDate",
-		set(now, { hours: 23, minutes: 59, seconds: 59 }),
-		{ shouldDirty: false }
-	  );
-	} else if (startDate) {
-	  form.setValue(
-		"endDate",
-		addMinutes(startDate, 60),
-		{ shouldDirty: false }
-	  );
-	}
-  }, [selectedTag, allDay, startDate, isEditing]);
+	  const now = new Date();
   
-	  
-	  
+	  const start = set(startDate, {
+		hours: now.getHours(),
+		minutes: now.getMinutes(),
+		seconds: 0,
+	  });
+  
+	  const end = set(startDate, {
+		hours: 23,
+		minutes: 59,
+		seconds: 59,
+	  });
+  
+	  form.setValue("startDate", start, { shouldDirty: true });
+	  form.setValue("endDate", end, { shouldDirty: true });
+	  return;
+	}
+  
+	// 🟢 NORMAL MEETING (NOT ALL DAY)
+	const newEnd = addMinutes(startDate, 60);
+  
+	form.setValue("endDate", newEnd, { shouldDirty: true });
+  
+  }, [selectedTag, startDate, allDay]);
+  
 	/* --------------------------------------------------
 	   SUBMIT
 	-------------------------------------------------- */
@@ -428,7 +487,7 @@ export function AddEditEventDialog({
               <TimePicker
                 value={field.value}
                 onChange={(date) => field.onChange(date)}
-                use24Hour={useCalendar().use24HourFormat}
+				use24Hour={false}
               />
             </FormItem>
           )}
@@ -444,7 +503,8 @@ export function AddEditEventDialog({
               <TimePicker
                 value={field.value}
                 onChange={(date) => field.onChange(date)}
-                use24Hour={useCalendar().use24HourFormat}
+				use24Hour={false}
+				minTime={startDate} 
               />
             </FormItem>
           )}

@@ -174,7 +174,7 @@ export function CalendarProvider({
 			  end,
 			  currentView
 			);
-	  
+	  console.log("EVENTS",events)
 			if (!cancelled) {
 			  setAllEvents(events);
 			  setFilteredEvents(events);

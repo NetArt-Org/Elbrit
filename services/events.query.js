@@ -13,6 +13,7 @@ query EventsByRange(
         starts_on
         ends_on
         color
+        all_day
         event_category
         owner {
           name

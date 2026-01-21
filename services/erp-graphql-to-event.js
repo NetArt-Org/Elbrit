@@ -17,10 +17,11 @@ export function mapErpGraphqlEventToCalendar(node) {
      PARTICIPANTS (SOURCE OF TRUTH)
   --------------------------------------------- */
   const participants =
-    node.event_participants?.map((p) => ({
-      type: p.reference_doctype?.name, // "Employee" | "Lead"
-      id: p.reference_docname__name,
-    })) ?? [];
+  node.event_participants?.map((p) => ({
+    type: p.reference_doctype?.name,
+    id: String(p.reference_docname__name), // 🔒 force scalar
+  })) ?? [];
+
 
   /* ---------------------------------------------
      DERIVE EMPLOYEES & DOCTORS

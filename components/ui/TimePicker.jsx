@@ -14,7 +14,7 @@ export function TimePicker({
   value,
   onChange,
   interval = 15,
-  use24Hour = false,
+  use24Hour = false,minTime
 }) {
   const [open, setOpen] = useState(false);
 
@@ -50,7 +50,7 @@ export function TimePicker({
   }
 
   function handleSelect(h, m) {
-    const base = value ?? new Date();
+    const base = value ? new Date(value) : new Date();
     const updated = setMinutes(setHours(base, h), m);
     onChange(updated);
     setOpen(false);
@@ -77,18 +77,27 @@ export function TimePicker({
                 value &&
                 value.getHours() === h &&
                 value.getMinutes() === m;
-
+                const isDisabled =
+                minTime &&
+                (h < minTime.getHours() ||
+                  (h === minTime.getHours() && m <= minTime.getMinutes()));
+              
               return (
                 <button
-                  key={`${h}-${m}`}
-                  onClick={() => handleSelect(h, m)}
-                  className={cn(
-                    "px-3 py-2 text-left text-sm tabular-nums hover:bg-muted",
-                    isSelected && "bg-muted font-medium"
-                  )}
-                >
-                  {label}
-                </button>
+                key={`${h}-${m}`}
+                disabled={isDisabled}
+                onClick={() => handleSelect(h, m)}
+                className={cn(
+                  "px-3 py-2 text-left text-sm tabular-nums",
+                  isDisabled
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:bg-muted",
+                  isSelected && "bg-muted font-medium"
+                )}
+              >
+                {label}
+              </button>
+              
               );
             })}
           </div>

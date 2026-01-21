@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format,addMinutes } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,27 +28,7 @@ export function DateTimePicker({
 }) {
 	const { use24HourFormat } = useCalendar();
 	const [open, setOpen] = useState(false);
-	useEffect(() => {
-		const start = form.getValues("startDate");
-		const end = form.getValues("endDate");
-	  
-		if (!start) return;
-	  
-		// ⛑ Restore endDate if RHF clears it
-		if (!end) {
-		  form.setValue("endDate", start, { shouldDirty: false });
-		  return;
-		}
-	  
-		// ⛑ Prevent endDate < startDate
-		if (end < start) {
-		  form.setValue("endDate", start, { shouldDirty: false });
-		}
-	  }, [
-		form.watch("startDate"),
-		form.watch("endDate"),
-	  ]);
-	  
+	
 	  useEffect(() => {
 		if (!hideTime) return;
 		if (form.formState.isDirty === false) return; 
