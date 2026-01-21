@@ -46,7 +46,7 @@ export function mapFormToErpEvent(values, options = {}) {
     ends_on: format(values.endDate, "yyyy-MM-dd HH:mm:ss"),
     event_category: values.tags,
     color: COLOR_HEX_MAP[values.color] ?? COLOR_HEX_MAP.blue,
-    all_day: values.allDay ? 1 : 0,
+    all_day: isBirthday || values.allDay ? 1 : 0,
     event_type: "Public",
     status: "Open",
     docstatus: 0,

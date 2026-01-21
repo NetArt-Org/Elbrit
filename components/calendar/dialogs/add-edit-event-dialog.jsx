@@ -106,6 +106,21 @@ const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 const isMulti = tagConfig?.employee?.multiselect === true;
 
 /* ---------------------------------------------
+   TODO: FORCE START DATE = NOW (HIDDEN)
+--------------------------------------------- */
+useEffect(() => {
+	if (selectedTag !== "Todo List") return;
+	if (isEditing) return;
+  
+	const now = new Date();
+  
+	form.setValue("startDate", now, {
+	  shouldDirty: false,
+	  shouldValidate: false,
+	});
+  }, [selectedTag]);
+  
+/* ---------------------------------------------
      RESET MANUAL FLAG ONLY WHEN START DATE CHANGES
      ✅ FIX – prevents overwriting manual edits
   --------------------------------------------- */
@@ -153,7 +168,19 @@ useEffect(() => {
 		}
 	  }, [isOpen, isEditing]);
 	
-
+/* ---------------------------------------------
+   FORCE ALL-DAY CHECKBOX ONLY
+   ❌ No time/date mutation
+--------------------------------------------- */
+useEffect(() => {
+	if (!tagConfig?.forceAllDay) return;
+  
+	form.setValue("allDay", true, {
+	  shouldDirty: false,
+	  shouldValidate: false,
+	});
+  }, [selectedTag]);
+  
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
 	-------------------------------------------------- */
@@ -301,11 +328,11 @@ useEffect(() => {
 		});
 		console.log("ERP DOC",erpDoc)
 
-		// const saved = await saveEvent(erpDoc);
+		const saved = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			// erpName: saved.name,
+			erpName: saved.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -321,10 +348,10 @@ useEffect(() => {
 			  ),
 		};
 		console.log("Calendar DOC",calendarEvent)
-		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 
-		// toast.success("Event saved");
-		// onClose();
+		toast.success("Event saved");
+		onClose();
 	};
 
 	return (
@@ -555,7 +582,8 @@ useEffect(() => {
 
 						{/* EMPLOYEES */}
 						{!tagConfig.hide?.includes("employees") &&
- !tagConfig.employee?.autoSelectLoggedIn && (
+  (!tagConfig.employee?.autoSelectLoggedIn ||
+	tagConfig.employee?.multiselect) && (
   <FormField
     control={form.control}
     name="employees"
