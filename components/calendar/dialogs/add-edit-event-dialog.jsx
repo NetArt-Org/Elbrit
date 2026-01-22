@@ -102,9 +102,7 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 			allDay: false,
 			todoStatus: "Open",
 			priority: "Medium",
-			leaveType: undefined,
-			leavePeriod: "Full", // "Full" | "Half"
-			medicalAttachment: undefined,
+			leavePeriod: "Full", 
 		},
 	});
 
@@ -123,6 +121,7 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 	const getFieldLabel = (field, fallback) => {
 		return tagConfig.labels?.[field] ?? fallback;
 	};
+	
 	/* ---------------------------------------------
 	   Leave Balance Fetching
 	--------------------------------------------- */
@@ -205,14 +204,7 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 		}
 	}, [isOpen, event?.participants]);
 
-	useEffect(() => {
-		if (!isOpen) return;
-
-		// ❗ NEVER reset in edit mode
-		if (!isEditing) {
-			form.reset(form.getValues());
-		}
-	}, [isOpen, isEditing]);
+	
 
 	/* ---------------------------------------------
 	   FORCE ALL-DAY CHECKBOX ONLY
@@ -226,7 +218,25 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 			shouldValidate: false,
 		});
 	}, [selectedTag]);
+	/* --------------------------------------------------
+	   RESET FORM
+	-------------------------------------------------- */
+	const initialDefaultsRef = useRef(form.getValues());
 
+	useEffect(() => {
+		if (!isOpen || isEditing) return;
+	  
+		const now = new Date();
+	  
+		form.reset({
+		  ...initialDefaultsRef.current,
+		  startDate: now,
+		  endDate: addMinutes(now, 60),
+		  tags: selectedTag,
+		});
+	  }, [isOpen, selectedTag, isEditing]);
+	  
+	  
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
 	-------------------------------------------------- */
