@@ -1,5 +1,5 @@
 import { Calendar, Clock, Text, User } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { formatTime } from "@/components/calendar/helpers";
 
 const ICONS = {
@@ -25,12 +25,16 @@ export function EventDetailsFields({ event, config, use24HourFormat }) {
         }
 
         if (field.type === "date") {
-          const d = parseISO(value);
+          const d = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (!isValid(d)) return null;
+
           value = format(d, "EEEE dd MMMM");
         }
 
         if (field.type === "datetime") {
-          const d = parseISO(value);
+          const d = typeof value === "string" ? parseISO(value) : new Date(value);
+          if (!isValid(d)) return null;
+
           value = (
             <>
               {format(d, "EEEE dd MMMM")}

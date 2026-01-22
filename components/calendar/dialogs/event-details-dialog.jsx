@@ -1,13 +1,10 @@
 "use client";;
-import { format, parseISO } from "date-fns";
 import { useState, useRef } from "react";
-import { Calendar, Clock, Text, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import {
 	Dialog,
-	DialogClose,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
@@ -16,7 +13,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
-import { formatTime } from "@/components/calendar/helpers";
 import { deleteEventFromErp } from "@/services/event.service";
 import { EventDetailsFields } from "./EventDetailsFields";
 export function EventDetailsDialog({
@@ -24,14 +20,10 @@ export function EventDetailsDialog({
 	children
 }) {
 	const [open, setOpen] = useState(false);
-	const startDate = parseISO(event.startDate);
-	const endDate = parseISO(event.endDate);
 	const { use24HourFormat, removeEvent } = useCalendar();
 	const deleteLockRef = useRef(false);
 	const tagConfig =
 		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
-
-	const isDateOnly = tagConfig.dateOnly;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

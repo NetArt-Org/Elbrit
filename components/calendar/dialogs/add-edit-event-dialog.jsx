@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addMinutes, differenceInCalendarDays, set } from "date-fns";
-import { useEffect, useMemo, useState,useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
@@ -58,7 +58,7 @@ export function AddEditEventDialog({
 	event,
 	defaultTag,
 }) {
-	const { isOpen,onClose, onToggle } = useDisclosure();
+	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
 	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
@@ -96,297 +96,312 @@ export function AddEditEventDialog({
 			medicalAttachment: undefined,
 			allDay: false,
 			todoStatus: "Open",
-priority: "Medium",
+			priority: "Medium",
 		},
 	});
 
 	const startDate = useWatch({ control: form.control, name: "startDate" });
-const endDate = useWatch({ control: form.control, name: "endDate" });
-const allDay = useWatch({ control: form.control, name: "allDay" });
-const selectedTag = form.watch("tags");
-const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
-const isMulti = tagConfig?.employee?.multiselect === true;
-const isFieldVisible = (field) => {
-	if (tagConfig.show) return tagConfig.show.includes(field);
-	if (tagConfig.hide) return !tagConfig.hide.includes(field);
-	return true;
-  };
-  
-  const getFieldLabel = (field, fallback) => {
-	return tagConfig.labels?.[field] ?? fallback;
-  };
-  
-/* ---------------------------------------------
-   TODO: FORCE START DATE = NOW (HIDDEN)
---------------------------------------------- */
-useEffect(() => {
-	if (selectedTag !== "Todo List") return;
-	if (isEditing) return;
-  
-	const now = new Date();
-  
-	form.setValue("startDate", now, {
-	  shouldDirty: false,
-	  shouldValidate: false,
-	});
-  }, [selectedTag]);
-  
-/* ---------------------------------------------
-     RESET MANUAL FLAG ONLY WHEN START DATE CHANGES
-     ✅ FIX – prevents overwriting manual edits
-  --------------------------------------------- */
-  useEffect(() => {
-    endDateTouchedRef.current = false;
-  }, [startDate]);
-  /* ---------------------------------------------
-     LOAD PARTICIPANTS (UNCHANGED)
-  --------------------------------------------- */
-useEffect(() => {
-	if (!isOpen || !event?.participants?.length) return;
-  
-	const employeeIds = event.participants
-	  .filter((p) => p.type === "Employee")
-	  .map((p) => p.id);
-  
-	const doctor = event.participants.find(
-	  (p) => p.type === "Lead"
-	);
-  
-	if (employeeIds.length) {
-	  form.setValue(
-		"employees",
-		tagConfig.employee?.multiselect
-		  ? employeeIds
-		  : employeeIds[0],
-		{ shouldDirty: false, shouldValidate: false }
-	  );
-	}
-  
-	if (doctor) {
-	  form.setValue("doctor", doctor.id, {
-		shouldDirty: false,
-		shouldValidate: false,
-	  });
-	}
-  }, [isOpen, event?.participants]);
-  
-	  useEffect(() => {
+	const endDate = useWatch({ control: form.control, name: "endDate" });
+	const allDay = useWatch({ control: form.control, name: "allDay" });
+	const selectedTag = form.watch("tags");
+	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
+	const isMulti = tagConfig?.employee?.multiselect === true;
+	const isFieldVisible = (field) => {
+		if (tagConfig.show) return tagConfig.show.includes(field);
+		if (tagConfig.hide) return !tagConfig.hide.includes(field);
+		return true;
+	};
+
+	const getFieldLabel = (field, fallback) => {
+		return tagConfig.labels?.[field] ?? fallback;
+	};
+
+	/* ---------------------------------------------
+	   TODO: FORCE START DATE = NOW (HIDDEN)
+	--------------------------------------------- */
+	useEffect(() => {
+		if (selectedTag !== "Todo List") return;
+		if (isEditing) return;
+
+		const now = new Date();
+
+		form.setValue("startDate", now, {
+			shouldDirty: false,
+			shouldValidate: false,
+		});
+	}, [selectedTag]);
+
+	/* ---------------------------------------------
+		 RESET MANUAL FLAG ONLY WHEN START DATE CHANGES
+		 ✅ FIX – prevents overwriting manual edits
+	  --------------------------------------------- */
+	useEffect(() => {
+		endDateTouchedRef.current = false;
+	}, [startDate]);
+	/* ---------------------------------------------
+	   LOAD PARTICIPANTS (UNCHANGED)
+	--------------------------------------------- */
+	useEffect(() => {
+		if (!isOpen || !event?.participants?.length) return;
+
+		const employeeIds = event.participants
+			.filter((p) => p.type === "Employee")
+			.map((p) => p.id);
+
+		const doctor = event.participants.find(
+			(p) => p.type === "Lead"
+		);
+
+		if (employeeIds.length) {
+			form.setValue(
+				"employees",
+				tagConfig.employee?.multiselect
+					? employeeIds
+					: employeeIds[0],
+				{ shouldDirty: false, shouldValidate: false }
+			);
+		}
+
+		if (doctor) {
+			form.setValue("doctor", doctor.id, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
+		}
+	}, [isOpen, event?.participants]);
+
+	useEffect(() => {
 		if (!isOpen) return;
-	  
+
 		// ❗ NEVER reset in edit mode
 		if (!isEditing) {
-		  form.reset(form.getValues());
+			form.reset(form.getValues());
 		}
-	  }, [isOpen, isEditing]);
-	
-/* ---------------------------------------------
-   FORCE ALL-DAY CHECKBOX ONLY
-   ❌ No time/date mutation
---------------------------------------------- */
-useEffect(() => {
-	if (!tagConfig?.forceAllDay) return;
-  
-	form.setValue("allDay", true, {
-	  shouldDirty: false,
-	  shouldValidate: false,
-	});
-  }, [selectedTag]);
-  
+	}, [isOpen, isEditing]);
+
+	/* ---------------------------------------------
+	   FORCE ALL-DAY CHECKBOX ONLY
+	   ❌ No time/date mutation
+	--------------------------------------------- */
+	useEffect(() => {
+		if (!tagConfig?.forceAllDay) return;
+
+		form.setValue("allDay", true, {
+			shouldDirty: false,
+			shouldValidate: false,
+		});
+	}, [selectedTag]);
+
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
 	-------------------------------------------------- */
 	useEffect(() => {
 		if (isEditing) return;
 		if (!tagConfig.autoTitle) return;
-	  
+
 		const values = form.getValues();
 		const title = tagConfig.autoTitle(values, {
-		  doctorOptions,
-		  employeeOptions,
+			doctorOptions,
+			employeeOptions,
 		});
-	  
+
 		if (title && values.title !== title) {
-		  form.setValue("title", title, {
-			shouldDirty: false,
-			shouldValidate: false,
-		  });
+			form.setValue("title", title, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
 		}
-	  }, [
+	}, [
 		startDate,
 		selectedTag,
 		doctorOptions,
 		employeeOptions
-	  ]);
-	  
+	]);
+
 
 	/* --------------------------------------------------
 	   AUTO SELECT LOGGED IN USER
 	-------------------------------------------------- */
 	useEffect(() => {
 		if (!selectedTag) return;
-	  
+
 		loadParticipantOptionsByTag({
-		  tag: selectedTag,
-		  employeeOptions,
-		  hqTerritoryOptions,
-		  doctorOptions,
-		  setEmployeeOptions,
-		  setHqTerritoryOptions,
-		  setDoctorOptions,
+			tag: selectedTag,
+			employeeOptions,
+			hqTerritoryOptions,
+			doctorOptions,
+			setEmployeeOptions,
+			setHqTerritoryOptions,
+			setDoctorOptions,
 		});
-	  
+
 		// 🔒 ABSOLUTE GUARD
 		if (isEditing) return;
-	  
+
 		if (!tagConfig.employee?.autoSelectLoggedIn) return;
-	  
+
 		const value = tagConfig.employee.multiselect
-		  ? [LOGGED_IN_USER.id]
-		  : LOGGED_IN_USER.id;
-	  
+			? [LOGGED_IN_USER.id]
+			: LOGGED_IN_USER.id;
+
 		form.setValue("employees", value, { shouldDirty: false });
-	  }, [selectedTag]);
+	}, [selectedTag]);
 
-	  /* ---------------------------------------------
-     NON-MEETING DATE LOGIC (MEETING-LIKE)
-     ✅ FIX – guarded writes only
-  --------------------------------------------- */
-  useEffect(() => {
-    if (!startDate) return;
-    if (selectedTag === "Meeting" || selectedTag === "Birthday") return;
-    if (endDateTouchedRef.current) return;
+	/* ---------------------------------------------
+   NON-MEETING DATE LOGIC (MEETING-LIKE)
+   ✅ FIX – guarded writes only
+--------------------------------------------- */
+	useEffect(() => {
+		if (!startDate) return;
+		if (selectedTag === "Meeting" || selectedTag === "Birthday") return;
+		if (endDateTouchedRef.current) return;
 
-    const now = new Date();
+		const now = new Date();
 
-    const normalizedStart = set(startDate, {
-      hours: now.getHours(),
-      minutes: now.getMinutes(),
-      seconds: 0,
-    });
+		const normalizedStart = set(startDate, {
+			hours: now.getHours(),
+			minutes: now.getMinutes(),
+			seconds: 0,
+		});
 
-    if (startDate.getTime() !== normalizedStart.getTime()) {
-      form.setValue("startDate", normalizedStart, { shouldDirty: false });
-      return;
-    }
+		if (startDate.getTime() !== normalizedStart.getTime()) {
+			form.setValue("startDate", normalizedStart, { shouldDirty: false });
+			return;
+		}
 
-    if (!form.getValues("endDate")) return;
+		if (!form.getValues("endDate")) return;
 
-    const normalizedEnd = set(startDate, {
-      hours: 23,
-      minutes: 59,
-      seconds: 59,
-    });
+		const normalizedEnd = set(startDate, {
+			hours: 23,
+			minutes: 59,
+			seconds: 59,
+		});
 
-    if (endDate?.getTime() !== normalizedEnd.getTime()) {
-      form.setValue("endDate", normalizedEnd, { shouldDirty: false });
-    }
-  }, [startDate, selectedTag]);
-	  /* ---------------------------------------------
-     MEETING TIME LOGIC (MERGED)
-  --------------------------------------------- */
-  useEffect(() => {
-	if (selectedTag !== "Meeting") return;
-	if (!startDate) return;
-  // ❌ DO NOT override manual edits
-  if (endDateTouchedRef.current) return;
-	// 🟢 ALL DAY LOGIC
-	if (allDay) {
-	  const now = new Date();
-  
-	  const start = set(startDate, {
-		hours: now.getHours(),
-		minutes: now.getMinutes(),
-		seconds: 0,
-	  });
-  
-	  const end = set(startDate, {
-		hours: 23,
-		minutes: 59,
-		seconds: 59,
-	  });
-  
-	  form.setValue("startDate", start, { shouldDirty: true });
-	  form.setValue("endDate", end, { shouldDirty: true });
-	  return;
+		if (endDate?.getTime() !== normalizedEnd.getTime()) {
+			form.setValue("endDate", normalizedEnd, { shouldDirty: false });
+		}
+	}, [startDate, selectedTag]);
+	/* ---------------------------------------------
+   MEETING TIME LOGIC (MERGED)
+--------------------------------------------- */
+	useEffect(() => {
+		if (selectedTag !== "Meeting") return;
+		if (!startDate) return;
+		// ❌ DO NOT override manual edits
+		if (endDateTouchedRef.current) return;
+		// 🟢 ALL DAY LOGIC
+		if (allDay) {
+			const now = new Date();
+
+			const start = set(startDate, {
+				hours: now.getHours(),
+				minutes: now.getMinutes(),
+				seconds: 0,
+			});
+
+			const end = set(startDate, {
+				hours: 23,
+				minutes: 59,
+				seconds: 59,
+			});
+
+			form.setValue("startDate", start, { shouldDirty: true });
+			form.setValue("endDate", end, { shouldDirty: true });
+			return;
+		}
+
+		// 🟢 NORMAL MEETING (NOT ALL DAY)
+		const newEnd = addMinutes(startDate, 60);
+
+		form.setValue("endDate", newEnd, { shouldDirty: true });
+
+	}, [selectedTag, startDate, allDay]);
+
+	/* --------------------------------------------------
+   SUBMIT
+-------------------------------------------------- */
+const onSubmit = async (values) => {
+	if (values.tags === "Birthday" && !values.endDate) {
+	  values.endDate = values.startDate;
 	}
   
-	// 🟢 NORMAL MEETING (NOT ALL DAY)
-	const newEnd = addMinutes(startDate, 60);
+	if (selectedTag === "Leave") {
+	  const days =
+		differenceInCalendarDays(values.endDate, values.startDate) + 1;
   
-	form.setValue("endDate", newEnd, { shouldDirty: true });
+	  if (days > 2 && !values.medicalAttachment) {
+		toast.error("Medical certificate required");
+		return;
+	  }
+	}
   
-  }, [selectedTag, startDate, allDay]);
+	/* ==================================================
+	   EVENT FLOW
+	================================================== */
+	const erpDoc = mapFormToErpEvent(values, {
+	  erpName: event?.erpName,
+	});
   
-	/* --------------------------------------------------
-	   SUBMIT
-	-------------------------------------------------- */
-	const onSubmit = async (values) => {
-		if (values.tags === "Birthday" && !values.endDate) {
-			values.endDate = values.startDate;
-		  }
-		if (selectedTag === "Leave") {
-			const days =
-				differenceInCalendarDays(values.endDate, values.startDate) + 1;
-
-			if (days > 2 && !values.medicalAttachment) {
-				toast.error("Medical certificate required");
-				return;
-			}
-		}
-		/* ==================================================
-     ✅ TODO LIST FLOW
-  ================================================== */
-  if (values.tags === "Todo List") {
-    const todoDoc = mapFormToErpTodo(values, {
-      erpName: event?.erpName,
-	  employeeOptions
-    });
-	console.log("ERP DOC",todoDoc)
-    const savedTodo = await saveDocToErp(todoDoc);
-
-    const calendarTodo = mapErpTodoToCalendar({
-      ...todoDoc,
-      name: savedTodo.name,
-    });
-	console.log("Calendar DOC",calendarTodo)
-
-    event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
-
-    toast.success("Todo saved");
-    onClose();
-    return;
-  }
-
-		const erpDoc = mapFormToErpEvent(values, {
-			erpName: event?.erpName,
-		});
-		console.log("ERP DOC",erpDoc)
-
-		// const saved = await saveEvent(erpDoc);
-
-		const calendarEvent = {
-			...(event ?? {}),
-			// erpName: saved.name,
-			title: values.title,
-			description: values.description,
-			startDate: erpDoc.starts_on,
-			endDate: erpDoc.ends_on,
-			color: tagConfig.fixedColor,
-			tags: values.tags,
-			owner: isEditing ? event.owner : LOGGED_IN_USER.id,
-			hqTerritory: values.hqTerritory || "",
-			participants: buildCalendarParticipants(
-				values,
-				employeeOptions,
-				doctorOptions
-			  ),
-		};
-		console.log("Calendar DOC",calendarEvent)
-		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-
-		// toast.success("Event saved");
-		// onClose();
+	console.log("ERP DOC", erpDoc);
+  
+	const saved = await saveEvent(erpDoc);
+  
+	const calendarEvent = {
+	  ...(event ?? {}),
+	  erpName: saved.name,
+	  title: values.title,
+	  description: values.description,
+	  startDate: erpDoc.starts_on,
+	  endDate: erpDoc.ends_on,
+	  color: tagConfig.fixedColor,
+	  tags: values.tags,
+	  owner: isEditing ? event.owner : LOGGED_IN_USER.id,
+	  hqTerritory: values.hqTerritory || "",
+	  participants: buildCalendarParticipants(
+		values,
+		employeeOptions,
+		doctorOptions
+	  ),
 	};
+  
+	console.log("Calendar DOC", calendarEvent);
+  
+	event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+  
+	toast.success("Event saved");
+  
+	/* ==================================================
+	   TODO LIST FLOW (API ONLY — UI COMMENTED)
+	================================================== */
+	if (values.tags === "Todo List") {
+	  const todoDoc = mapFormToErpTodo(values, {
+		erpName: event?.erpName,
+		employeeOptions,
+		referenceEventName: saved?.name, // ✅ correct field
+	  });
+  
+	  console.log("ERP TODO DOC", todoDoc);
+  
+	  const savedTodo = await saveDocToErp(todoDoc);
+  
+	  /*
+	  const calendarTodo = mapErpTodoToCalendar({
+		...todoDoc,
+		name: savedTodo.name,
+	  });
+  
+	  console.log("Calendar TODO DOC", calendarTodo);
+  
+	  event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
+  
+	  toast.success("Todo saved");
+	  onClose();
+	  */
+	  onClose();
+	  return;
+	}
+  };
+  
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
@@ -442,7 +457,7 @@ useEffect(() => {
 								)}
 							/>
 						)}
-	{selectedTag === "HQ Tour Plan" && (
+						{selectedTag === "HQ Tour Plan" && (
 							<FormField
 								control={form.control}
 								name="hqTerritory"
@@ -482,221 +497,220 @@ useEffect(() => {
 							/>
 						)}
 						{selectedTag === "Meeting" ? (
-  <>
-    {/* DATE ROW */}
-    <div className="grid grid-cols-2 gap-3">
-      <FormField
-        control={form.control}
-        name="startDate"
-        render={({ field }) => (
-          <DateTimePicker
-            form={form}
-            field={field}
-            hideTime={true}
-            label="Start Date"
-          />
-        )}
-      />
+							<>
+								{/* DATE ROW */}
+								<div className="grid grid-cols-2 gap-3">
+									<FormField
+										control={form.control}
+										name="startDate"
+										render={({ field }) => (
+											<DateTimePicker
+												form={form}
+												field={field}
+												hideTime={true}
+												label="Start Date"
+											/>
+										)}
+									/>
 
-      <FormField
-        control={form.control}
-        name="endDate"
-        render={({ field }) => (
-			<DateTimePicker
-			form={form}
-			field={{
-			  ...field,
-			  onChange: (date) => {
-				endDateTouchedRef.current = true;
-				field.onChange(date);
-			  },
-			}}
-			hideTime={true}
-			label="End Date"
-		  />
-		  
-        )}
-      />
-    </div>
+									<FormField
+										control={form.control}
+										name="endDate"
+										render={({ field }) => (
+											<DateTimePicker
+												form={form}
+												field={{
+													...field,
+													onChange: (date) => {
+														endDateTouchedRef.current = true;
+														field.onChange(date);
+													},
+												}}
+												hideTime={true}
+												label="End Date"
+											/>
 
-    {/* ALL DAY */}
-    <FormField
-      control={form.control}
-      name="allDay"
-      render={({ field }) => (
-        <FormItem className="flex items-center gap-2">
-          <Checkbox
-            checked={field.value}
-            onCheckedChange={field.onChange}
-          />
-          <FormLabel style={{marginTop:0}}>All day</FormLabel>
-        </FormItem>
-      )}
-    />
+										)}
+									/>
+								</div>
 
-    {/* TIME ROW */}
-    {!form.watch("allDay") && (
-      <div className="grid grid-cols-2 gap-3">
-        {/* START TIME */}
-        <FormField
-          control={form.control}
-          name="startDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Start Time</FormLabel>
-              <TimePicker
-                value={field.value}
-                onChange={(date) => field.onChange(date)}
-				use24Hour={false}
-              />
-            </FormItem>
-          )}
-        />
+								{/* ALL DAY */}
+								<FormField
+									control={form.control}
+									name="allDay"
+									render={({ field }) => (
+										<FormItem className="flex items-center gap-2">
+											<Checkbox
+												checked={field.value}
+												onCheckedChange={field.onChange}
+											/>
+											<FormLabel style={{ marginTop: 0 }}>All day</FormLabel>
+										</FormItem>
+									)}
+								/>
 
-        {/* END TIME */}
-        <FormField
-          control={form.control}
-          name="endDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>End Time</FormLabel>
-              <TimePicker
-                value={field.value}
-                onChange={(date) => {
-					endDateTouchedRef.current = true;
-					field.onChange(date);
-				  }}
-				use24Hour={false}
-				minTime={startDate} 
-              />
-            </FormItem>
-          )}
-        />
-      </div>
-    )}
-  </>
-) : (
-  /* EXISTING NON-MEETING LOGIC (UNCHANGED) */
-  <div
-    className={`grid gap-3 ${
-      isFieldVisible("startDate") && isFieldVisible("endDate")
-        ? "grid-cols-2"
-        : "grid-cols-1"
-    }`}
-  >
-    {/* START DATE */}
-    {isFieldVisible("startDate") && (
-      <FormField
-        control={form.control}
-        name="startDate"
-        render={({ field }) => (
-          <DateTimePicker
-            form={form}
-            field={field}
-            label={getFieldLabel("startDate", "Start Date")}
-            hideTime={tagConfig.dateOnly}
-            allowAllDates={selectedTag === "Birthday"}
-          />
-        )}
-      />
-    )}
+								{/* TIME ROW */}
+								{!form.watch("allDay") && (
+									<div className="grid grid-cols-2 gap-3">
+										{/* START TIME */}
+										<FormField
+											control={form.control}
+											name="startDate"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Start Time</FormLabel>
+													<TimePicker
+														value={field.value}
+														onChange={(date) => field.onChange(date)}
+														use24Hour={false}
+													/>
+												</FormItem>
+											)}
+										/>
 
-    {/* END / DUE DATE */}
-    {isFieldVisible("endDate") && (
-      <FormField
-        control={form.control}
-        name="endDate"
-        render={({ field }) => (
-          <DateTimePicker
-            form={form}
-            field={{
-              ...field,
-              onChange: (date) => {
-                endDateTouchedRef.current = true;
-                field.onChange(date);
-              },
-            }}
-            label={getFieldLabel("endDate", "End Date")}
-            hideTime={tagConfig.dateOnly}
-          />
-        )}
-      />
-    )}
-  </div>
-)}
+										{/* END TIME */}
+										<FormField
+											control={form.control}
+											name="endDate"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>End Time</FormLabel>
+													<TimePicker
+														value={field.value}
+														onChange={(date) => {
+															endDateTouchedRef.current = true;
+															field.onChange(date);
+														}}
+														use24Hour={false}
+														minTime={startDate}
+													/>
+												</FormItem>
+											)}
+										/>
+									</div>
+								)}
+							</>
+						) : (
+							/* EXISTING NON-MEETING LOGIC (UNCHANGED) */
+							<div
+								className={`grid gap-3 ${isFieldVisible("startDate") && isFieldVisible("endDate")
+										? "grid-cols-2"
+										: "grid-cols-1"
+									}`}
+							>
+								{/* START DATE */}
+								{isFieldVisible("startDate") && (
+									<FormField
+										control={form.control}
+										name="startDate"
+										render={({ field }) => (
+											<DateTimePicker
+												form={form}
+												field={field}
+												label={getFieldLabel("startDate", "Start Date")}
+												hideTime={tagConfig.dateOnly}
+												allowAllDates={selectedTag === "Birthday"}
+											/>
+										)}
+									/>
+								)}
+
+								{/* END / DUE DATE */}
+								{isFieldVisible("endDate") && (
+									<FormField
+										control={form.control}
+										name="endDate"
+										render={({ field }) => (
+											<DateTimePicker
+												form={form}
+												field={{
+													...field,
+													onChange: (date) => {
+														endDateTouchedRef.current = true;
+														field.onChange(date);
+													},
+												}}
+												label={getFieldLabel("endDate", "End Date")}
+												hideTime={tagConfig.dateOnly}
+											/>
+										)}
+									/>
+								)}
+							</div>
+						)}
 
 
 						{/* EMPLOYEES */}
 						{!tagConfig.hide?.includes("employees") &&
-  (!tagConfig.employee?.autoSelectLoggedIn ||
-	tagConfig.employee?.multiselect) && (
-  <FormField
-    control={form.control}
-    name="employees"
-    render={({ field }) => (
-      <FormItem>
-        <FormLabel>Employees</FormLabel>
-        <FormControl>
-		<RHFCombobox
-  value={field.value}
-  onChange={field.onChange}
-  options={employeeOptions}
-  placeholder="Select employees"
-  searchPlaceholder="Search employee"
-  multiple={isMulti}
-/>
-        </FormControl>
-      </FormItem>
-    )}
-  />
-)}
-{selectedTag === "Todo List" && (
-  <div className="grid grid-cols-2 gap-3">
-    <FormField
-      control={form.control}
-      name="todoStatus"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Status</FormLabel>
-          <Select value={field.value} onValueChange={field.onChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {["Open", "Closed", "Cancelled"].map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormItem>
-      )}
-    />
+							(!tagConfig.employee?.autoSelectLoggedIn ||
+								tagConfig.employee?.multiselect) && (
+								<FormField
+									control={form.control}
+									name="employees"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Employees</FormLabel>
+											<FormControl>
+												<RHFCombobox
+													value={field.value}
+													onChange={field.onChange}
+													options={employeeOptions}
+													placeholder="Select employees"
+													searchPlaceholder="Search employee"
+													multiple={isMulti}
+												/>
+											</FormControl>
+										</FormItem>
+									)}
+								/>
+							)}
+						{selectedTag === "Todo List" && (
+							<div className="grid grid-cols-2 gap-3">
+								<FormField
+									control={form.control}
+									name="todoStatus"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Status</FormLabel>
+											<Select value={field.value} onValueChange={field.onChange}>
+												<SelectTrigger>
+													<SelectValue placeholder="Select status" />
+												</SelectTrigger>
+												<SelectContent>
+													{["Open", "Closed", "Cancelled"].map((s) => (
+														<SelectItem key={s} value={s}>
+															{s}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormItem>
+									)}
+								/>
 
-    <FormField
-      control={form.control}
-      name="priority"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Priority</FormLabel>
-          <Select value={field.value} onValueChange={field.onChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select priority" />
-            </SelectTrigger>
-            <SelectContent>
-              {["High", "Medium", "Low"].map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormItem>
-      )}
-    />
-  </div>
-)}
+								<FormField
+									control={form.control}
+									name="priority"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Priority</FormLabel>
+											<Select value={field.value} onValueChange={field.onChange}>
+												<SelectTrigger>
+													<SelectValue placeholder="Select priority" />
+												</SelectTrigger>
+												<SelectContent>
+													{["High", "Medium", "Low"].map((p) => (
+														<SelectItem key={p} value={p}>
+															{p}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormItem>
+									)}
+								/>
+							</div>
+						)}
 
 						{/* LEAVE EXTRA */}
 						{selectedTag === "Leave" && (
@@ -757,15 +771,15 @@ useEffect(() => {
 						)}
 					</form>
 				</Form>
-                <div className="pt-4">
-				<ModalFooter>
-					<ModalClose asChild>
-						<Button variant="outline">Cancel</Button>
-					</ModalClose>
-					<Button type="submit" form="event-form">
-						{isEditing?"Update Event":"Create Event"}
-					</Button>
-				</ModalFooter>
+				<div className="pt-4">
+					<ModalFooter>
+						<ModalClose asChild>
+							<Button variant="outline">Cancel</Button>
+						</ModalClose>
+						<Button type="submit" form="event-form">
+							{isEditing ? "Update Event" : "Create Event"}
+						</Button>
+					</ModalFooter>
 				</div>
 			</ModalContent>
 		</Modal>

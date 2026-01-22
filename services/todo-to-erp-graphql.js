@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
 
 export function mapFormToErpTodo(values, options = {}) {
-    const { erpName, employeeOptions = [] } = options;
+    const { erpName, employeeOptions = [],referenceEventName } = options;
   
     const employeeId = Array.isArray(values.employees)
       ? values.employees[0]
@@ -11,7 +11,6 @@ export function mapFormToErpTodo(values, options = {}) {
     const employee = employeeOptions.find(
       (e) => e.value === employeeId
     );
-  console.log("EMPLOYEE",employee,employeeOptions)
     const allocatedTo = employee?.email;
   
     if (!allocatedTo) {
@@ -28,6 +27,9 @@ export function mapFormToErpTodo(values, options = {}) {
       allocated_to: allocatedTo, // ✅ EMAIL, NOT EMP ID
       assigned_by: LOGGED_IN_USER.id,
       docstatus: 0,
+       // ✅ LINK TO EVENT
+    reference_type: "Event",
+    reference_name: referenceEventName,
     };
   
     if (erpName) {
