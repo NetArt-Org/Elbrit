@@ -15,6 +15,7 @@ export async function fetchEmployees() {
       doctype: "Employee",
       value: node.name,          // ERP ID → saved
       label: node.employee_name, 
+      email: node.company_email, 
       designation: node.designation?.name ?? null,// UI text
     })) || []
   );

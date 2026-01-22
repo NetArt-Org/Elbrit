@@ -13,6 +13,13 @@ export const eventSchema = z.object({
 	hqTerritory: z.string().optional(),
 	allDay: z.boolean().optional(),
 	doctor: z.any().optional(),
+	todoStatus: z
+    .enum(["Open", "Closed", "Cancelled"])
+    .optional(),
+
+  priority: z
+    .enum(["High", "Medium", "Low"])
+    .optional(),
   }).superRefine((data, ctx) => {
 	const config = TAG_FORM_CONFIG[data.tags] ?? TAG_FORM_CONFIG.DEFAULT;
   

@@ -114,6 +114,21 @@ export function mapErpGraphqlEventToCalendar(node) {
 
   return event;
 }
+export function mapErpTodoToCalendar(todo) {
+  return {
+    erpName: todo.name,
+    title: todo.description,
+    description: todo.description,
+    startDate: new Date(todo.date),
+    endDate: new Date(todo.date),
+    tags: "Todo List",
+    color: "orange",
+    isTodo: true,
+    status: todo.status,
+    priority: todo.priority,
+  };
+}
+
 
 /* ---------------------------------------------
    HELPERS

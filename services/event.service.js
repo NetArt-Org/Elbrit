@@ -17,6 +17,16 @@ mutation SaveEvent($doc: String!) {
   }
 }
 `;
+const SAVE_EVENT_TODO = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "ToDo", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+
 
 export async function saveEvent(doc) {
   const data = await graphqlRequest(SAVE_EVENT_MUTATION, {
@@ -26,12 +36,25 @@ export async function saveEvent(doc) {
   if (!data?.saveDoc?.doc?.name) {
     throw new Error("ERP did not return Event name");
   }
-
+  console.log("Created ToDo name:", data?.saveDoc?.doc?.name,data.saveDoc.doc);
   // invalidate cache only after successful write
   clearEventCache();
 
   return data.saveDoc.doc;
 }
+export async function saveDocToErp(doc) {
+  const data = await graphqlRequest(SAVE_EVENT_TODO, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return document name");
+  }
+
+  clearEventCache();
+  return data.saveDoc.doc;
+}
+
 
 export async function fetchEventsByRange(startDate, endDate, view) {
   const cacheKey = buildRangeCacheKey(view, startDate, endDate);
