@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
-import { saveDocToErp, saveEvent } from "@/services/event.service";
+import { saveDocToErp, saveEvent,fetchEmployeeLeaveBalance } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
+import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
 
 import {
 	Form,
@@ -50,8 +51,8 @@ import { RHFCombobox } from "@/components/ui/RHFCombobox";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@/lib/participants";
 import { TimePicker } from "@/components/ui/TimePicker";
-import { mapFormToErpTodo } from "@/services/todo-to-erp-graphql";
-import { mapErpTodoToCalendar } from "@/services/erp-todo-to-calendar";
+import { mapFormToErpTodo,mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
+import { mapFormToErpLeave } from "@/services/leave-to-erp";
 
 export function AddEditEventDialog({
 	children,
@@ -64,7 +65,11 @@ export function AddEditEventDialog({
 	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
 	const [doctorOptions, setDoctorOptions] = useState([]);
 	const [employeeOptions, setEmployeeOptions] = useState([]);
+	const [leaveBalance, setLeaveBalance] = useState(null);
+const [leaveLoading, setLeaveLoading] = useState(false);
+
 	const endDateTouchedRef = useRef(false); // existing
+
 	const initialDates = useMemo(() => {
 		if (!event) {
 			const now = new Date();
@@ -97,6 +102,9 @@ export function AddEditEventDialog({
 			allDay: false,
 			todoStatus: "Open",
 			priority: "Medium",
+			leaveType: undefined,
+			leavePeriod: "Full", // "Full" | "Half"
+			medicalAttachment: undefined,
 		},
 	});
 
@@ -115,7 +123,34 @@ export function AddEditEventDialog({
 	const getFieldLabel = (field, fallback) => {
 		return tagConfig.labels?.[field] ?? fallback;
 	};
-
+	/* ---------------------------------------------
+	   Leave Balance Fetching
+	--------------------------------------------- */
+	useEffect(() => {
+		if (!isOpen || selectedTag !== "Leave") return;
+	  console.log("STARTED",LOGGED_IN_USER)
+		let alive = true;
+		setLeaveLoading(true);
+	  
+		fetchEmployeeLeaveBalance(LOGGED_IN_USER.id)
+		  .then((data) => {
+			if (!alive) return;
+			console.log("Leave balance:", data); // IMPORTANT
+			setLeaveBalance(data);
+		  })
+		  .catch((err) => {
+			console.error("Leave balance error", err);
+			setLeaveBalance({});
+		  })
+		  .finally(() => {
+			if (alive) setLeaveLoading(false);
+		  });
+	  
+		return () => {
+		  alive = false;
+		};
+	  }, [isOpen, selectedTag]);
+	  
 	/* ---------------------------------------------
 	   TODO: FORCE START DATE = NOW (HIDDEN)
 	--------------------------------------------- */
@@ -316,7 +351,20 @@ export function AddEditEventDialog({
 		form.setValue("endDate", newEnd, { shouldDirty: true });
 
 	}, [selectedTag, startDate, allDay]);
-
+	const leavePeriod = useWatch({
+		control: form.control,
+		name: "leavePeriod",
+	  });
+	  
+	  useEffect(() => {
+		if (selectedTag !== "Leave") return;
+	  
+		if (leavePeriod === "Half") {
+		  form.setValue("endDate", startDate, { shouldDirty: true });
+		}
+	  }, [leavePeriod, startDate]);
+	  
+	
 	/* --------------------------------------------------
    SUBMIT
 -------------------------------------------------- */
@@ -334,7 +382,25 @@ const onSubmit = async (values) => {
 		return;
 	  }
 	}
-  
+	if (selectedTag === "Leave") {
+		const leaveDoc = mapFormToErpLeave(values);
+	  console.log("LEAVE DOC",leaveDoc)
+		// const savedLeave = await saveLeaveApplication(leaveDoc);
+	  
+		// toast.success("Leave applied successfully");
+	  
+		// OPTIONAL: map leave → calendar event
+		// addEvent({
+		//   title: `${values.leaveType} Leave`,
+		//   startDate: leaveDoc.from_date,
+		//   endDate: leaveDoc.to_date,
+		//   allDay: true,
+		//   tags: "Leave",
+		//   erpName: savedLeave.name,
+		// });
+		return;
+	  }
+	  
 	/* ==================================================
 	   EVENT FLOW
 	================================================== */
@@ -384,7 +450,7 @@ const onSubmit = async (values) => {
   
 	  const savedTodo = await saveDocToErp(todoDoc);
   
-	  /*
+	  
 	  const calendarTodo = mapErpTodoToCalendar({
 		...todoDoc,
 		name: savedTodo.name,
@@ -395,8 +461,8 @@ const onSubmit = async (values) => {
 	  event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
   
 	  toast.success("Todo saved");
-	  onClose();
-	  */
+	//   onClose();
+	  
 	  onClose();
 	  return;
 	}
@@ -441,7 +507,64 @@ const onSubmit = async (values) => {
 								</div>
 							)}
 						/>
+{selectedTag === "Leave" && (
+	<>
+  <FormField
+    control={form.control}
+    name="leaveType"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Leave Type</FormLabel>
 
+		<LeaveTypeCards
+  balance={leaveBalance}
+  loading={leaveLoading}
+  value={field.value}
+  onChange={field.onChange}
+/>
+{field.value && leaveBalance?.[field.value] && (
+  <div className="mt-2 text-sm text-muted-foreground">
+    Balance:{" "}
+    {leaveBalance[field.value].available}
+    {" / "}
+    {leaveBalance[field.value].allocated}
+  </div>
+)}
+      </FormItem>
+    )}
+  />
+  <FormField
+  control={form.control}
+  name="leavePeriod"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Select Period</FormLabel>
+      <div className="flex gap-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="Full"
+            checked={field.value === "Full"}
+            onChange={field.onChange}
+          />
+          Full Day
+        </label>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="Half"
+            checked={field.value === "Half"}
+            onChange={field.onChange}
+          />
+          Half Day
+        </label>
+      </div>
+    </FormItem>
+  )}
+/>
+</>
+)}
 						{/* TITLE ALWAYS BELOW TAGS */}
 						{!tagConfig.hide?.includes("title") && (
 							<FormField
@@ -712,50 +835,6 @@ const onSubmit = async (values) => {
 							</div>
 						)}
 
-						{/* LEAVE EXTRA */}
-						{selectedTag === "Leave" && (
-							<>
-								<FormField
-									control={form.control}
-									name="leaveType"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Leave Type</FormLabel>
-											<Select
-												value={field.value}
-												onValueChange={field.onChange}
-											>
-												<SelectTrigger>
-													<SelectValue placeholder="Select leave type" />
-												</SelectTrigger>
-												<SelectContent>
-													{["SL", "PL", "CL", "ML"].map((t) => (
-														<SelectItem key={t} value={t}>
-															{t}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</FormItem>
-									)}
-								/>
-
-								<div className="text-sm text-muted-foreground">
-									Balance: 10 / 12
-								</div>
-
-								<FormField
-									control={form.control}
-									name="medicalAttachment"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Medical Certificate</FormLabel>
-											<Input type="file" onChange={field.onChange} />
-										</FormItem>
-									)}
-								/>
-							</>
-						)}
 
 						{!tagConfig.hide?.includes("description") && (
 							<FormField

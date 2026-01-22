@@ -84,3 +84,32 @@ query GetHQTerritories($first: Int!){
   }
   }
 `;
+
+export const LEAVE_ALLOCATIONS_QUERY = `
+query LeaveAllocationsByEmployee(
+  $first: Int!
+  $filters: [DBFilterInput!]
+) {
+  LeaveAllocations(first: $first, filter: $filters) {
+    edges {
+      node {
+        leave_type__name
+        total_leaves_allocated
+      }
+    }
+  }
+}
+`;
+export const LEAVE_APPLICATIONS_QUERY = `
+query LeaveApplications($first: Int!, $filters: [DBFilterInput!]) {
+  LeaveApplications(first: $first, filter: $filters) {
+    edges {
+      node {
+        leave_type__name
+        total_leave_days
+      }
+    }
+  }
+}
+`;
+
