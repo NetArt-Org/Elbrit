@@ -25,6 +25,7 @@ export function DateTimePicker({
 	hideTime = false,
 	defaultHour = 0,
 	defaultMinute = 0,
+	disabled=false
 }) {
 	const { use24HourFormat } = useCalendar();
 	const [open, setOpen] = useState(false);
@@ -113,6 +114,7 @@ export function DateTimePicker({
 				<PopoverTrigger asChild>
 					<FormControl>
 						<Button
+						    disabled={disabled}
 							variant={"outline"}
 							onMouseDown={(e) => e.preventDefault()}
 							className={cn(

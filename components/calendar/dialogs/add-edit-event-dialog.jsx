@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
-import { saveDocToErp, saveEvent,fetchEmployeeLeaveBalance } from "@/services/event.service";
+import { saveDocToErp, saveEvent,fetchEmployeeLeaveBalance, saveLeaveApplication } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
 
@@ -52,7 +52,7 @@ import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@/lib/participants";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { mapFormToErpTodo,mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
-import { mapFormToErpLeave } from "@/services/leave-to-erp";
+import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-erp";
 
 export function AddEditEventDialog({
 	children,
@@ -121,20 +121,42 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 	const getFieldLabel = (field, fallback) => {
 		return tagConfig.labels?.[field] ?? fallback;
 	};
-	
+	const resetFieldsOnTagChange = () => {
+		// always reset these
+		form.resetField("employees", { defaultValue: undefined });
+		form.resetField("doctor", { defaultValue: undefined });
+		form.resetField("hqTerritory", { defaultValue: "" });
+	  
+		// Todo-only
+		form.resetField("todoStatus", { defaultValue: "Open" });
+		form.resetField("priority", { defaultValue: "Medium" });
+	  
+		// Leave-only — reset ONLY when leaving Leave
+		if (selectedTag !== "Leave") {
+		  form.resetField("leaveType", { defaultValue: undefined });
+		  form.resetField("leavePeriod", { defaultValue: "Full" });
+		  form.resetField("medicalAttachment", { defaultValue: undefined });
+		}
+	  };
+	  
+	  useEffect(() => {
+		if (!isOpen) return;
+		if (isEditing) return;
+	  
+		resetFieldsOnTagChange();
+	  }, [selectedTag]);
+	  
 	/* ---------------------------------------------
 	   Leave Balance Fetching
 	--------------------------------------------- */
 	useEffect(() => {
 		if (!isOpen || selectedTag !== "Leave") return;
-	  console.log("STARTED",LOGGED_IN_USER)
 		let alive = true;
 		setLeaveLoading(true);
 	  
 		fetchEmployeeLeaveBalance(LOGGED_IN_USER.id)
 		  .then((data) => {
 			if (!alive) return;
-			console.log("Leave balance:", data); // IMPORTANT
 			setLeaveBalance(data);
 		  })
 		  .catch((err) => {
@@ -392,22 +414,20 @@ const onSubmit = async (values) => {
 		return;
 	  }
 	}
+
 	if (selectedTag === "Leave") {
 		const leaveDoc = mapFormToErpLeave(values);
-	  console.log("LEAVE DOC",leaveDoc)
-		// const savedLeave = await saveLeaveApplication(leaveDoc);
-	  
-		// toast.success("Leave applied successfully");
-	  
+	    console.log("LEAVE DOC",leaveDoc)
+		const savedLeave = await saveLeaveApplication(leaveDoc);
+		const calendarLeave = mapErpLeaveToCalendar({
+			...leaveDoc,
+			name: savedLeave.name,
+		  });
+		toast.success("Leave applied successfully");
+		console.log("CAlendar Leave DOC",calendarLeave)
 		// OPTIONAL: map leave → calendar event
-		// addEvent({
-		//   title: `${values.leaveType} Leave`,
-		//   startDate: leaveDoc.from_date,
-		//   endDate: leaveDoc.to_date,
-		//   allDay: true,
-		//   tags: "Leave",
-		//   erpName: savedLeave.name,
-		// });
+		event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+		onClose();
 		return;
 	  }
 	  
@@ -420,11 +440,11 @@ const onSubmit = async (values) => {
   
 	console.log("ERP DOC", erpDoc);
   
-	const saved = await saveEvent(erpDoc);
+	// const saved = await saveEvent(erpDoc);
   
 	const calendarEvent = {
 	  ...(event ?? {}),
-	  erpName: saved.name,
+	//   erpName: saved.name,
 	  title: values.title,
 	  description: values.description,
 	  startDate: erpDoc.starts_on,
@@ -442,9 +462,9 @@ const onSubmit = async (values) => {
   
 	console.log("Calendar DOC", calendarEvent);
   
-	event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+	// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
   
-	toast.success("Event saved");
+	// toast.success("Event saved");
   
 	/* ==================================================
 	   TODO LIST FLOW (API ONLY — UI COMMENTED)
@@ -453,32 +473,31 @@ const onSubmit = async (values) => {
 	  const todoDoc = mapFormToErpTodo(values, {
 		erpName: event?.erpName,
 		employeeOptions,
-		referenceEventName: saved?.name, // ✅ correct field
+		// referenceEventName: saved?.name, 
 	  });
   
 	  console.log("ERP TODO DOC", todoDoc);
   
-	  const savedTodo = await saveDocToErp(todoDoc);
+	//   const savedTodo = await saveDocToErp(todoDoc);
   
 	  
 	  const calendarTodo = mapErpTodoToCalendar({
 		...todoDoc,
-		name: savedTodo.name,
+		// name: savedTodo.name,
 	  });
   
 	  console.log("Calendar TODO DOC", calendarTodo);
   
-	  event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
+	//   event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
   
-	  toast.success("Todo saved");
+	//   toast.success("Todo saved");
 	//   onClose();
 	  
-	  onClose();
+	//   onClose();
 	  return;
 	}
   };
   
-
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -756,6 +775,7 @@ const onSubmit = async (values) => {
 										render={({ field }) => (
 											<DateTimePicker
 												form={form}
+												disabled={selectedTag === "Leave" && leavePeriod === "Half"}
 												field={{
 													...field,
 													onChange: (date) => {

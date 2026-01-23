@@ -27,8 +27,14 @@ export function RHFCombobox({
 }) {
   const [open, setOpen] = useState(false);
 
+  const normalizedValue = multiple
+  ? Array.isArray(value) ? value : []
+  : typeof value === "string" ? value : undefined;
   const isSelected = (val) =>
-    multiple ? value?.includes(val) : value === val;
+    multiple
+      ? normalizedValue.includes(val)
+      : normalizedValue === val;
+  
 
   const handleSelect = (val) => {
     if (!multiple) {
@@ -38,19 +44,21 @@ export function RHFCombobox({
     }
 
     // multi-select logic
-    if (value?.includes(val)) {
-      onChange(value.filter(v => v !== val));
+    if (normalizedValue.includes(val)) {
+      onChange(normalizedValue.filter(v => v !== val));
     } else {
-      onChange([...(value || []), val]);
+      onChange([...normalizedValue, val]);
     }
+    
   };
 
   const selectedLabel = multiple
-    ? options
-        .filter(o => value?.includes(o.value))
-        .map(o => o.label)
-        .join(", ")
-    : options.find(o => o.value === value)?.label;
+  ? options
+      .filter(o => normalizedValue.includes(o.value))
+      .map(o => o.label)
+      .join(", ")
+  : options.find(o => o.value === normalizedValue)?.label;
+
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
@@ -62,9 +70,10 @@ export function RHFCombobox({
           className="w-full justify-between"
         >
         <span className="block max-w-full truncate">
-  {multiple && value?.length > 0
-    ? `${value.length} employee${value.length > 1 ? "s" : ""} selected`
-    : selectedLabel || placeholder}
+        {multiple && normalizedValue.length > 0
+  ? `${normalizedValue.length} employee${normalizedValue.length > 1 ? "s" : ""} selected`
+  : selectedLabel || placeholder}
+
 </span>
 
           <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />

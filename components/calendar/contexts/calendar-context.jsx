@@ -99,12 +99,7 @@ export function CalendarProvider({
 		} else {
 			const filtered = allEvents.filter((event) => event.owner?.id === userId);
 			setFilteredEvents(filtered);
-		}
-		console.log(
-			"ALL:", allEvents.length,
-			"FILTERED:", filteredEvents.length,
-			"USER:", selectedUserId
-		  );		  
+		}	  
 	};
 
 	const handleSelectDate = (date) => {
@@ -174,7 +169,6 @@ export function CalendarProvider({
 			  end,
 			  currentView
 			);
-	  console.log("EVENTS",events)
 			if (!cancelled) {
 			  setAllEvents(events);
 			  setFilteredEvents(events);
