@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
-import { saveDocToErp, saveEvent,fetchEmployeeLeaveBalance, saveLeaveApplication } from "@/services/event.service";
+import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
 
@@ -51,7 +51,7 @@ import { RHFCombobox } from "@/components/ui/RHFCombobox";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@/lib/participants";
 import { TimePicker } from "@/components/ui/TimePicker";
-import { mapFormToErpTodo,mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
+import { mapFormToErpTodo, mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-erp";
 
 export function AddEditEventDialog({
@@ -66,7 +66,7 @@ export function AddEditEventDialog({
 	const [doctorOptions, setDoctorOptions] = useState([]);
 	const [employeeOptions, setEmployeeOptions] = useState([]);
 	const [leaveBalance, setLeaveBalance] = useState(null);
-const [leaveLoading, setLeaveLoading] = useState(false);
+	const [leaveLoading, setLeaveLoading] = useState(false);
 
 	const endDateTouchedRef = useRef(false); // existing
 
@@ -86,6 +86,7 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 
 	const form = useForm({
 		resolver: zodResolver(eventSchema),
+		mode: "onChange",
 		defaultValues: {
 			title: event?.title ?? "",
 			description: event?.description ?? "",
@@ -95,14 +96,13 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 			hqTerritory: event?.hqTerritory ?? "",
 			employees: undefined,
 			doctor: undefined,
-			// Leave
-			leaveType: undefined,
+			leaveType: "Casual Leave",
 			reportTo: undefined,
 			medicalAttachment: undefined,
 			allDay: false,
 			todoStatus: "Open",
 			priority: "Medium",
-			leavePeriod: "Full", 
+			leavePeriod: "Full",
 		},
 	});
 
@@ -126,26 +126,47 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 		form.resetField("employees", { defaultValue: undefined });
 		form.resetField("doctor", { defaultValue: undefined });
 		form.resetField("hqTerritory", { defaultValue: "" });
-	  
+
 		// Todo-only
 		form.resetField("todoStatus", { defaultValue: "Open" });
 		form.resetField("priority", { defaultValue: "Medium" });
-	  
+		form.resetField("doctor", {
+			defaultValue: isDoctorMulti ? [] : undefined,
+		  });
+		  
+
 		// Leave-only — reset ONLY when leaving Leave
 		if (selectedTag !== "Leave") {
-		  form.resetField("leaveType", { defaultValue: undefined });
-		  form.resetField("leavePeriod", { defaultValue: "Full" });
-		  form.resetField("medicalAttachment", { defaultValue: undefined });
+			form.resetField("leaveType", { defaultValue: undefined });
+			form.resetField("leavePeriod", { defaultValue: "Full" });
+			form.resetField("medicalAttachment", { defaultValue: undefined });
 		}
-	  };
+	};
+	const leaveType = useWatch({
+		control: form.control,
+		name: "leaveType",
+	  });
 	  
-	  useEffect(() => {
+	  const leaveDays =
+		selectedTag === "Leave" && startDate && endDate
+		  ? differenceInCalendarDays(endDate, startDate) + 1
+		  : 0;
+	  
+	  const requiresMedical =
+		selectedTag === "Leave" &&
+		leaveType === "Sick Leave" &&
+		leaveDays >
+		  (tagConfig.leave?.medicalCertificateAfterDays ?? Infinity);
+	  
+	const isDoctorMulti = tagConfig.doctor?.multiselect === true;
+
+	useEffect(() => {
 		if (!isOpen) return;
 		if (isEditing) return;
-	  
+
 		resetFieldsOnTagChange();
-	  }, [selectedTag]);
-	  
+	}, [selectedTag]);
+
 	/* ---------------------------------------------
 	   Leave Balance Fetching
 	--------------------------------------------- */
@@ -153,25 +174,25 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 		if (!isOpen || selectedTag !== "Leave") return;
 		let alive = true;
 		setLeaveLoading(true);
-	  
+
 		fetchEmployeeLeaveBalance(LOGGED_IN_USER.id)
-		  .then((data) => {
-			if (!alive) return;
-			setLeaveBalance(data);
-		  })
-		  .catch((err) => {
-			console.error("Leave balance error", err);
-			setLeaveBalance({});
-		  })
-		  .finally(() => {
-			if (alive) setLeaveLoading(false);
-		  });
-	  
+			.then((data) => {
+				if (!alive) return;
+				setLeaveBalance(data);
+			})
+			.catch((err) => {
+				console.error("Leave balance error", err);
+				setLeaveBalance({});
+			})
+			.finally(() => {
+				if (alive) setLeaveLoading(false);
+			});
+
 		return () => {
-		  alive = false;
+			alive = false;
 		};
-	  }, [isOpen, selectedTag]);
-	  
+	}, [isOpen, selectedTag]);
+
 	/* ---------------------------------------------
 	   TODO: FORCE START DATE = NOW (HIDDEN)
 	--------------------------------------------- */
@@ -226,7 +247,7 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 		}
 	}, [isOpen, event?.participants]);
 
-	
+
 
 	/* ---------------------------------------------
 	   FORCE ALL-DAY CHECKBOX ONLY
@@ -247,18 +268,18 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 
 	useEffect(() => {
 		if (!isOpen || isEditing) return;
-	  
+
 		const now = new Date();
-	  
+
 		form.reset({
-		  ...initialDefaultsRef.current,
-		  startDate: now,
-		  endDate: addMinutes(now, 60),
-		  tags: selectedTag,
+			...initialDefaultsRef.current,
+			startDate: now,
+			endDate: addMinutes(now, 60),
+			tags: selectedTag,
 		});
-	  }, [isOpen, selectedTag, isEditing]);
-	  
-	  
+	}, [isOpen, selectedTag, isEditing]);
+
+
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
 	-------------------------------------------------- */
@@ -386,118 +407,116 @@ const [leaveLoading, setLeaveLoading] = useState(false);
 	const leavePeriod = useWatch({
 		control: form.control,
 		name: "leavePeriod",
-	  });
-	  
-	  useEffect(() => {
+	});
+
+	useEffect(() => {
 		if (selectedTag !== "Leave") return;
-	  
+
 		if (leavePeriod === "Half") {
-		  form.setValue("endDate", startDate, { shouldDirty: true });
+			form.setValue("endDate", startDate, { shouldDirty: true });
 		}
-	  }, [leavePeriod, startDate]);
-	  
-	
+	}, [leavePeriod, startDate]);
+
+
 	/* --------------------------------------------------
    SUBMIT
 -------------------------------------------------- */
-const onSubmit = async (values) => {
-	if (values.tags === "Birthday" && !values.endDate) {
-	  values.endDate = values.startDate;
-	}
-  
-	if (selectedTag === "Leave") {
-	  const days =
-		differenceInCalendarDays(values.endDate, values.startDate) + 1;
-  
-	  if (days > 2 && !values.medicalAttachment) {
-		toast.error("Medical certificate required");
-		return;
-	  }
-	}
+	const onSubmit = async (values) => {
+		if (values.tags === "Birthday" && !values.endDate) {
+			values.endDate = values.startDate;
+		}
 
-	if (selectedTag === "Leave") {
-		const leaveDoc = mapFormToErpLeave(values);
-	    console.log("LEAVE DOC",leaveDoc)
-		const savedLeave = await saveLeaveApplication(leaveDoc);
-		const calendarLeave = mapErpLeaveToCalendar({
-			...leaveDoc,
-			name: savedLeave.name,
-		  });
-		toast.success("Leave applied successfully");
-		console.log("CAlendar Leave DOC",calendarLeave)
-		// OPTIONAL: map leave → calendar event
-		event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+		if (selectedTag === "Leave") {
+			const days =
+				differenceInCalendarDays(values.endDate, values.startDate) + 1;
+
+			if (days > 2 && !values.medicalAttachment) {
+				toast.error("Medical certificate required");
+				return;
+			}
+		}
+
+		if (selectedTag === "Leave") {
+			const leaveDoc = mapFormToErpLeave(values);
+			console.log("LEAVE DOC", leaveDoc)
+			const savedLeave = await saveLeaveApplication(leaveDoc);
+			const calendarLeave = mapErpLeaveToCalendar({
+				...leaveDoc,
+				name: savedLeave.name,
+			});
+			toast.success("Leave applied successfully");
+			console.log("CAlendar Leave DOC",calendarLeave)
+			event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+			onClose();
+			return;
+		}
+
+		/* ==================================================
+		   EVENT FLOW
+		================================================== */
+		const erpDoc = mapFormToErpEvent(values, {
+			erpName: event?.erpName,
+		});
+
+		console.log("ERP DOC", erpDoc);
+
+		const saved = await saveEvent(erpDoc);
+
+		const calendarEvent = {
+			...(event ?? {}),
+			  erpName: saved.name,
+			title: values.title,
+			description: values.description,
+			startDate: erpDoc.starts_on,
+			endDate: erpDoc.ends_on,
+			color: tagConfig.fixedColor,
+			tags: values.tags,
+			owner: isEditing ? event.owner : LOGGED_IN_USER.id,
+			hqTerritory: values.hqTerritory || "",
+			participants: buildCalendarParticipants(
+				values,
+				employeeOptions,
+				doctorOptions
+			),
+		};
+
+		console.log("Calendar DOC", calendarEvent);
+
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+
+		toast.success("Event saved");
+		/* ==================================================
+		   TODO LIST FLOW (API ONLY — UI COMMENTED)
+		================================================== */
+		if (values.tags === "Todo List") {
+			const todoDoc = mapFormToErpTodo(values, {
+				erpName: event?.erpName,
+				employeeOptions,
+				referenceEventName: saved?.name, 
+			});
+
+			console.log("ERP TODO DOC", todoDoc);
+
+			  const savedTodo = await saveDocToErp(todoDoc);
+
+
+			const calendarTodo = mapErpTodoToCalendar({
+				...todoDoc,
+				name: savedTodo.name,
+			});
+
+			console.log("Calendar TODO DOC", calendarTodo);
+
+			  event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
+
+			  toast.success("Todo saved");
+			  onClose();
+			return;
+		}
 		onClose();
-		return;
-	  }
-	  
-	/* ==================================================
-	   EVENT FLOW
-	================================================== */
-	const erpDoc = mapFormToErpEvent(values, {
-	  erpName: event?.erpName,
-	});
-  
-	console.log("ERP DOC", erpDoc);
-  
-	// const saved = await saveEvent(erpDoc);
-  
-	const calendarEvent = {
-	  ...(event ?? {}),
-	//   erpName: saved.name,
-	  title: values.title,
-	  description: values.description,
-	  startDate: erpDoc.starts_on,
-	  endDate: erpDoc.ends_on,
-	  color: tagConfig.fixedColor,
-	  tags: values.tags,
-	  owner: isEditing ? event.owner : LOGGED_IN_USER.id,
-	  hqTerritory: values.hqTerritory || "",
-	  participants: buildCalendarParticipants(
-		values,
-		employeeOptions,
-		doctorOptions
-	  ),
+			return;
 	};
-  
-	console.log("Calendar DOC", calendarEvent);
-  
-	// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-  
-	// toast.success("Event saved");
-  
-	/* ==================================================
-	   TODO LIST FLOW (API ONLY — UI COMMENTED)
-	================================================== */
-	if (values.tags === "Todo List") {
-	  const todoDoc = mapFormToErpTodo(values, {
-		erpName: event?.erpName,
-		employeeOptions,
-		// referenceEventName: saved?.name, 
-	  });
-  
-	  console.log("ERP TODO DOC", todoDoc);
-  
-	//   const savedTodo = await saveDocToErp(todoDoc);
-  
-	  
-	  const calendarTodo = mapErpTodoToCalendar({
-		...todoDoc,
-		// name: savedTodo.name,
-	  });
-  
-	  console.log("Calendar TODO DOC", calendarTodo);
-  
-	//   event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
-  
-	//   toast.success("Todo saved");
-	//   onClose();
-	  
-	//   onClose();
-	  return;
-	}
-  };
-  
+
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -536,75 +555,90 @@ const onSubmit = async (values) => {
 								</div>
 							)}
 						/>
-{selectedTag === "Leave" && (
-	<>
-  <FormField
-    control={form.control}
-    name="leaveType"
-    render={({ field }) => (
-      <FormItem>
-        <FormLabel>Leave Type</FormLabel>
+						{selectedTag === "Leave" && (
+							<>
+								<FormField
+									control={form.control}
+									name="leaveType"
+									render={({ field,fieldState }) => (
+										<FormItem>
+											<FormLabel>Leave Type</FormLabel>
 
-		<LeaveTypeCards
-  balance={leaveBalance}
-  loading={leaveLoading}
-  value={field.value}
-  onChange={field.onChange}
-/>
-{field.value && leaveBalance?.[field.value] && (
-  <div className="mt-2 text-sm text-muted-foreground">
-    Balance:{" "}
-    {leaveBalance[field.value].available}
-    {" / "}
-    {leaveBalance[field.value].allocated}
-  </div>
-)}
-      </FormItem>
-    )}
-  />
-  <FormField
-  control={form.control}
-  name="leavePeriod"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Select Period</FormLabel>
-      <div className="flex gap-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            value="Full"
-            checked={field.value === "Full"}
-            onChange={field.onChange}
-          />
-          Full Day
-        </label>
+											<LeaveTypeCards
+												balance={leaveBalance}
+												loading={leaveLoading}
+												value={field.value}
+												onChange={field.onChange}
+											/>
+											{field.value && leaveBalance?.[field.value] && (
+												<div className="mt-2 text-sm text-muted-foreground">
+													Balance:{" "}
+													{leaveBalance[field.value].available}
+													{" / "}
+													{leaveBalance[field.value].allocated}
+												</div>
+											)}
+											{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="leavePeriod"
+									render={({ field,fieldState }) => (
+										<FormItem>
+											<FormLabel>Select Period</FormLabel>
+											<div className="flex gap-4">
+												<label className="flex items-center gap-2">
+													<input
+														type="radio"
+														value="Full"
+														checked={field.value === "Full"}
+														onChange={field.onChange}
+													/>
+													Full Day
+												</label>
 
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            value="Half"
-            checked={field.value === "Half"}
-            onChange={field.onChange}
-          />
-          Half Day
-        </label>
-      </div>
-    </FormItem>
-  )}
-/>
-</>
-)}
+												<label className="flex items-center gap-2">
+													<input
+														type="radio"
+														value="Half"
+														checked={field.value === "Half"}
+														onChange={field.onChange}
+													/>
+													Half Day
+												</label>
+											</div>
+											{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
+										</FormItem>
+									)}
+								/>
+							</>
+						)}
 						{/* TITLE ALWAYS BELOW TAGS */}
 						{!tagConfig.hide?.includes("title") && (
 							<FormField
 								control={form.control}
 								name="title"
-								render={({ field }) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>Title</FormLabel>
 										<FormControl>
 											<Input placeholder="Enter title" {...field} />
 										</FormControl>
+										{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -613,7 +647,7 @@ const onSubmit = async (values) => {
 							<FormField
 								control={form.control}
 								name="hqTerritory"
-								render={({ field }) => (
+								render={({ field ,fieldState}) => (
 									<FormItem>
 										<FormLabel>HQ Territory</FormLabel>
 										<FormControl>
@@ -624,6 +658,11 @@ const onSubmit = async (values) => {
 												placeholder="Select HQ Territory"
 											/>
 										</FormControl>
+										{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -633,7 +672,7 @@ const onSubmit = async (values) => {
 							<FormField
 								control={form.control}
 								name="doctor"
-								render={({ field }) => (
+								render={({ field,fieldState }) => (
 									<FormItem>
 										<FormLabel>Doctor</FormLabel>
 										<FormControl>
@@ -642,8 +681,14 @@ const onSubmit = async (values) => {
 												value={field.value}
 												onChange={field.onChange}
 												placeholder="Select doctor"
+												multiple={isDoctorMulti}
 											/>
 										</FormControl>
+										{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
 									</FormItem>
 								)}
 							/>
@@ -746,8 +791,8 @@ const onSubmit = async (values) => {
 							/* EXISTING NON-MEETING LOGIC (UNCHANGED) */
 							<div
 								className={`grid gap-3 ${isFieldVisible("startDate") && isFieldVisible("endDate")
-										? "grid-cols-2"
-										: "grid-cols-1"
+									? "grid-cols-2"
+									: "grid-cols-1"
 									}`}
 							>
 								{/* START DATE */}
@@ -800,7 +845,7 @@ const onSubmit = async (values) => {
 								<FormField
 									control={form.control}
 									name="employees"
-									render={({ field }) => (
+									render={({ field,fieldState }) => (
 										<FormItem>
 											<FormLabel>Employees</FormLabel>
 											<FormControl>
@@ -813,6 +858,11 @@ const onSubmit = async (values) => {
 													multiple={isMulti}
 												/>
 											</FormControl>
+											{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
 										</FormItem>
 									)}
 								/>
@@ -822,7 +872,7 @@ const onSubmit = async (values) => {
 								<FormField
 									control={form.control}
 									name="todoStatus"
-									render={({ field }) => (
+									render={({ field,fieldState }) => (
 										<FormItem>
 											<FormLabel>Status</FormLabel>
 											<Select value={field.value} onValueChange={field.onChange}>
@@ -837,6 +887,11 @@ const onSubmit = async (values) => {
 													))}
 												</SelectContent>
 											</Select>
+											{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
 										</FormItem>
 									)}
 								/>
@@ -844,7 +899,7 @@ const onSubmit = async (values) => {
 								<FormField
 									control={form.control}
 									name="priority"
-									render={({ field }) => (
+									render={({ field,fieldState }) => (
 										<FormItem>
 											<FormLabel>Priority</FormLabel>
 											<Select value={field.value} onValueChange={field.onChange}>
@@ -859,11 +914,31 @@ const onSubmit = async (values) => {
 													))}
 												</SelectContent>
 											</Select>
+											{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
 										</FormItem>
 									)}
 								/>
 							</div>
 						)}
+{selectedTag === "Leave" && requiresMedical && (
+  <FormField
+    control={form.control}
+    name="medicalAttachment"
+    render={({ field, fieldState }) => (
+      <FormItem>
+        <FormLabel>Medical Certificate</FormLabel>
+        <Input type="file" onChange={e => field.onChange(e.target.files?.[0])} />
+        {fieldState.error && (
+          <p className="text-sm text-red-500">{fieldState.error.message}</p>
+        )}
+      </FormItem>
+    )}
+  />
+)}
 
 
 						{!tagConfig.hide?.includes("description") && (
@@ -881,11 +956,11 @@ const onSubmit = async (values) => {
 					</form>
 				</Form>
 				<div className="pt-4">
-					<ModalFooter>
+					<ModalFooter className="gap-2">
 						<ModalClose asChild>
 							<Button variant="outline">Cancel</Button>
 						</ModalClose>
-						<Button type="submit" form="event-form">
+						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
 							{isEditing ? "Update Event" : "Create Event"}
 						</Button>
 					</ModalFooter>
