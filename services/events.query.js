@@ -38,6 +38,26 @@ query EventsByRange(
   }
 }
 `;
+export const TODO_LIST_QUERY = `
+query ToDoes($first: Int!, $filters: [DBFilterInput!]) {
+  ToDoes(first: $first, filter: $filters) {
+    edges {
+      node {
+        name
+        description
+        date
+        priority
+        status
+        allocated_to {
+          name
+        }
+        reference_type__name
+        reference_name__name
+      }
+    }
+  }
+}
+`;
 
 export const EMPLOYEES_QUERY = `
 query GetEmployees($first: Int!) {

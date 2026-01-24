@@ -24,7 +24,6 @@ export function EventDetailsDialog({
 	const deleteLockRef = useRef(false);
 	const tagConfig =
 		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
-
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>

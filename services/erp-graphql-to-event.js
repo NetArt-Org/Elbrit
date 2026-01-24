@@ -6,6 +6,26 @@ import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
  * ERP GraphQL → Calendar Event
  * Employees & Doctors are derived ONLY from participants
  */
+
+export function toTitleCase(value = "") {
+  const cleaned = value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+  const words = cleaned.split(" ");
+
+  return words
+    .map(word => {
+      // preserve known acronyms
+      if (word === "hq") return "HQ";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
+}
+
+
 export function mapErpGraphqlEventToCalendar(node) {
   if (!node) return null;
 
@@ -59,7 +79,7 @@ export function mapErpGraphqlEventToCalendar(node) {
     startDate: startDate ? startDate.toISOString() : null,
     endDate: endDate ? endDate.toISOString() : null,
 
-    tags: tag,
+    tags: toTitleCase(tag),
 
     // ✅ REQUIRED BY eventSchema
     employees: tagConfig.employee?.multiselect
