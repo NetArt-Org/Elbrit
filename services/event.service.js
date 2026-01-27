@@ -1,6 +1,6 @@
 import { graphqlRequest } from "@/lib/graphql-client";
 import { serializeEventDoc } from "./event-to-erp-graphql";
-import { EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY } from "@/services/events.query";
+import { EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, TODO_LIST_QUERY } from "@/services/events.query";
 import { mapErpGraphqlEventToCalendar } from "@/services/erp-graphql-to-event";
 import { getCachedEvents, setCachedEvents } from "@/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@/lib/calendar/cache-key";
@@ -11,6 +11,8 @@ import {
   getLeaveCacheKey,
   clearLeaveCache,
 } from "@/lib/leave/leave-cache";
+import { mapErpLeaveToCalendar } from "./leave-to-erp";
+import { mapErpTodoToCalendar } from "./todo-to-erp-graphql";
 const PAGE_SIZE = 50;
 
 const SAVE_EVENT_MUTATION = `
@@ -79,7 +81,22 @@ export async function saveLeaveApplication(doc) {
   clearLeaveCache();
   return data.saveDoc.doc;
 }
-
+export async function fetchAllLeaveApplications() {
+  const data = await graphqlRequest(LEAVE_QUERY, {
+    first: 500, // adjust if needed
+  });
+  return data.LeaveApplications.edges
+    .map(edge => mapErpLeaveToCalendar(edge.node))
+    .filter(Boolean);
+}
+export async function fetchAllTodoList() {
+  const data = await graphqlRequest(TODO_LIST_QUERY, {
+    first: 500, // adjust if needed
+  });
+  return data.ToDoes.edges
+    .map(edge => mapErpTodoToCalendar(edge.node))
+    .filter(Boolean);
+}
 
 export async function fetchEventsByRange(startDate, endDate, view) {
   const cacheKey = buildRangeCacheKey(view, startDate, endDate);
@@ -92,7 +109,6 @@ export async function fetchEventsByRange(startDate, endDate, view) {
   let after = null;
   let events = [];
 
-  // ✅ MUST match DBFilterInput exactly
   const filter = [
     {
       fieldname: "starts_on",
@@ -110,25 +126,27 @@ export async function fetchEventsByRange(startDate, endDate, view) {
     const data = await graphqlRequest(EVENTS_BY_RANGE_QUERY, {
       first: PAGE_SIZE,
       after,
-      filter, // ✅ correct variable name
+      filter,
     });
 
     const connection = data?.Events;
     if (!connection) break;
 
-    // ✅ ALWAYS read from edges[].node
     const pageEvents = connection.edges
       .map(edge => mapErpGraphqlEventToCalendar(edge.node))
       .filter(Boolean);
 
     events.push(...pageEvents);
 
-    if (!connection.pageInfo || !connection.pageInfo.hasNextPage) break;
+    if (!connection.pageInfo?.hasNextPage) break;
     after = connection.pageInfo.endCursor;
   }
 
-  setCachedEvents(cacheKey, events);
-  return events;
+  const leaves = await fetchAllLeaveApplications();
+  const todolist = await fetchAllTodoList();
+  const merged = [...events, ...leaves,...todolist];
+  setCachedEvents(cacheKey, merged);
+  return merged;
 }
 
 const DELETE_EVENT_MUTATION = `

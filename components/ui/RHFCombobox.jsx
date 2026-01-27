@@ -23,9 +23,11 @@ export function RHFCombobox({
   placeholder,
   searchPlaceholder,
   disabled = false,
+  selectionLabel,
   multiple = false, // 🔑 NEW (default false)
 }) {
   const [open, setOpen] = useState(false);
+  const labelName = selectionLabel ?? "employee";
 
   const normalizedValue = multiple
   ? Array.isArray(value) ? value : []
@@ -71,8 +73,9 @@ export function RHFCombobox({
         >
         <span className="block max-w-full truncate">
         {multiple && normalizedValue.length > 0
-  ? `${normalizedValue.length} employee${normalizedValue.length > 1 ? "s" : ""} selected`
+  ? `${normalizedValue.length} ${labelName}${normalizedValue.length > 1 ? "s" : ""} selected`
   : selectedLabel || placeholder}
+
 
 </span>
 

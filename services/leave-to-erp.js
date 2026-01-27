@@ -33,17 +33,26 @@ export function mapFormToErpLeave(values) {
 }
 
 export function mapErpLeaveToCalendar(leave) {
-  const from = startOfDay(new Date(leave.from_date));
-  const to = endOfDay(new Date(leave.to_date));
+  if (!leave?.from_date || !leave?.to_date || !leave?.name) return null;
+
+  const start = startOfDay(
+    new Date(`${leave.from_date}T00:00:00`)
+  );
+
+  const end = endOfDay(
+    new Date(`${leave.to_date}T00:00:00`)
+  );
 
   return {
-    id: leave.name,
-    leaveType: leave.leave_type,
-    startDate: from,
-    endDate: to,
+    id: `LEAVE-${leave.name}`,
+    title: leave.leave_type__name || "Leave",
     tags: "Leave",
+    leaveType: leave.leave_type__name,
+    startDate: start.toISOString(), // ✅ normalized
+    endDate: end.toISOString(),     // ✅ normalized
     status: leave.status,
-    color: "#DC2626",
     description: leave.description,
+    color: "red",
+    allDay: true,
   };
 }

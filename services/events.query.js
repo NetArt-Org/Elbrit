@@ -39,8 +39,8 @@ query EventsByRange(
 }
 `;
 export const TODO_LIST_QUERY = `
-query ToDoes($first: Int!, $filters: [DBFilterInput!]) {
-  ToDoes(first: $first, filter: $filters) {
+query ToDoes($first: Int!) {
+  ToDoes(first: $first) {
     edges {
       node {
         name
@@ -48,9 +48,7 @@ query ToDoes($first: Int!, $filters: [DBFilterInput!]) {
         date
         priority
         status
-        allocated_to {
-          name
-        }
+        allocated_to__name
         reference_type__name
         reference_name__name
       }
@@ -98,6 +96,7 @@ query LeaveApplications($first: Int) {
   LeaveApplications(first: $first) {
     edges {
       node {
+        name
         from_date
         to_date
         half_day

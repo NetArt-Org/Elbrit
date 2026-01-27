@@ -165,6 +165,13 @@ export function AddEditEventDialog({
 		if (isEditing) return;
 
 		resetFieldsOnTagChange();
+		// ✅ CLEAR TITLE IF TAG HIDES IT
+	if (tagConfig.hide?.includes("title")) {
+		form.setValue("title", "", {
+			shouldDirty: false,
+			shouldValidate: false,
+		});
+	}
 	}, [selectedTag]);
 
 	/* ---------------------------------------------
@@ -264,15 +271,16 @@ export function AddEditEventDialog({
 	/* --------------------------------------------------
 	   RESET FORM
 	-------------------------------------------------- */
-	const initialDefaultsRef = useRef(form.getValues());
+	// const initialDefaultsRef = useRef(form.getValues());
 
 	useEffect(() => {
 		if (!isOpen || isEditing) return;
 
 		const now = new Date();
+		const currentValues = form.getValues(); 
 
 		form.reset({
-			...initialDefaultsRef.current,
+			...currentValues,               // ✅ keeps title
 			startDate: now,
 			endDate: addMinutes(now, 60),
 			tags: selectedTag,
@@ -421,102 +429,102 @@ export function AddEditEventDialog({
 	/* --------------------------------------------------
    SUBMIT
 -------------------------------------------------- */
-	const onSubmit = async (values) => {
-		if (values.tags === "Birthday" && !values.endDate) {
-			values.endDate = values.startDate;
-		}
+const onSubmit = async (values) => {
+	/* ==================================================
+	   NORMALIZATION
+	================================================== */
+	if (values.tags === "Birthday" && !values.endDate) {
+		values.endDate = values.startDate;
+	}
 
-		if (selectedTag === "Leave") {
-			const days =
-				differenceInCalendarDays(values.endDate, values.startDate) + 1;
+	/* ==================================================
+	   LEAVE FLOW (ONLY)
+	================================================== */
+	if (values.tags === "Leave") {
+		const days =
+			differenceInCalendarDays(values.endDate, values.startDate) + 1;
 
-			if (days > 2 && !values.medicalAttachment) {
-				toast.error("Medical certificate required");
-				return;
-			}
-		}
-
-		if (selectedTag === "Leave") {
-			const leaveDoc = mapFormToErpLeave(values);
-			console.log("LEAVE DOC", leaveDoc)
-			const savedLeave = await saveLeaveApplication(leaveDoc);
-			const calendarLeave = mapErpLeaveToCalendar({
-				...leaveDoc,
-				name: savedLeave.name,
-				color:"#DC2626",
-			});
-			toast.success("Leave applied successfully");
-			console.log("CAlendar Leave DOC",calendarLeave)
-			event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
-			onClose();
+		if (days > 2 && !values.medicalAttachment) {
+			toast.error("Medical certificate required");
 			return;
 		}
 
-		/* ==================================================
-		   EVENT FLOW
-		================================================== */
-		const erpDoc = mapFormToErpEvent(values, {
-			erpName: event?.erpName,
+		const leaveDoc = mapFormToErpLeave(values);
+		console.log("LEAVE DOC", leaveDoc);
+
+		const savedLeave = await saveLeaveApplication(leaveDoc);
+
+		const calendarLeave = mapErpLeaveToCalendar({
+			...leaveDoc,
+			name: savedLeave.name,
+			color: "#DC2626",
 		});
 
-		console.log("ERP DOC", erpDoc);
-
-		const saved = await saveEvent(erpDoc);
-
-		const calendarEvent = {
-			...(event ?? {}),
-			  erpName: saved.name,
-			title: values.title,
-			description: values.description,
-			startDate: erpDoc.starts_on,
-			endDate: erpDoc.ends_on,
-			color: tagConfig.fixedColor,
-			tags: values.tags,
-			owner: isEditing ? event.owner : LOGGED_IN_USER.id,
-			hqTerritory: values.hqTerritory || "",
-			participants: buildCalendarParticipants(
-				values,
-				employeeOptions,
-				doctorOptions
-			),
-		};
-
-		console.log("Calendar DOC", calendarEvent);
-
-		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-
-		toast.success("Event saved");
-		/* ==================================================
-		   TODO LIST FLOW (API ONLY — UI COMMENTED)
-		================================================== */
-		if (values.tags === "Todo List") {
-			const todoDoc = mapFormToErpTodo(values, {
-				erpName: event?.erpName,
-				employeeOptions,
-				referenceEventName: saved?.name, 
-			});
-
-			console.log("ERP TODO DOC", todoDoc);
-
-			  const savedTodo = await saveDocToErp(todoDoc);
-
-
-			const calendarTodo = mapErpTodoToCalendar({
-				...todoDoc,
-				name: savedTodo.name,
-			});
-
-			console.log("Calendar TODO DOC", calendarTodo);
-
-			  event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
-
-			  toast.success("Todo saved");
-			  onClose();
-			return;
-		}
+		event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+		toast.success("Leave applied successfully");
 		onClose();
-			return;
+		return;
+	}
+
+	/* ==================================================
+	   TODO LIST FLOW (ONLY)
+	================================================== */
+	if (values.tags === "Todo List") {
+		const todoDoc = mapFormToErpTodo(values, {
+			erpName: event?.erpName,
+			employeeOptions,
+			referenceEventName: event?.erpName,
+		});
+
+		console.log("ERP TODO DOC", todoDoc);
+
+		const savedTodo = await saveDocToErp(todoDoc);
+
+		const calendarTodo = mapErpTodoToCalendar({
+			...todoDoc,
+			name: savedTodo.name,
+		});
+
+		event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
+		toast.success("Todo saved");
+		onClose();
+		return;
+	}
+
+	/* ==================================================
+	   DEFAULT EVENT FLOW
+	================================================== */
+	const erpDoc = mapFormToErpEvent(values, {
+		erpName: event?.erpName,
+	});
+
+	console.log("ERP DOC", erpDoc);
+
+	// const savedEvent = await saveEvent(erpDoc);
+
+	const calendarEvent = {
+		...(event ?? {}),
+		// erpName: savedEvent.name,
+		title: values.title,
+		description: values.description,
+		startDate: erpDoc.starts_on,
+		endDate: erpDoc.ends_on,
+		color: tagConfig.fixedColor,
+		tags: values.tags,
+		owner: event ? event.owner : LOGGED_IN_USER.id,
+		hqTerritory: values.hqTerritory || "",
+		participants: buildCalendarParticipants(
+			values,
+			employeeOptions,
+			doctorOptions
+		),
 	};
+
+	// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+	// toast.success("Event saved");
+	// onClose();
+};
+
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
@@ -683,6 +691,7 @@ export function AddEditEventDialog({
 												onChange={field.onChange}
 												placeholder="Select doctor"
 												multiple={isDoctorMulti}
+												selectionLabel={'doctor'}
 											/>
 										</FormControl>
 										{fieldState.error && (
@@ -697,7 +706,7 @@ export function AddEditEventDialog({
 						{selectedTag === "Meeting" ? (
 							<>
 								{/* DATE ROW */}
-								<div className="grid grid-cols-2 gap-3">
+								<div className="grid">
 									<FormField
 										control={form.control}
 										name="startDate"
@@ -706,28 +715,8 @@ export function AddEditEventDialog({
 												form={form}
 												field={field}
 												hideTime={true}
-												label="Start Date"
+												label="Date"
 											/>
-										)}
-									/>
-
-									<FormField
-										control={form.control}
-										name="endDate"
-										render={({ field }) => (
-											<DateTimePicker
-												form={form}
-												field={{
-													...field,
-													onChange: (date) => {
-														endDateTouchedRef.current = true;
-														field.onChange(date);
-													},
-												}}
-												hideTime={true}
-												label="End Date"
-											/>
-
 										)}
 									/>
 								</div>
@@ -869,33 +858,7 @@ export function AddEditEventDialog({
 								/>
 							)}
 						{selectedTag === "Todo List" && (
-							<div className="grid grid-cols-2 gap-3">
-								<FormField
-									control={form.control}
-									name="todoStatus"
-									render={({ field,fieldState }) => (
-										<FormItem>
-											<FormLabel>Status</FormLabel>
-											<Select value={field.value} onValueChange={field.onChange}>
-												<SelectTrigger>
-													<SelectValue placeholder="Select status" />
-												</SelectTrigger>
-												<SelectContent>
-													{["Open", "Closed", "Cancelled"].map((s) => (
-														<SelectItem key={s} value={s}>
-															{s}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
-										</FormItem>
-									)}
-								/>
+							<div className="grid">
 
 								<FormField
 									control={form.control}
@@ -962,7 +925,7 @@ export function AddEditEventDialog({
 							<Button variant="outline">Cancel</Button>
 						</ModalClose>
 						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
-							{isEditing ? "Update Event" : "Create Event"}
+							{isEditing ? "Update" : "Submit"}
 						</Button>
 					</ModalFooter>
 				</div>

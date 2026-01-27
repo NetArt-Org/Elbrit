@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format,startOfDay, endOfDay  } from "date-fns";
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
 
 export function mapFormToErpTodo(values, options = {}) {
@@ -40,18 +40,22 @@ export function mapFormToErpTodo(values, options = {}) {
   }
   
   export function mapErpTodoToCalendar(todo) {
-    const d = new Date(todo.date);
+    if (!todo?.date || !todo?.name) return null;
+
+    const start = startOfDay(
+      new Date(`${todo.date}T00:00:00`)
+    );
   
-    const iso = !isNaN(d.getTime()) ? d.toISOString() : null;
+    const end = endOfDay(
+      new Date(`${todo.date}T00:00:00`)
+    );
   
     return {
       erpName: todo.name,
       title: todo.description,
       description: todo.description,
-  
-      startDate: iso,   // ✅ ISO STRING
-      endDate: iso,     // ✅ ISO STRING
-  
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
       tags: "Todo List",
       color: "orange",
       isTodo: true,
