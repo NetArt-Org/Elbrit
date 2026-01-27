@@ -9,7 +9,6 @@ export function mapFormToErpLeave(values) {
   const toDate = isHalf
     ? fromDate
     : toERPDate(values.endDate);
-    console.log("VALUE",values)
   return {
     doctype: "Leave Application",
     employee: LOGGED_IN_USER.id,
@@ -44,7 +43,7 @@ export function mapErpLeaveToCalendar(leave) {
     endDate: to,
     tags: "Leave",
     status: leave.status,
-    color: "#2563eb",
+    color: "#DC2626",
     description: leave.description,
   };
 }

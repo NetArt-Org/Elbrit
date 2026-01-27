@@ -443,6 +443,7 @@ export function AddEditEventDialog({
 			const calendarLeave = mapErpLeaveToCalendar({
 				...leaveDoc,
 				name: savedLeave.name,
+				color:"#DC2626",
 			});
 			toast.success("Leave applied successfully");
 			console.log("CAlendar Leave DOC",calendarLeave)

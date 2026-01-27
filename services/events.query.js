@@ -93,6 +93,32 @@ query Doctors($first: Int) {
 }
 `
 
+export const LEAVE_QUERY=`
+query LeaveApplications($first: Int) {
+  LeaveApplications(first: $first) {
+    edges {
+      node {
+        from_date
+        to_date
+        half_day
+        half_day_date
+        total_leave_days
+        description
+        posting_date
+        status
+        fsl_attach
+        leave_approver_name
+        leave_approver__name
+        leave_balance
+        employee__name
+        employee_name
+        leave_type__name
+      }
+    }
+  }
+}
+`
+
 export const HQ_TERRITORIES_QUERY = `
 query GetHQTerritories($first: Int!){
   Territorys(first: $first)  {

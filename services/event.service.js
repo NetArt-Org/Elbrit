@@ -33,7 +33,7 @@ mutation SaveEvent($doc: String!) {
 `;
 const SAVE_LEAVE_APPLICATION_MUTATION = `
 mutation SaveEvent($doc: String!) {
-  saveDoc(doctype: "LeaveApplication", doc: $doc) {
+  saveDoc(doctype: "Leave Application", doc: $doc) {
     doc {
       name
     }
