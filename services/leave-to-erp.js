@@ -1,7 +1,7 @@
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
-import { differenceInCalendarDays, startOfDay, endOfDay } from "date-fns";
+import { differenceInCalendarDays, startOfDay, endOfDay,format } from "date-fns";
 function toERPDate(date = new Date()) {
-  return date.toISOString().split("T")[0];
+  return format(startOfDay(date), "yyyy-MM-dd");
 }
 export function mapFormToErpLeave(values) {
   const isHalf = values.leavePeriod === "Half";
@@ -9,6 +9,11 @@ export function mapFormToErpLeave(values) {
   const toDate = isHalf
     ? fromDate
     : toERPDate(values.endDate);
+    const totalDays =
+    differenceInCalendarDays(
+      startOfDay(values.endDate),
+      startOfDay(values.startDate)
+    ) + 1;
   return {
     doctype: "Leave Application",
     employee: LOGGED_IN_USER.id,
@@ -18,12 +23,12 @@ export function mapFormToErpLeave(values) {
     to_date: toDate,
 
     half_day: isHalf ? 1 : 0,
-    half_day_date: isHalf ? fromDate : null,
-
+    half_day_date: isHalf
+    ? toERPDate(values.halfDayDate)
+    : null,
     total_leave_days: isHalf
-      ? 0.5
-      : differenceInCalendarDays(toDate, fromDate) + 1,
-
+      ? totalDays - 0.5
+      : totalDays,
     description: values.description ?? "",
     posting_date: toERPDate(),
     status: "Open",

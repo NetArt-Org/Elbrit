@@ -16,41 +16,43 @@ import {
 import { ScrollArea, } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 
 export function DateTimePicker({
-	form,label,
+	form, label,
 	field,
 	allowAllDates = false,
 	hideTime = false,
 	defaultHour = 0,
 	defaultMinute = 0,
-	disabled=false
+	disabled = false,
+	minDate,
+	maxDate,
 }) {
 	const { use24HourFormat } = useCalendar();
 	const [open, setOpen] = useState(false);
-	
-	  useEffect(() => {
+
+	useEffect(() => {
 		if (!hideTime) return;
-		if (form.formState.isDirty === false) return; 
+		if (form.formState.isDirty === false) return;
 		const value = form.getValues(field.name);
 		if (!value) return;
-	  
+
 		const normalized = new Date(value);
 		normalized.setHours(defaultHour);
 		normalized.setMinutes(0);
 		normalized.setSeconds(0);
-	  
+
 		if (
-		  value.getHours() !== normalized.getHours() ||
-		  value.getMinutes() !== 0 ||
-		  value.getSeconds() !== 0
+			value.getHours() !== normalized.getHours() ||
+			value.getMinutes() !== 0 ||
+			value.getSeconds() !== 0
 		) {
-		  form.setValue(field.name, normalized, { shouldDirty: false });
+			form.setValue(field.name, normalized, { shouldDirty: false });
 		}
-	  }, [hideTime]);
-	  
-	  
+	}, [hideTime]);
+
+
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 
@@ -68,14 +70,14 @@ export function DateTimePicker({
 			setOpen(false);
 		} else {
 			const current = field.value ?? new Date();
-		  
+
 			newDate.setHours(current.getHours());
 			newDate.setMinutes(current.getMinutes());
 			newDate.setSeconds(0);
-		  }		  
+		}
 		form.setValue(field.name, newDate);
 	}
-	
+
 
 	function handleTimeChange(type, value) {
 		const currentDate = form.getValues(field.name) || new Date();
@@ -105,6 +107,14 @@ export function DateTimePicker({
 				startDateValue.getDate()
 			)
 			: null;
+	const normalizedMinDate = minDate
+		? new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())
+		: null;
+
+	const normalizedMaxDate = maxDate
+		? new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())
+		: null;
+
 	return (
 		<FormItem className="flex flex-col">
 			<FormLabel>
@@ -114,7 +124,7 @@ export function DateTimePicker({
 				<PopoverTrigger asChild>
 					<FormControl>
 						<Button
-						    disabled={disabled}
+							disabled={disabled}
 							variant={"outline"}
 							onMouseDown={(e) => e.preventDefault()}
 							className={cn(
@@ -138,32 +148,46 @@ export function DateTimePicker({
 				</PopoverTrigger>
 				<PopoverContent className="w-auto p-0">
 					<div className="sm:flex">
-					<Calendar
-  mode="single"
-  selected={field.value}
-  onSelect={handleDateSelect}
-  initialFocus
+						<Calendar
+							mode="single"
+							selected={field.value}
+							onSelect={handleDateSelect}
+							initialFocus
 
-  {...(allowAllDates && {
-    captionLayout: "dropdown",
-    fromYear: 1940,
-    toYear: 2100,
-  })}
+							{...(allowAllDates && {
+								captionLayout: "dropdown",
+								fromYear: 1940,
+								toYear: 2100,
+							})}
 
-  disabled={(date) => {
-    if (allowAllDates) return false;
+							disabled={(date) => {
+								if (allowAllDates) return false;
 
-    if (field.name === "startDate") {
-      return date < today;
-    }
+								const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-    if (field.name === "endDate" && normalizedStartDate) {
-      return date < normalizedStartDate;
-    }
+								// 🔒 MIN DATE
+								if (normalizedMinDate && day < normalizedMinDate) {
+									return true;
+								}
 
-    return false;
-  }}
-/>
+								// 🔒 MAX DATE
+								if (normalizedMaxDate && day > normalizedMaxDate) {
+									return true;
+								}
+
+								// Existing rules
+								if (field.name === "startDate") {
+									return day < today;
+								}
+
+								if (field.name === "endDate" && normalizedStartDate) {
+									return day < normalizedStartDate;
+								}
+
+								return false;
+							}}
+
+						/>
 
 						{!hideTime && (
 							<div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x">

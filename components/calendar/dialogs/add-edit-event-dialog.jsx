@@ -105,6 +105,7 @@ export function AddEditEventDialog({
 			todoStatus: "Open",
 			priority: "Medium",
 			leavePeriod: "Full",
+			halfDayDate: undefined,
 		},
 	});
 
@@ -113,6 +114,7 @@ export function AddEditEventDialog({
 	const allDay = useWatch({ control: form.control, name: "allDay" });
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
+	const halfDayDate = useWatch({ control: form.control, name: "halfDayDate", }); // 🔧 LEAVE HALF DAY FIX
 
 	const selectedTag = form.watch("tags");
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
@@ -153,7 +155,12 @@ export function AddEditEventDialog({
 		if (!startDate || !endDate) return 0;
 
 		// Half day is always 1 day logically
-		if (leavePeriod === "Half") return 1;
+		if (leavePeriod === "Half") {
+			const total =
+				differenceInCalendarDays(endDate, startDate) + 1;
+			return total - 0.5;
+		}
+
 
 		return differenceInCalendarDays(endDate, startDate) + 1;
 	}, [selectedTag, startDate, endDate, leavePeriod]);
@@ -191,6 +198,17 @@ export function AddEditEventDialog({
 			});
 		}
 	}, [selectedTag]);
+	/* ---------------------------------------------
+		   Half day logic
+		--------------------------------------------- */
+	useEffect(() => {
+		if (leavePeriod !== "Half") {
+			form.setValue("halfDayDate", undefined, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
+		}
+	}, [leavePeriod]); // 🔧 LEAVE HALF DAY FIX
 
 	/* ---------------------------------------------
 	   Leave Balance Fetching
@@ -374,7 +392,7 @@ export function AddEditEventDialog({
 --------------------------------------------- */
 	useEffect(() => {
 		if (!startDate) return;
-		if (selectedTag === "Meeting" || selectedTag === "Birthday") return;
+		if (selectedTag === "Meeting" || selectedTag === "Birthday" ) return;
 		if (endDateTouchedRef.current) return;
 
 		const now = new Date();
@@ -392,15 +410,22 @@ export function AddEditEventDialog({
 
 		if (!form.getValues("endDate")) return;
 
-		const normalizedEnd = set(startDate, {
+		const currentEnd = form.getValues("endDate");
+
+		// Auto-fix ONLY if endDate is missing or invalid
+		if (!currentEnd || currentEnd < startDate) {
+		  const normalizedEnd = set(startDate, {
 			hours: 23,
 			minutes: 59,
 			seconds: 59,
-		});
-
-		if (endDate?.getTime() !== normalizedEnd.getTime()) {
-			form.setValue("endDate", normalizedEnd, { shouldDirty: false });
+		  });
+		
+		  form.setValue("endDate", normalizedEnd, {
+			shouldDirty: false,
+			shouldValidate: false,
+		  });
 		}
+		
 	}, [startDate, selectedTag]);
 	/* ---------------------------------------------
    MEETING TIME LOGIC (MERGED)
@@ -437,14 +462,6 @@ export function AddEditEventDialog({
 		form.setValue("endDate", newEnd, { shouldDirty: true });
 
 	}, [selectedTag, startDate, allDay]);
-
-	useEffect(() => {
-		if (selectedTag !== "Leave") return;
-
-		if (leavePeriod === "Half") {
-			form.setValue("endDate", startDate, { shouldDirty: true });
-		}
-	}, [leavePeriod, startDate]);
 
 
 	/* --------------------------------------------------
@@ -492,14 +509,14 @@ export function AddEditEventDialog({
 			const todoDoc = mapFormToErpTodo(values, employeeResolvers);
 
 
-			console.log("ERP TODO DOC", todoDoc,values);
+			console.log("ERP TODO DOC", todoDoc, values);
 
 			const savedTodo = await saveDocToErp(todoDoc);
-			  
+
 			const calendarTodo = mapErpTodoToCalendar({
 				...todoDoc,
 				name: savedTodo.name,
-			},employeeResolvers);
+			}, employeeResolvers);
 			console.log("CAlendar TODO DOC", calendarTodo);
 			event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
 			toast.success("Todo saved");
@@ -603,41 +620,6 @@ export function AddEditEventDialog({
 													{leaveBalance[field.value].allocated}
 												</div>
 											)}
-											{fieldState.error && (
-												<p className="text-sm text-red-500">
-													{fieldState.error.message}
-												</p>
-											)}
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="leavePeriod"
-									render={({ field, fieldState }) => (
-										<FormItem>
-											<FormLabel>Select Period</FormLabel>
-											<div className="flex gap-4">
-												<label className="flex items-center gap-2">
-													<input
-														type="radio"
-														value="Full"
-														checked={field.value === "Full"}
-														onChange={field.onChange}
-													/>
-													Full Day
-												</label>
-
-												<label className="flex items-center gap-2">
-													<input
-														type="radio"
-														value="Half"
-														checked={field.value === "Half"}
-														onChange={field.onChange}
-													/>
-													Half Day
-												</label>
-											</div>
 											{fieldState.error && (
 												<p className="text-sm text-red-500">
 													{fieldState.error.message}
@@ -826,7 +808,6 @@ export function AddEditEventDialog({
 										render={({ field }) => (
 											<DateTimePicker
 												form={form}
-												disabled={selectedTag === "Leave" && leavePeriod === "Half"}
 												field={{
 													...field,
 													onChange: (date) => {
@@ -841,33 +822,33 @@ export function AddEditEventDialog({
 									/>
 								)}
 								{selectedTag === "Todo List" && (
-								<FormField
-									control={form.control}
-									name="priority"
-									render={({ field, fieldState }) => (
-										<FormItem className="flex flex-col" >
-											<FormLabel>Priority</FormLabel>
-											<Select value={field.value} onValueChange={field.onChange}>
-												<SelectTrigger>
-													<SelectValue placeholder="Select priority" />
-												</SelectTrigger>
-												<SelectContent>
-													{["High", "Medium", "Low"].map((p) => (
-														<SelectItem key={p} value={p}>
-															{p}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											{fieldState.error && (
-												<p className="text-sm text-red-500">
-													{fieldState.error.message}
-												</p>
-											)}
-										</FormItem>
-									)}
-								/>
-						)}
+									<FormField
+										control={form.control}
+										name="priority"
+										render={({ field, fieldState }) => (
+											<FormItem className="flex flex-col" >
+												<FormLabel>Priority</FormLabel>
+												<Select value={field.value} onValueChange={field.onChange}>
+													<SelectTrigger>
+														<SelectValue placeholder="Select priority" />
+													</SelectTrigger>
+													<SelectContent>
+														{["High", "Medium", "Low"].map((p) => (
+															<SelectItem key={p} value={p}>
+																{p}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												{fieldState.error && (
+													<p className="text-sm text-red-500">
+														{fieldState.error.message}
+													</p>
+												)}
+											</FormItem>
+										)}
+									/>
+								)}
 							</div>
 						)}
 
@@ -901,6 +882,53 @@ export function AddEditEventDialog({
 									)}
 								/>
 							)}
+						{selectedTag === "Leave" && (
+							<FormField
+								control={form.control}
+								name="leavePeriod"
+								render={({ field }) => (
+									<FormItem className="flex items-center gap-2">
+										{/* 🔧 LEAVE HALF DAY FIX: checkbox instead of radio */}
+										<Checkbox
+											checked={field.value === "Half"}
+											onCheckedChange={(checked) => {
+												field.onChange(checked ? "Half" : "Full");
+											}}
+										/>
+										<FormLabel style={{ marginTop: 0 }}>
+											Half Day
+										</FormLabel>
+									</FormItem>
+								)}
+							/>
+						)}
+						{selectedTag === "Leave" && leavePeriod === "Half" && (
+							<FormField
+								control={form.control}
+								name="halfDayDate"
+								render={({ field, fieldState }) => (
+									<DateTimePicker
+										form={form}
+										field={{
+											...field,
+											onChange: (date) => {
+												// 🔧 LEAVE HALF DAY FIX: range validation
+												if (date < startDate || date > endDate) {
+													toast.error("Half Day date must be between From and To dates");
+													return;
+												}
+												field.onChange(date);
+											},
+										}}
+										label="Half Day Date"
+										hideTime={true}
+										minDate={startDate}
+										maxDate={endDate}
+									/>
+								)}
+							/>
+						)}
+
 						{selectedTag === "Leave" && requiresMedical && (
 							<FormField
 								control={form.control}
@@ -916,8 +944,6 @@ export function AddEditEventDialog({
 								)}
 							/>
 						)}
-
-
 						{!tagConfig.hide?.includes("description") && (
 							<FormField
 								control={form.control}

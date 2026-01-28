@@ -24,9 +24,12 @@ export function mapFormToErpTodo(values, resolvers) {
   };
 }
   export function mapErpTodoToCalendar(todo, resolvers) {
-    const employeeId = resolvers.getEmployeeIdByEmail(
-      todo.allocated_to__name || todo.allocated_to
-    );
+    const employeeId =
+    resolvers?.getEmployeeIdByEmail
+      ? resolvers.getEmployeeIdByEmail(
+          todo.allocated_to__name || todo.allocated_to
+        )
+      : null;
   
     const start = startOfDay(new Date(`${todo.date}T00:00:00`));
     const end = endOfDay(new Date(`${todo.date}T00:00:00`));
