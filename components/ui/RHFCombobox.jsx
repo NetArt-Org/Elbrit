@@ -63,6 +63,7 @@ export function RHFCombobox({
 
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
@@ -118,5 +119,27 @@ export function RHFCombobox({
         </Command>
       </PopoverContent>
     </Popover>
+    {/* SELECTED TAGS */}
+{multiple && normalizedValue.length > 0 && (
+  <div className="mt-2 flex flex-wrap gap-2">
+    {options
+      .filter(o => normalizedValue.includes(o.value))
+      .map(o => (
+        <button
+          key={o.value}
+          type="button"
+          className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm"
+          onClick={() =>
+            onChange(normalizedValue.filter(v => v !== o.value))
+          }
+        >
+          {o.label}
+          <span className="text-muted-foreground hover:text-foreground">×</span>
+        </button>
+      ))}
+  </div>
+)}
+
+    </>
   );
 }

@@ -49,8 +49,6 @@ query ToDoes($first: Int!) {
         priority
         status
         allocated_to__name
-        reference_type__name
-        reference_name__name
       }
     }
   }

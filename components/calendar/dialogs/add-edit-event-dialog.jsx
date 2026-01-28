@@ -53,6 +53,7 @@ import { loadParticipantOptionsByTag } from "@/lib/participants";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { mapFormToErpTodo, mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-erp";
+import { useEmployeeResolvers } from "@/lib/employeeResolver";
 
 export function AddEditEventDialog({
 	children,
@@ -67,6 +68,7 @@ export function AddEditEventDialog({
 	const [employeeOptions, setEmployeeOptions] = useState([]);
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
+	const employeeResolvers = useEmployeeResolvers(employeeOptions);
 
 	const endDateTouchedRef = useRef(false); // existing
 
@@ -469,17 +471,17 @@ export function AddEditEventDialog({
 			const leaveDoc = mapFormToErpLeave(values);
 			console.log("LEAVE DOC", leaveDoc);
 
-			// const savedLeave = await saveLeaveApplication(leaveDoc);
+			const savedLeave = await saveLeaveApplication(leaveDoc);
 
 			const calendarLeave = mapErpLeaveToCalendar({
 				...leaveDoc,
-				// name: savedLeave.name,
+				name: savedLeave.name,
 				color: "#DC2626",
 			});
 
-			// event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
-			// toast.success("Leave applied successfully");
-			// onClose();
+			event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+			toast.success("Leave applied successfully");
+			onClose();
 			return;
 		}
 
@@ -487,21 +489,18 @@ export function AddEditEventDialog({
 		   TODO LIST FLOW (ONLY)
 		================================================== */
 		if (values.tags === "Todo List") {
-			const todoDoc = mapFormToErpTodo(values, {
-				erpName: event?.erpName,
-				employeeOptions,
-				referenceEventName: event?.erpName,
-			});
+			const todoDoc = mapFormToErpTodo(values, employeeResolvers);
 
-			console.log("ERP TODO DOC", todoDoc);
+
+			console.log("ERP TODO DOC", todoDoc,values);
 
 			const savedTodo = await saveDocToErp(todoDoc);
-
+			  
 			const calendarTodo = mapErpTodoToCalendar({
 				...todoDoc,
 				name: savedTodo.name,
-			});
-
+			},employeeResolvers);
+			console.log("CAlendar TODO DOC", calendarTodo);
 			event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
 			toast.success("Todo saved");
 			onClose();
@@ -517,11 +516,11 @@ export function AddEditEventDialog({
 
 		console.log("ERP DOC", erpDoc);
 
-		// const savedEvent = await saveEvent(erpDoc);
+		const savedEvent = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			// erpName: savedEvent.name,
+			erpName: savedEvent.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -537,9 +536,9 @@ export function AddEditEventDialog({
 			),
 		};
 
-		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-		// toast.success("Event saved");
-		// onClose();
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		toast.success("Event saved");
+		onClose();
 	};
 
 
@@ -797,7 +796,7 @@ export function AddEditEventDialog({
 						) : (
 							/* EXISTING NON-MEETING LOGIC (UNCHANGED) */
 							<div
-								className={`grid gap-3 ${isFieldVisible("startDate") && isFieldVisible("endDate")
+								className={`grid gap-3 ${isFieldVisible("startDate") && isFieldVisible("endDate") || selectedTag === "Todo List"
 									? "grid-cols-2"
 									: "grid-cols-1"
 									}`}
@@ -841,47 +840,12 @@ export function AddEditEventDialog({
 										)}
 									/>
 								)}
-							</div>
-						)}
-
-
-						{/* EMPLOYEES */}
-						{!tagConfig.hide?.includes("employees") &&
-							(!tagConfig.employee?.autoSelectLoggedIn ||
-								tagConfig.employee?.multiselect) && (
-								<FormField
-									control={form.control}
-									name="employees"
-									render={({ field, fieldState }) => (
-										<FormItem>
-											<FormLabel>Employees</FormLabel>
-											<FormControl>
-												<RHFCombobox
-													value={field.value}
-													onChange={field.onChange}
-													options={employeeOptions}
-													placeholder="Select employees"
-													searchPlaceholder="Search employee"
-													multiple={isMulti}
-												/>
-											</FormControl>
-											{fieldState.error && (
-												<p className="text-sm text-red-500">
-													{fieldState.error.message}
-												</p>
-											)}
-										</FormItem>
-									)}
-								/>
-							)}
-						{selectedTag === "Todo List" && (
-							<div className="grid">
-
+								{selectedTag === "Todo List" && (
 								<FormField
 									control={form.control}
 									name="priority"
 									render={({ field, fieldState }) => (
-										<FormItem>
+										<FormItem className="flex flex-col" >
 											<FormLabel>Priority</FormLabel>
 											<Select value={field.value} onValueChange={field.onChange}>
 												<SelectTrigger>
@@ -903,8 +867,40 @@ export function AddEditEventDialog({
 										</FormItem>
 									)}
 								/>
+						)}
 							</div>
 						)}
+
+
+						{/* EMPLOYEES */}
+						{!tagConfig.hide?.includes("employees") &&
+							(!tagConfig.employee?.autoSelectLoggedIn ||
+								tagConfig.employee?.multiselect) && (
+								<FormField
+									control={form.control}
+									name="employees"
+									render={({ field, fieldState }) => (
+										<FormItem>
+											<FormLabel> {selectedTag === "Todo List" ? "Allocated To" : "Employees"}</FormLabel>
+											<FormControl>
+												<RHFCombobox
+													value={field.value}
+													onChange={field.onChange}
+													options={employeeOptions}
+													placeholder="Select employees"
+													searchPlaceholder="Search employee"
+													multiple={isMulti}
+												/>
+											</FormControl>
+											{fieldState.error && (
+												<p className="text-sm text-red-500">
+													{fieldState.error.message}
+												</p>
+											)}
+										</FormItem>
+									)}
+								/>
+							)}
 						{selectedTag === "Leave" && requiresMedical && (
 							<FormField
 								control={form.control}
