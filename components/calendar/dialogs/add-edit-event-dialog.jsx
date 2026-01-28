@@ -109,6 +109,9 @@ export function AddEditEventDialog({
 	const startDate = useWatch({ control: form.control, name: "startDate" });
 	const endDate = useWatch({ control: form.control, name: "endDate" });
 	const allDay = useWatch({ control: form.control, name: "allDay" });
+	const leaveType = useWatch({ control: form.control, name: "leaveType", });
+	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
+
 	const selectedTag = form.watch("tags");
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const isMulti = tagConfig?.employee?.multiselect === true;
@@ -132,9 +135,9 @@ export function AddEditEventDialog({
 		form.resetField("priority", { defaultValue: "Medium" });
 		form.resetField("doctor", {
 			defaultValue: isDoctorMulti ? [] : undefined,
-		  });
-		  
+		});
 
+		form.resetField("title", { defaultValue: "" });
 		// Leave-only — reset ONLY when leaving Leave
 		if (selectedTag !== "Leave") {
 			form.resetField("leaveType", { defaultValue: undefined });
@@ -142,23 +145,36 @@ export function AddEditEventDialog({
 			form.resetField("medicalAttachment", { defaultValue: undefined });
 		}
 	};
-	const leaveType = useWatch({
-		control: form.control,
-		name: "leaveType",
-	  });
-	  
-	  const leaveDays =
-		selectedTag === "Leave" && startDate && endDate
-		  ? differenceInCalendarDays(endDate, startDate) + 1
-		  : 0;
-	  
-	  const requiresMedical =
-		selectedTag === "Leave" &&
-		leaveType === "Sick Leave" &&
-		leaveDays >
-		  (tagConfig.leave?.medicalCertificateAfterDays ?? Infinity);
-	  
+
+	const leaveDays = useMemo(() => {
+		if (selectedTag !== "Leave") return 0;
+		if (!startDate || !endDate) return 0;
+
+		// Half day is always 1 day logically
+		if (leavePeriod === "Half") return 1;
+
+		return differenceInCalendarDays(endDate, startDate) + 1;
+	}, [selectedTag, startDate, endDate, leavePeriod]);
+	const requiresMedical = useMemo(() => {
+		if (selectedTag !== "Leave") return false;
+		if (leaveType !== "Sick Leave") return false;
+
+		const threshold =
+			tagConfig.leave?.medicalCertificateAfterDays ?? 2;
+
+		return leaveDays > threshold;
+	}, [selectedTag, leaveType, leaveDays, tagConfig]);
+	useEffect(() => {
+		if (!requiresMedical) {
+			form.setValue("medicalAttachment", undefined, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
+		}
+	}, [requiresMedical]);
+
 	const isDoctorMulti = tagConfig.doctor?.multiselect === true;
+	const autoTitleRef = useRef(false);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -166,12 +182,12 @@ export function AddEditEventDialog({
 
 		resetFieldsOnTagChange();
 		// ✅ CLEAR TITLE IF TAG HIDES IT
-	if (tagConfig.hide?.includes("title")) {
-		form.setValue("title", "", {
-			shouldDirty: false,
-			shouldValidate: false,
-		});
-	}
+		if (tagConfig.hide?.includes("title")) {
+			form.setValue("title", "", {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
+		}
 	}, [selectedTag]);
 
 	/* ---------------------------------------------
@@ -277,7 +293,7 @@ export function AddEditEventDialog({
 		if (!isOpen || isEditing) return;
 
 		const now = new Date();
-		const currentValues = form.getValues(); 
+		const currentValues = form.getValues();
 
 		form.reset({
 			...currentValues,               // ✅ keeps title
@@ -296,24 +312,31 @@ export function AddEditEventDialog({
 		if (!tagConfig.autoTitle) return;
 
 		const values = form.getValues();
-		const title = tagConfig.autoTitle(values, {
-			doctorOptions,
-			employeeOptions,
-		});
 
-		if (title && values.title !== title) {
-			form.setValue("title", title, {
+		const nextTitle = tagConfig.autoTitle(
+			values,
+			{ doctorOptions, employeeOptions }
+		);
+
+		if (!nextTitle) return;
+
+		// ✅ overwrite only if auto-generated OR empty
+		if (!values.title || autoTitleRef.current) {
+			autoTitleRef.current = true;
+
+			form.setValue("title", nextTitle, {
 				shouldDirty: false,
 				shouldValidate: false,
 			});
 		}
 	}, [
-		startDate,
 		selectedTag,
+		startDate,
 		doctorOptions,
-		employeeOptions
+		employeeOptions,
+		form.watch("doctor"),
+		form.watch("employees"),
 	]);
-
 
 	/* --------------------------------------------------
 	   AUTO SELECT LOGGED IN USER
@@ -412,10 +435,6 @@ export function AddEditEventDialog({
 		form.setValue("endDate", newEnd, { shouldDirty: true });
 
 	}, [selectedTag, startDate, allDay]);
-	const leavePeriod = useWatch({
-		control: form.control,
-		name: "leavePeriod",
-	});
 
 	useEffect(() => {
 		if (selectedTag !== "Leave") return;
@@ -429,101 +448,99 @@ export function AddEditEventDialog({
 	/* --------------------------------------------------
    SUBMIT
 -------------------------------------------------- */
-const onSubmit = async (values) => {
-	/* ==================================================
-	   NORMALIZATION
-	================================================== */
-	if (values.tags === "Birthday" && !values.endDate) {
-		values.endDate = values.startDate;
-	}
+	const onSubmit = async (values) => {
+		/* ==================================================
+		   NORMALIZATION
+		================================================== */
+		if (values.tags === "Birthday" && !values.endDate) {
+			values.endDate = values.startDate;
+		}
 
-	/* ==================================================
-	   LEAVE FLOW (ONLY)
-	================================================== */
-	if (values.tags === "Leave") {
-		const days =
-			differenceInCalendarDays(values.endDate, values.startDate) + 1;
+		/* ==================================================
+		   LEAVE FLOW (ONLY)
+		================================================== */
+		if (values.tags === "Leave") {
+			if (requiresMedical && !values.medicalAttachment) {
+				toast.error("Medical certificate required");
+				return;
+			}
 
-		if (days > 2 && !values.medicalAttachment) {
-			toast.error("Medical certificate required");
+
+			const leaveDoc = mapFormToErpLeave(values);
+			console.log("LEAVE DOC", leaveDoc);
+
+			// const savedLeave = await saveLeaveApplication(leaveDoc);
+
+			const calendarLeave = mapErpLeaveToCalendar({
+				...leaveDoc,
+				// name: savedLeave.name,
+				color: "#DC2626",
+			});
+
+			// event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+			// toast.success("Leave applied successfully");
+			// onClose();
 			return;
 		}
 
-		const leaveDoc = mapFormToErpLeave(values);
-		console.log("LEAVE DOC", leaveDoc);
+		/* ==================================================
+		   TODO LIST FLOW (ONLY)
+		================================================== */
+		if (values.tags === "Todo List") {
+			const todoDoc = mapFormToErpTodo(values, {
+				erpName: event?.erpName,
+				employeeOptions,
+				referenceEventName: event?.erpName,
+			});
 
-		const savedLeave = await saveLeaveApplication(leaveDoc);
+			console.log("ERP TODO DOC", todoDoc);
 
-		const calendarLeave = mapErpLeaveToCalendar({
-			...leaveDoc,
-			name: savedLeave.name,
-			color: "#DC2626",
-		});
+			const savedTodo = await saveDocToErp(todoDoc);
 
-		event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
-		toast.success("Leave applied successfully");
-		onClose();
-		return;
-	}
+			const calendarTodo = mapErpTodoToCalendar({
+				...todoDoc,
+				name: savedTodo.name,
+			});
 
-	/* ==================================================
-	   TODO LIST FLOW (ONLY)
-	================================================== */
-	if (values.tags === "Todo List") {
-		const todoDoc = mapFormToErpTodo(values, {
+			event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
+			toast.success("Todo saved");
+			onClose();
+			return;
+		}
+
+		/* ==================================================
+		   DEFAULT EVENT FLOW
+		================================================== */
+		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
-			employeeOptions,
-			referenceEventName: event?.erpName,
 		});
 
-		console.log("ERP TODO DOC", todoDoc);
+		console.log("ERP DOC", erpDoc);
 
-		const savedTodo = await saveDocToErp(todoDoc);
+		// const savedEvent = await saveEvent(erpDoc);
 
-		const calendarTodo = mapErpTodoToCalendar({
-			...todoDoc,
-			name: savedTodo.name,
-		});
+		const calendarEvent = {
+			...(event ?? {}),
+			// erpName: savedEvent.name,
+			title: values.title,
+			description: values.description,
+			startDate: erpDoc.starts_on,
+			endDate: erpDoc.ends_on,
+			color: tagConfig.fixedColor,
+			tags: values.tags,
+			owner: event ? event.owner : LOGGED_IN_USER.id,
+			hqTerritory: values.hqTerritory || "",
+			participants: buildCalendarParticipants(
+				values,
+				employeeOptions,
+				doctorOptions
+			),
+		};
 
-		event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
-		toast.success("Todo saved");
-		onClose();
-		return;
-	}
-
-	/* ==================================================
-	   DEFAULT EVENT FLOW
-	================================================== */
-	const erpDoc = mapFormToErpEvent(values, {
-		erpName: event?.erpName,
-	});
-
-	console.log("ERP DOC", erpDoc);
-
-	// const savedEvent = await saveEvent(erpDoc);
-
-	const calendarEvent = {
-		...(event ?? {}),
-		// erpName: savedEvent.name,
-		title: values.title,
-		description: values.description,
-		startDate: erpDoc.starts_on,
-		endDate: erpDoc.ends_on,
-		color: tagConfig.fixedColor,
-		tags: values.tags,
-		owner: event ? event.owner : LOGGED_IN_USER.id,
-		hqTerritory: values.hqTerritory || "",
-		participants: buildCalendarParticipants(
-			values,
-			employeeOptions,
-			doctorOptions
-		),
+		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		// toast.success("Event saved");
+		// onClose();
 	};
-
-	// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-	// toast.success("Event saved");
-	// onClose();
-};
 
 
 	return (
@@ -569,7 +586,7 @@ const onSubmit = async (values) => {
 								<FormField
 									control={form.control}
 									name="leaveType"
-									render={({ field,fieldState }) => (
+									render={({ field, fieldState }) => (
 										<FormItem>
 											<FormLabel>Leave Type</FormLabel>
 
@@ -588,17 +605,17 @@ const onSubmit = async (values) => {
 												</div>
 											)}
 											{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
+												<p className="text-sm text-red-500">
+													{fieldState.error.message}
+												</p>
+											)}
 										</FormItem>
 									)}
 								/>
 								<FormField
 									control={form.control}
 									name="leavePeriod"
-									render={({ field,fieldState }) => (
+									render={({ field, fieldState }) => (
 										<FormItem>
 											<FormLabel>Select Period</FormLabel>
 											<div className="flex gap-4">
@@ -623,10 +640,10 @@ const onSubmit = async (values) => {
 												</label>
 											</div>
 											{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
+												<p className="text-sm text-red-500">
+													{fieldState.error.message}
+												</p>
+											)}
 										</FormItem>
 									)}
 								/>
@@ -656,7 +673,7 @@ const onSubmit = async (values) => {
 							<FormField
 								control={form.control}
 								name="hqTerritory"
-								render={({ field ,fieldState}) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>HQ Territory</FormLabel>
 										<FormControl>
@@ -681,7 +698,7 @@ const onSubmit = async (values) => {
 							<FormField
 								control={form.control}
 								name="doctor"
-								render={({ field,fieldState }) => (
+								render={({ field, fieldState }) => (
 									<FormItem>
 										<FormLabel>Doctor</FormLabel>
 										<FormControl>
@@ -835,7 +852,7 @@ const onSubmit = async (values) => {
 								<FormField
 									control={form.control}
 									name="employees"
-									render={({ field,fieldState }) => (
+									render={({ field, fieldState }) => (
 										<FormItem>
 											<FormLabel>Employees</FormLabel>
 											<FormControl>
@@ -849,10 +866,10 @@ const onSubmit = async (values) => {
 												/>
 											</FormControl>
 											{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
+												<p className="text-sm text-red-500">
+													{fieldState.error.message}
+												</p>
+											)}
 										</FormItem>
 									)}
 								/>
@@ -863,7 +880,7 @@ const onSubmit = async (values) => {
 								<FormField
 									control={form.control}
 									name="priority"
-									render={({ field,fieldState }) => (
+									render={({ field, fieldState }) => (
 										<FormItem>
 											<FormLabel>Priority</FormLabel>
 											<Select value={field.value} onValueChange={field.onChange}>
@@ -879,30 +896,30 @@ const onSubmit = async (values) => {
 												</SelectContent>
 											</Select>
 											{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
+												<p className="text-sm text-red-500">
+													{fieldState.error.message}
+												</p>
+											)}
 										</FormItem>
 									)}
 								/>
 							</div>
 						)}
-{selectedTag === "Leave" && requiresMedical && (
-  <FormField
-    control={form.control}
-    name="medicalAttachment"
-    render={({ field, fieldState }) => (
-      <FormItem>
-        <FormLabel>Medical Certificate</FormLabel>
-        <Input type="file" onChange={e => field.onChange(e.target.files?.[0])} />
-        {fieldState.error && (
-          <p className="text-sm text-red-500">{fieldState.error.message}</p>
-        )}
-      </FormItem>
-    )}
-  />
-)}
+						{selectedTag === "Leave" && requiresMedical && (
+							<FormField
+								control={form.control}
+								name="medicalAttachment"
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel>Medical Certificate</FormLabel>
+										<Input type="file" onChange={e => field.onChange(e.target.files?.[0])} />
+										{fieldState.error && (
+											<p className="text-sm text-red-500">{fieldState.error.message}</p>
+										)}
+									</FormItem>
+								)}
+							/>
+						)}
 
 
 						{!tagConfig.hide?.includes("description") && (
