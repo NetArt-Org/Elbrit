@@ -33,7 +33,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const SWIPE_THRESHOLD = 60;
 
@@ -236,9 +236,12 @@ export const AgendaEvents = ({ scope = "all" }) => {
                         )}
                         <div className="w-full">
                           <p className="font-medium text-sm">{event.title}</p>
+                          {/* <TodoDescriptionOneLine html={event.description} /> */}
+                          {event.tags!="Todo List" ? 
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             {event.description}
-                          </p>
+                          </p>:null
+                          }
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             {event.owner?.name}
                           </p>

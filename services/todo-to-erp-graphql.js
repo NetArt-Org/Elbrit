@@ -36,7 +36,7 @@ export function mapFormToErpTodo(values, resolvers) {
   
     return {
       erpName: todo.name,
-      title: todo.description,
+      title: `To Do List-${todo.name}`,
       description: todo.description,
   
       startDate: start.toISOString(),

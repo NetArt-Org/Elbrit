@@ -105,7 +105,6 @@ query LeaveApplications($first: Int) {
         status
         fsl_attach
         leave_approver_name
-        leave_approver__name
         leave_balance
         employee__name
         employee_name

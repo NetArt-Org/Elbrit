@@ -11,7 +11,7 @@ import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
 import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
-
+import { TodoWysiwyg } from "@/components/ui/TodoWysiwyg";
 import {
 	Form,
 	FormControl,
@@ -392,7 +392,7 @@ export function AddEditEventDialog({
 --------------------------------------------- */
 	useEffect(() => {
 		if (!startDate) return;
-		if (selectedTag === "Meeting" || selectedTag === "Birthday" ) return;
+		if (selectedTag === "Meeting" || selectedTag === "Birthday") return;
 		if (endDateTouchedRef.current) return;
 
 		const now = new Date();
@@ -414,18 +414,18 @@ export function AddEditEventDialog({
 
 		// Auto-fix ONLY if endDate is missing or invalid
 		if (!currentEnd || currentEnd < startDate) {
-		  const normalizedEnd = set(startDate, {
-			hours: 23,
-			minutes: 59,
-			seconds: 59,
-		  });
-		
-		  form.setValue("endDate", normalizedEnd, {
-			shouldDirty: false,
-			shouldValidate: false,
-		  });
+			const normalizedEnd = set(startDate, {
+				hours: 23,
+				minutes: 59,
+				seconds: 59,
+			});
+
+			form.setValue("endDate", normalizedEnd, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
 		}
-		
+
 	}, [startDate, selectedTag]);
 	/* ---------------------------------------------
    MEETING TIME LOGIC (MERGED)
@@ -488,17 +488,17 @@ export function AddEditEventDialog({
 			const leaveDoc = mapFormToErpLeave(values);
 			console.log("LEAVE DOC", leaveDoc);
 
-			const savedLeave = await saveLeaveApplication(leaveDoc);
+			// const savedLeave = await saveLeaveApplication(leaveDoc);
 
 			const calendarLeave = mapErpLeaveToCalendar({
 				...leaveDoc,
-				name: savedLeave.name,
+				// name: savedLeave.name,
 				color: "#DC2626",
 			});
 
-			event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
-			toast.success("Leave applied successfully");
-			onClose();
+			// event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+			// toast.success("Leave applied successfully");
+			// onClose();
 			return;
 		}
 
@@ -533,11 +533,11 @@ export function AddEditEventDialog({
 
 		console.log("ERP DOC", erpDoc);
 
-		const savedEvent = await saveEvent(erpDoc);
+		// const savedEvent = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			erpName: savedEvent.name,
+			// erpName: savedEvent.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -553,9 +553,9 @@ export function AddEditEventDialog({
 			),
 		};
 
-		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-		toast.success("Event saved");
-		onClose();
+		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		// toast.success("Event saved");
+		// onClose();
 	};
 
 
@@ -951,7 +951,14 @@ export function AddEditEventDialog({
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Description</FormLabel>
-										<Textarea {...field} />
+										{selectedTag === "Todo List" ? (
+											<TodoWysiwyg
+												value={field.value}
+												onChange={field.onChange}
+											/>
+										) : (
+											<Textarea {...field} />
+										)}
 									</FormItem>
 								)}
 							/>
