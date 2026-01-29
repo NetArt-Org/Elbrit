@@ -54,6 +54,7 @@ import { TimePicker } from "@/components/ui/TimePicker";
 import { mapFormToErpTodo, mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-erp";
 import { useEmployeeResolvers } from "@/lib/employeeResolver";
+import { uploadLeaveMedicalCertificate } from "@/services/file.service";
 
 export function AddEditEventDialog({
 	children,
@@ -106,7 +107,7 @@ export function AddEditEventDialog({
 			priority: "Medium",
 			leavePeriod: "Full",
 			halfDayDate: undefined,
-			approvedBy:undefined
+			approvedBy: undefined
 		},
 	});
 
@@ -483,22 +484,25 @@ export function AddEditEventDialog({
 				toast.error("Medical certificate required");
 				return;
 			}
-
-
 			const leaveDoc = mapFormToErpLeave(values);
+			delete leaveDoc.fsl_attach;
 			console.log("LEAVE DOC", leaveDoc);
 
-			// const savedLeave = await saveLeaveApplication(leaveDoc);
+			const savedLeave = await saveLeaveApplication(leaveDoc);
 
+			// 2️⃣ Upload medical certificate ONLY when required
+			if (requiresMedical && values.medicalAttachment) {
+				await uploadLeaveMedicalCertificate(values, savedLeave.name);
+			  }
 			const calendarLeave = mapErpLeaveToCalendar({
 				...leaveDoc,
-				// name: savedLeave.name,
+				name: savedLeave.name,
 				color: "#DC2626",
 			});
 
-			// event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
-			// toast.success("Leave applied successfully");
-			// onClose();
+			event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
+			toast.success("Leave applied successfully");
+			onClose();
 			return;
 		}
 
@@ -968,10 +972,10 @@ export function AddEditEventDialog({
 						<ModalClose asChild>
 							<Button variant="outline">Cancel</Button>
 						</ModalClose>
-						{event && event.tags=="Leave" && event.status=="APPROVED" ? null :
-						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
-							{isEditing ? "Update" : "Submit"}
-						</Button>}
+						{event && event.tags == "Leave" && event.status == "APPROVED" ? null :
+							<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
+								{isEditing ? "Update" : "Submit"}
+							</Button>}
 					</ModalFooter>
 				</div>
 			</ModalContent>

@@ -33,14 +33,14 @@ export function EventDetailsDialog({
 				</DialogHeader>
 
 				<ScrollArea className="max-h-[80vh]">
-  <div className="p-4">
-    <EventDetailsFields
-      event={event}
-      config={tagConfig}
-      use24HourFormat={use24HourFormat}
-    />
-  </div>
-</ScrollArea>
+					<div className="p-4">
+						<EventDetailsFields
+							event={event}
+							config={tagConfig}
+							use24HourFormat={use24HourFormat}
+						/>
+					</div>
+				</ScrollArea>
 				<div className="flex justify-end gap-2">
 					<AddEditEventDialog event={event}>
 						<Button variant="outline">Edit</Button>
