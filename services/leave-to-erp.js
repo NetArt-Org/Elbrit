@@ -59,6 +59,7 @@ export function mapErpLeaveToCalendar(leave) {
     description: leave.description,
     color: "red",
     allDay: true,
-    approvedBy:leave.leave_approver_name ? leave.leave_approver_name:""
+    medicalAttachment:leave.fsl_attach ?? "",
+    approvedBy:leave.leave_approver_name ?? ""
   };
 }

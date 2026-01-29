@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
-import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication } from "@/services/event.service";
+import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
 import { TodoWysiwyg } from "@/components/ui/TodoWysiwyg";
@@ -99,9 +99,9 @@ export function AddEditEventDialog({
 			hqTerritory: event?.hqTerritory ?? "",
 			employees: undefined,
 			doctor: undefined,
-			leaveType: "Casual Leave",
+			leaveType: event?.leaveType ?? "Casual Leave",
 			reportTo: undefined,
-			medicalAttachment: undefined,
+			medicalAttachment: event?.medicalAttachment ?? "",
 			allDay: false,
 			todoStatus: "Open",
 			priority: "Medium",
@@ -490,10 +490,20 @@ export function AddEditEventDialog({
 
 			const savedLeave = await saveLeaveApplication(leaveDoc);
 
-			// 2️⃣ Upload medical certificate ONLY when required
 			if (requiresMedical && values.medicalAttachment) {
-				await uploadLeaveMedicalCertificate(values, savedLeave.name);
-			  }
+				const uploadResult = await uploadLeaveMedicalCertificate(
+					values,
+					savedLeave.name
+				);
+
+				if (uploadResult?.fileUrl) {
+					await updateLeaveAttachment(
+						savedLeave.name,
+						uploadResult.fileUrl
+					);
+				}
+			}
+
 			const calendarLeave = mapErpLeaveToCalendar({
 				...leaveDoc,
 				name: savedLeave.name,
@@ -537,11 +547,11 @@ export function AddEditEventDialog({
 
 		console.log("ERP DOC", erpDoc);
 
-		// const savedEvent = await saveEvent(erpDoc);
+		const savedEvent = await saveEvent(erpDoc);
 
 		const calendarEvent = {
 			...(event ?? {}),
-			// erpName: savedEvent.name,
+			erpName: savedEvent.name,
 			title: values.title,
 			description: values.description,
 			startDate: erpDoc.starts_on,
@@ -557,9 +567,9 @@ export function AddEditEventDialog({
 			),
 		};
 
-		// event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-		// toast.success("Event saved");
-		// onClose();
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+		toast.success("Event saved");
+		onClose();
 	};
 
 
@@ -567,10 +577,13 @@ export function AddEditEventDialog({
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
 
-			<ModalContent>
+			<ModalContent className="
+    max-h-[90vh] min-h-[70vh] flex flex-col
+    overflow-scroll
+  ">
 				<ModalHeader>
 					<ModalTitle>{isEditing ? "Edit Event" : "Add Event"}</ModalTitle>
-					<ModalDescription />
+					{/* <ModalDescription /> */}
 				</ModalHeader>
 
 				<Form {...form}>
@@ -939,6 +952,23 @@ export function AddEditEventDialog({
 									<FormItem>
 										<FormLabel>Medical Certificate</FormLabel>
 										<Input type="file" onChange={e => field.onChange(e.target.files?.[0])} />
+										{/* ✅ Existing attachment link */}
+										{event?.medicalAttachment && (
+											<div className="mt-2 text-sm">
+												<span className="text-muted-foreground">
+													Existing file:
+												</span>{" "}
+												<a
+													href={process.env.NEXT_PUBLIC_ERP_URL + event.medicalAttachment}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-blue-600 underline"
+												>
+													View / Download
+												</a>
+											</div>
+										)}
+
 										{fieldState.error && (
 											<p className="text-sm text-red-500">{fieldState.error.message}</p>
 										)}
@@ -967,15 +997,14 @@ export function AddEditEventDialog({
 						)}
 					</form>
 				</Form>
-				<div className="pt-4">
+				<div className="pt-4 flex mt-auto justify-end">
 					<ModalFooter className="gap-2">
 						<ModalClose asChild>
 							<Button variant="outline">Cancel</Button>
 						</ModalClose>
-						{event && event.tags == "Leave" && event.status == "APPROVED" ? null :
-							<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
+						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
 								{isEditing ? "Update" : "Submit"}
-							</Button>}
+							</Button>
 					</ModalFooter>
 				</div>
 			</ModalContent>

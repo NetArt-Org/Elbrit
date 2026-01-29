@@ -62,6 +62,10 @@ export async function uploadLeaveMedicalCertificate(values, leaveName) {
   if (json.errors?.length) {
     throw new Error(json.errors[0].message);
   }
+  const uploaded = json.data?.uploadFile;
 
-  return json.data?.uploadFile;
+  return {
+    fileUrl: uploaded?.file_url,
+    fileName: uploaded?.name,
+  };
 }

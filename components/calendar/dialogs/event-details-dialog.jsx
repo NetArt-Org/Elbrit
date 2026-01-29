@@ -41,6 +41,7 @@ export function EventDetailsDialog({
 						/>
 					</div>
 				</ScrollArea>
+				{event.tags=="Leave" && event.status=="APPROVED"?null:
 				<div className="flex justify-end gap-2">
 					<AddEditEventDialog event={event}>
 						<Button variant="outline">Edit</Button>
@@ -67,6 +68,7 @@ export function EventDetailsDialog({
 						Delete
 					</Button>
 				</div>
+				}
 			</DialogContent>
 		</Dialog>
 	);

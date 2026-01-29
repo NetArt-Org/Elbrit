@@ -42,6 +42,40 @@ mutation SaveEvent($doc: String!) {
   }
 }
 `;
+const UPDATE_LEAVE_ATTACHMENT_MUTATION = `
+mutation UpdateLeaveAttachment(
+  $name: String!
+  $value: DOCFIELD_VALUE_TYPE!
+) {
+  setValue(
+    doctype: "Leave Application"
+    name: $name
+    fieldname: "fsl_attach"
+    value: $value
+  ) {
+    name
+  }
+}
+`;
+export async function updateLeaveAttachment(leaveName, fileUrl) {
+  if (!leaveName || !fileUrl) return;
+
+  const data = await graphqlRequest(
+    UPDATE_LEAVE_ATTACHMENT_MUTATION,
+    {
+      name: leaveName,
+      value: fileUrl,
+    }
+  );
+
+  if (!data?.setValue?.name) {
+    throw new Error("Failed to update leave attachment");
+  }
+console.log("DATA",data)
+  clearLeaveCache();
+  return true;
+}
+
 
 export async function saveEvent(doc) {
   const data = await graphqlRequest(SAVE_EVENT_MUTATION, {
