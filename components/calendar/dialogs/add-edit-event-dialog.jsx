@@ -106,6 +106,7 @@ export function AddEditEventDialog({
 			priority: "Medium",
 			leavePeriod: "Full",
 			halfDayDate: undefined,
+			approvedBy:undefined
 		},
 	});
 
@@ -114,8 +115,7 @@ export function AddEditEventDialog({
 	const allDay = useWatch({ control: form.control, name: "allDay" });
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
-	const halfDayDate = useWatch({ control: form.control, name: "halfDayDate", }); // 🔧 LEAVE HALF DAY FIX
-
+	// approvedBy
 	const selectedTag = form.watch("tags");
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const isMulti = tagConfig?.employee?.multiselect === true;
@@ -851,8 +851,6 @@ export function AddEditEventDialog({
 								)}
 							</div>
 						)}
-
-
 						{/* EMPLOYEES */}
 						{!tagConfig.hide?.includes("employees") &&
 							(!tagConfig.employee?.autoSelectLoggedIn ||
@@ -970,9 +968,10 @@ export function AddEditEventDialog({
 						<ModalClose asChild>
 							<Button variant="outline">Cancel</Button>
 						</ModalClose>
+						{event && event.tags=="Leave" && event.status=="APPROVED" ? null :
 						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
 							{isEditing ? "Update" : "Submit"}
-						</Button>
+						</Button>}
 					</ModalFooter>
 				</div>
 			</ModalContent>

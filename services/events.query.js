@@ -106,7 +106,6 @@ query LeaveApplications($first: Int) {
         fsl_attach
         leave_approver_name
         leave_balance
-        employee__name
         employee_name
         leave_type__name
       }

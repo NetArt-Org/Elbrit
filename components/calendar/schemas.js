@@ -18,6 +18,7 @@ export const eventSchema = z.object({
 	leavePeriod: z.enum(["Full", "Half"]).optional(),
 	medicalAttachment: z.any().optional(),
 	halfDayDate:  z.date().optional(),
+	approvedBy:  z.date().optional(),
 	todoStatus: z.enum(["Open", "Closed", "Cancelled"]).optional(),
 	priority: z.enum(["High", "Medium", "Low"]).optional(),
   }).superRefine((data, ctx) => {

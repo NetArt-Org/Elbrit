@@ -88,6 +88,10 @@ export function RHFCombobox({
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         align="start"
+        style={{
+          maxHeight: 180,
+          overflow:"hidden"
+        }}
       >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
