@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
-import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment } from "@/services/event.service";
+import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
 import { TodoWysiwyg } from "@/components/ui/TodoWysiwyg";
@@ -192,7 +192,6 @@ export function AddEditEventDialog({
 	}, [requiresMedical]);
 
 	const isDoctorMulti = tagConfig.doctor?.multiselect === true;
-	const autoTitleRef = useRef(false);
 
 	useEffect(() => {
 		if (!isOpen) return;
@@ -471,19 +470,19 @@ export function AddEditEventDialog({
 	const buildDoctorVisitTitle = (doctorId, values) => {
 		const doc = doctorOptions.find(d => d.value === doctorId);
 		const empId = Array.isArray(values.employees)
-		  ? values.employees[0]
-		  : values.employees;
-	  
+			? values.employees[0]
+			: values.employees;
+
 		const emp = employeeOptions.find(e => e.value === empId);
-	  
+
 		if (!doc) return values.title || "DV";
-	  
+
 		const doctorName = doc.label.replace(/\s+/g, "");
 		const employeeName = emp?.label?.replace(/\s+/g, "") ?? "Emp";
-	  
+
 		return `${doctorName}-${employeeName}`;
-	  };
-	  
+	};
+
 
 	/* --------------------------------------------------
    SUBMIT
@@ -495,7 +494,19 @@ export function AddEditEventDialog({
 		if (values.tags === "Birthday" && !values.endDate) {
 			values.endDate = values.startDate;
 		}
+		if (values.tags === "Birthday" && values.doctor) {
+			const doctorId = Array.isArray(values.doctor)
+				? values.doctor[0]
+				: values.doctor;
 
+			try {
+				await updateLeadDob(doctorId, values.startDate);
+			} catch (err) {
+				console.error("Failed to update doctor DOB", err);
+				toast.error("Failed to update Doctor DOB");
+				return;
+			}
+		}
 		/* ==================================================
 		   LEAVE FLOW (ONLY)
 		================================================== */
@@ -570,19 +581,19 @@ export function AddEditEventDialog({
 				const perDoctorErpDoc = mapFormToErpEvent(
 					{
 						...values,
-						title: buildDoctorVisitTitle(doctorId, values), 
+						title: buildDoctorVisitTitle(doctorId, values),
 						doctor: doctorId, // 👈 single doctor
 					},
 					{}
 				);
 
 				const savedEvent = await saveEvent(perDoctorErpDoc);
-				console.log("DOCTOR",perDoctorErpDoc,doctorId)
+				console.log("DOCTOR", perDoctorErpDoc, doctorId)
 
 				// 2️⃣ CALENDAR EVENT (ALWAYS ADD, NEVER UPDATE)
 				const calendarEvent = {
 					erpName: savedEvent.name,
-					title: buildDoctorVisitTitle(doctorId, values), 
+					title: buildDoctorVisitTitle(doctorId, values),
 					description: values.description,
 					startDate: perDoctorErpDoc.starts_on,
 					endDate: perDoctorErpDoc.ends_on,
@@ -940,6 +951,33 @@ export function AddEditEventDialog({
 								)}
 							</div>
 						)}
+						{/* Assigned to Display */}
+						{selectedTag == "Todo List" &&
+							<FormField
+								control={form.control}
+								name="assignedTo"
+								render={({ field, fieldState }) => (
+									<FormItem>
+										<FormLabel>Assigned To</FormLabel>
+										<FormControl>
+											<RHFCombobox
+												value={field.value}
+												onChange={field.onChange}
+												options={employeeOptions}
+												placeholder="Select employees"
+												searchPlaceholder="Search employee"
+												multiple={true}
+											/>
+										</FormControl>
+										{fieldState.error && (
+											<p className="text-sm text-red-500">
+												{fieldState.error.message}
+											</p>
+										)}
+									</FormItem>
+								)}
+							/>
+						}
 						{/* EMPLOYEES */}
 						{!tagConfig.hide?.includes("employees") &&
 							(!tagConfig.employee?.autoSelectLoggedIn ||

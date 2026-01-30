@@ -42,9 +42,6 @@ export function TodoWysiwyg({ value, onChange }) {
         onChange={onChange}
         modules={modules}
         formats={formats}
-        style={{
-          minHeight: 160,
-        }}
       />
     </div>
   );

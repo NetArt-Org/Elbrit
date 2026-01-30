@@ -5,6 +5,7 @@ import { mapErpGraphqlEventToCalendar } from "@/services/erp-graphql-to-event";
 import { getCachedEvents, setCachedEvents } from "@/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@/lib/calendar/cache-key";
 import { clearEventCache } from "@/lib/calendar/event-cache";
+import { format } from "date-fns";
 import {
   getCachedLeaveBalance,
   setCachedLeaveBalance,
@@ -71,7 +72,7 @@ export async function updateLeaveAttachment(leaveName, fileUrl) {
   if (!data?.setValue?.name) {
     throw new Error("Failed to update leave attachment");
   }
-console.log("DATA",data)
+  console.log("DATA", data)
   clearLeaveCache();
   return true;
 }
@@ -178,7 +179,7 @@ export async function fetchEventsByRange(startDate, endDate, view) {
 
   const leaves = await fetchAllLeaveApplications();
   const todolist = await fetchAllTodoList();
-  const merged = [...events, ...leaves,...todolist];
+  const merged = [...events, ...leaves, ...todolist];
   setCachedEvents(cacheKey, merged);
   return merged;
 }
@@ -296,4 +297,29 @@ export async function fetchEmployeeLeaveBalance(employeeId) {
 
   setCachedLeaveBalance(cacheKey, balance);
   return balance;
+}
+export function formatDateForERP(date) {
+  return format(date, "yyyy-MM-dd");
+}
+export async function updateLeadDob(leadName, dob) {
+  const mutation = `
+  mutation UpdateLeadDOB(
+  $name: String!
+  $value: DOCFIELD_VALUE_TYPE!
+) {
+  setValue(
+    doctype: "Lead"
+    name: $name
+    fieldname: "fsl_dob"
+    value: $value
+  ) {
+    name
+  }
+}
+  `;
+
+  return graphqlRequest(mutation, {
+    name: leadName,
+    value: formatDateForERP(dob),
+  });
 }

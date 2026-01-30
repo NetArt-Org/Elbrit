@@ -1,10 +1,10 @@
-.wrapper :global(.ql-container.ql-snow) {
+/* .wrapper :global(.ql-container.ql-snow) {
   border: 0;
   max-height: 100px;
   overflow-y: auto;
 }
 
 .wrapper :global(.ql-editor) {
-  font-size: 14px;      /* or 15px / 16px */
+  font-size: 14px;     
   line-height: 1.6;
-}
+} */
