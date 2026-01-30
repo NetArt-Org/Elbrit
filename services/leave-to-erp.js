@@ -49,6 +49,7 @@ export function mapErpLeaveToCalendar(leave) {
   );
 
   return {
+    erpName:`LEAVE-${leave.name}`,
     id: `LEAVE-${leave.name}`,
     title: leave.leave_type__name || "Leave",
     tags: "Leave",

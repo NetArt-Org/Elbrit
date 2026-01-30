@@ -16,7 +16,7 @@ export const ICON_MAP = {
   "HQ Tour Plan": Building2,     // Office / headquarters visit
   "Meeting": Users,              // Group discussion
   "Birthday": Cake,              // Celebration
-  "Doctor Visit Plan": Stethoscope, // Medical appointment
+  "Doctor Visit plan": Stethoscope, // Medical appointment
   "Todo List": ListChecks,       // Tasks / checklist
   "Other": HelpCircle,           // Uncategorized / miscellaneous
 };

@@ -116,8 +116,13 @@ export function AddEditEventDialog({
 	const allDay = useWatch({ control: form.control, name: "allDay" });
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
-	// approvedBy
-	const selectedTag = form.watch("tags");
+	const {
+		doctor,
+		employees,
+		hqTerritory,
+		tags: selectedTag,
+	} = useWatch({ control: form.control });
+
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const isMulti = tagConfig?.employee?.multiselect === true;
 	const isFieldVisible = (field) => {
@@ -129,27 +134,30 @@ export function AddEditEventDialog({
 	const getFieldLabel = (field, fallback) => {
 		return tagConfig.labels?.[field] ?? fallback;
 	};
+	const reset = fields =>
+		Object.entries(fields).forEach(([name, defaultValue]) =>
+			form.resetField(name, { defaultValue })
+		);
+
 	const resetFieldsOnTagChange = () => {
-		// always reset these
-		form.resetField("employees", { defaultValue: undefined });
-		form.resetField("doctor", { defaultValue: undefined });
-		form.resetField("hqTerritory", { defaultValue: "" });
-
-		// Todo-only
-		form.resetField("todoStatus", { defaultValue: "Open" });
-		form.resetField("priority", { defaultValue: "Medium" });
-		form.resetField("doctor", {
-			defaultValue: isDoctorMulti ? [] : undefined,
+		reset({
+			employees: undefined, doctor: isDoctorMulti ? [] : undefined,
+			todoStatus: "Open", priority: "Medium", title: "",
 		});
+		// ❌ HQ is REQUIRED for this tag — never reset it
+		if (selectedTag !== "HQ Tour Plan") {
+			reset({ hqTerritory: "" });
+		}
 
-		form.resetField("title", { defaultValue: "" });
-		// Leave-only — reset ONLY when leaving Leave
 		if (selectedTag !== "Leave") {
-			form.resetField("leaveType", { defaultValue: undefined });
-			form.resetField("leavePeriod", { defaultValue: "Full" });
-			form.resetField("medicalAttachment", { defaultValue: undefined });
+			reset({
+				leaveType: undefined,
+				leavePeriod: "Full",
+				medicalAttachment: undefined,
+			});
 		}
 	};
+
 
 	const leaveDays = useMemo(() => {
 		if (selectedTag !== "Leave") return 0;
@@ -333,30 +341,27 @@ export function AddEditEventDialog({
 		if (!tagConfig.autoTitle) return;
 
 		const values = form.getValues();
-
-		const nextTitle = tagConfig.autoTitle(
-			values,
-			{ doctorOptions, employeeOptions }
-		);
+		const nextTitle = tagConfig.autoTitle(values, {
+			doctorOptions,
+			employeeOptions,
+		});
 
 		if (!nextTitle) return;
 
-		// ✅ overwrite only if auto-generated OR empty
-		if (!values.title || autoTitleRef.current) {
-			autoTitleRef.current = true;
-
+		if (values.title !== nextTitle) {
 			form.setValue("title", nextTitle, {
 				shouldDirty: false,
-				shouldValidate: false,
+				shouldValidate: true, // 🔑 REQUIRED
 			});
 		}
 	}, [
 		selectedTag,
-		startDate,
+		hqTerritory,
+		doctor,
+		employees,
 		doctorOptions,
 		employeeOptions,
-		form.watch("doctor"),
-		form.watch("employees"),
+		isEditing,
 	]);
 
 	/* --------------------------------------------------
@@ -463,7 +468,22 @@ export function AddEditEventDialog({
 		form.setValue("endDate", newEnd, { shouldDirty: true });
 
 	}, [selectedTag, startDate, allDay]);
-
+	const buildDoctorVisitTitle = (doctorId, values) => {
+		const doc = doctorOptions.find(d => d.value === doctorId);
+		const empId = Array.isArray(values.employees)
+		  ? values.employees[0]
+		  : values.employees;
+	  
+		const emp = employeeOptions.find(e => e.value === empId);
+	  
+		if (!doc) return values.title || "DV";
+	  
+		const doctorName = doc.label.replace(/\s+/g, "");
+		const employeeName = emp?.label?.replace(/\s+/g, "") ?? "Emp";
+	  
+		return `${doctorName}-${employeeName}`;
+	  };
+	  
 
 	/* --------------------------------------------------
    SUBMIT
@@ -537,6 +557,57 @@ export function AddEditEventDialog({
 			onClose();
 			return;
 		}
+		/* ==================================================
+			 DOCTOR VISIT PLAN (FAN-OUT ONLY, NO UPDATE)
+		  ================================================== */
+		if (
+			values.tags === "Doctor Visit plan" &&
+			Array.isArray(values.doctor) &&
+			values.doctor.length > 0
+		) {
+			for (const doctorId of values.doctor) {
+				// 1️⃣ ERP DOC (ONE PER DOCTOR)
+				const perDoctorErpDoc = mapFormToErpEvent(
+					{
+						...values,
+						title: buildDoctorVisitTitle(doctorId, values), 
+						doctor: doctorId, // 👈 single doctor
+					},
+					{}
+				);
+
+				const savedEvent = await saveEvent(perDoctorErpDoc);
+				console.log("DOCTOR",perDoctorErpDoc,doctorId)
+
+				// 2️⃣ CALENDAR EVENT (ALWAYS ADD, NEVER UPDATE)
+				const calendarEvent = {
+					erpName: savedEvent.name,
+					title: buildDoctorVisitTitle(doctorId, values), 
+					description: values.description,
+					startDate: perDoctorErpDoc.starts_on,
+					endDate: perDoctorErpDoc.ends_on,
+					color: tagConfig.fixedColor,
+					tags: values.tags,
+					owner: LOGGED_IN_USER.id,
+					participants: buildCalendarParticipants(
+						{
+							...values,
+							doctor: doctorId, // 👈 single doctor
+						},
+						employeeOptions,
+						doctorOptions
+					),
+				};
+
+				addEvent(calendarEvent); // ✅ ALWAYS ADD
+			}
+
+			toast.success(
+				`Created ${values.doctor.length} Doctor Visit events`
+			);
+			onClose();
+			return; // 🔑 STOP HERE
+		}
 
 		/* ==================================================
 		   DEFAULT EVENT FLOW
@@ -544,6 +615,7 @@ export function AddEditEventDialog({
 		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
 		});
+
 
 		console.log("ERP DOC", erpDoc);
 
@@ -983,14 +1055,10 @@ export function AddEditEventDialog({
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Description</FormLabel>
-										{selectedTag === "Todo List" ? (
-											<TodoWysiwyg
-												value={field.value}
-												onChange={field.onChange}
-											/>
-										) : (
-											<Textarea {...field} />
-										)}
+										<TodoWysiwyg
+											value={field.value}
+											onChange={field.onChange}
+										/>
 									</FormItem>
 								)}
 							/>
@@ -1003,8 +1071,8 @@ export function AddEditEventDialog({
 							<Button variant="outline">Cancel</Button>
 						</ModalClose>
 						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
-								{isEditing ? "Update" : "Submit"}
-							</Button>
+							{isEditing ? "Update" : "Submit"}
+						</Button>
 					</ModalFooter>
 				</div>
 			</ModalContent>

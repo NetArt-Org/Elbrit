@@ -28,12 +28,19 @@ export function mapFormToErpEvent(values, options = {}) {
     });
   }
   
-    if (values.doctor) {
+  if (values.doctor) {
+    const doctorIds = Array.isArray(values.doctor)
+      ? values.doctor
+      : [values.doctor];
+  
+    doctorIds.forEach((doctorId) => {
       participants.push({
         reference_doctype: "Lead",
-        reference_docname: values.doctor,
+        reference_docname: doctorId,
       });
-    }
+    });
+  }
+  
   
     return participants;
   }

@@ -4,7 +4,7 @@ import {differenceInCalendarDays} from "date-fns"
 
 
 export const eventSchema = z.object({
-	title: z.string().min(1),
+	title: z.string().optional().or(z.literal("")),
 	tags: z.string(),
 	startDate: z.date(),
 	endDate: z.date().optional(),

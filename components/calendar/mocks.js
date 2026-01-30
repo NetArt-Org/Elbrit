@@ -15,7 +15,7 @@ export const TAGS = [
   { id: "HQ Tour Plan", label: "HQ Tour Plan" },
   { id: "Meeting", label: "Meeting" },
   { id: "Birthday", label: "Birthday" },
-  { id: "Doctor Visit Plan", label: "Doctor Visit Plan" },
+  { id: "Doctor Visit plan", label: "Doctor Tour Plan" },
   { id: "Todo List", label: "Todo List" },
   { id: "Other", label: "Other" },
 ];
@@ -24,7 +24,7 @@ export const PARTICIPANT_SOURCE_BY_TAG = {
   "HQ Tour Plan": ["HQ_TERRITORY"],
   "Meeting": ["EMPLOYEE"],
   "Birthday": ["DOCTOR"],
-  "Doctor Visit Plan": ["EMPLOYEE", "DOCTOR"],
+  "Doctor Visit plan": ["EMPLOYEE", "DOCTOR"],
   "Todo List": ["EMPLOYEE"],
   "Other": ["EMPLOYEE", "DOCTOR"],
 };
