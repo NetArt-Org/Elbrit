@@ -13,10 +13,10 @@ import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 export const TAGS = [
   { id: "Leave", label: "Leave" },
   { id: "HQ Tour Plan", label: "HQ Tour Plan" },
-  { id: "Meeting", label: "Meeting" },
-  { id: "Birthday", label: "Birthday" },
-  { id: "Doctor Visit plan", label: "Doctor Tour Plan" },
+  { id: "Doctor Visit plan", label: "DR Tour Plan" },
+  { id: "Birthday", label: "DR Birthday" },
   { id: "Todo List", label: "Todo List" },
+  { id: "Meeting", label: "Meeting" },
   { id: "Other", label: "Other" },
 ];
 export const PARTICIPANT_SOURCE_BY_TAG = {
