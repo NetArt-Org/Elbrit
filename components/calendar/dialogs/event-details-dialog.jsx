@@ -15,6 +15,7 @@ import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { deleteEventFromErp } from "@/services/event.service";
 import { EventDetailsFields } from "./EventDetailsFields";
+import { TAG_IDS } from "@/components/calendar/mocks";
 export function EventDetailsDialog({
 	event,
 	children

@@ -32,6 +32,7 @@ export async function fetchDoctors() {
       doctype: "Lead",
       value: node.name,
       label: node.lead_name,
+      kly_lat_long: node.fsl_lat_lon,
     })) || []
   );
 }

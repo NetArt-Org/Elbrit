@@ -72,7 +72,6 @@ export async function updateLeaveAttachment(leaveName, fileUrl) {
   if (!data?.setValue?.name) {
     throw new Error("Failed to update leave attachment");
   }
-  console.log("DATA", data)
   clearLeaveCache();
   return true;
 }
@@ -170,7 +169,7 @@ export async function fetchEventsByRange(startDate, endDate, view) {
     const pageEvents = connection.edges
       .map(edge => mapErpGraphqlEventToCalendar(edge.node))
       .filter(Boolean);
-
+    
     events.push(...pageEvents);
 
     if (!connection.pageInfo?.hasNextPage) break;

@@ -7,9 +7,10 @@ import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
  * - Handles create & update
  * - Adds name only when editing
  */
+
 export function mapFormToErpEvent(values, options = {}) {
   
-  const { erpName } = options;
+  const { erpName} = options;
 
   function buildParticipants(values) {
     const participants = [];
@@ -27,21 +28,26 @@ export function mapFormToErpEvent(values, options = {}) {
       });
     });
   }
-  
   if (values.doctor) {
-    const doctorIds = Array.isArray(values.doctor)
+    const doctors = Array.isArray(values.doctor)
       ? values.doctor
       : [values.doctor];
-  
-    doctorIds.forEach((doctorId) => {
-      participants.push({
+
+    doctors.forEach((doctor) => {
+      const isObject = typeof doctor === "object" && doctor !== null;
+
+      const participant = {
         reference_doctype: "Lead",
-        reference_docname: doctorId,
-      });
+        reference_docname: isObject ? doctor.value : doctor,
+      };
+
+      if (isObject && doctor.kly_lat_long) {
+        participant.kly_lat_long = doctor.kly_lat_long;
+      }
+
+      participants.push(participant);
     });
   }
-  
-  
     return participants;
   }
   const isBirthday = values.tags === "Birthday";

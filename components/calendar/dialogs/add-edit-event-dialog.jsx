@@ -488,20 +488,37 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		finalize("Todo saved");
 	};
 	const handleDoctorVisitPlan = async (values) => {
-		for (const doctorId of values.doctor) {
+		console.log("SUBMIT doctors raw:", values.doctor);
+		console.log("SUBMIT doctorOptions:", doctorOptions);
+		console.log("SUBMIT doctorOptions length:", doctorOptions.length);
+		const normalizedDoctors = (Array.isArray(values.doctor)
+		? values.doctor
+		: [values.doctor]
+	  ).map((d) =>
+		typeof d === "object"
+		  ? d
+		  : doctorOptions.find((o) => o.value === d) ?? d
+	  );
+	
+	  console.log("Normalized doctors:", normalizedDoctors);
+		for (const doctor of normalizedDoctors) {
+			const doctorId =
+				typeof doctor === "object" ? doctor.value : doctor;
+
 			const erpDoc = mapFormToErpEvent(
 				{
 					...values,
 					title: buildDoctorVisitTitle(doctorId, values),
-					doctor: doctorId,
+					doctor: doctor,
 				},
 				{}
 			);
-
+			console.log("ERP DOC DR VISIT PLAN", erpDoc)
 			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = {
-				erpName: savedEvent.name, title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
+				erpName: savedEvent.name, 
+				title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
 				participants: buildCalendarParticipants(
 					{ ...values, doctor: doctorId },
 					employeeOptions,
@@ -520,9 +537,11 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		});
 
 		const savedEvent = await saveEvent(erpDoc);
-
+		console.log("ERP DOC ", erpDoc)
 		const calendarEvent = {
-			...(event ?? {}), erpName: savedEvent.name, title: values.title, description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id, hqTerritory: values.hqTerritory || "",
+			...(event ?? {}),
+			erpName: savedEvent.name,
+			title: values.title, description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id, hqTerritory: values.hqTerritory || "",
 			participants: buildCalendarParticipants(
 				values,
 				employeeOptions,
@@ -535,7 +554,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	};
 	const onSubmit = async (values) => {
 		/* ========= NORMALIZATION ========= */
-		if (values.tags === "Birthday") {
+		if (values.tags === TAG_IDS.BIRTHDAY) {
 			const ok = await handleBirthday(values);
 			if (!ok) return;
 		}
@@ -742,7 +761,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 								)}
 
 								{selectedTag === TAG_IDS.TODO_LIST && (
-									<FormField 
+									<FormField
 										control={form.control}
 										name="priority"
 										render={({ field, fieldState }) => (
@@ -789,7 +808,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 										selectedTag === TAG_IDS.TODO_LIST
 											? "Allocated To"
 											: "Employees"
-									} 
+									}
 									options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
 								/>
 							)}

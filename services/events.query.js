@@ -24,9 +24,8 @@ query EventsByRange(
           name
         }
           event_participants {
-          reference_doctype {
-            name
-          }
+          reference_doctype__name
+          kly_lat_long
           reference_docname__name
         }
       }
@@ -83,6 +82,7 @@ query Doctors($first: Int) {
       node {
         name
         lead_name
+        fsl_lat_lon
       }
     }
   }

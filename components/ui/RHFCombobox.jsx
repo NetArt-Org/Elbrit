@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,49 +19,64 @@ import {
 export function RHFCombobox({
   value,
   onChange,
-  options,
-  placeholder,
+  options = [],
+  placeholder = "Select option",
   searchPlaceholder,
   disabled = false,
-  selectionLabel,
-  multiple = false, // 🔑 NEW (default false)
+  selectionLabel = "item",
+  multiple = false,
 }) {
   const [open, setOpen] = useState(false);
-  const labelName = selectionLabel ?? "employee";
 
-  const normalizedValue = multiple
-  ? Array.isArray(value) ? value : []
-  : value ?? "";
+  /* ---------------------------------------
+     Helpers
+  --------------------------------------- */
+  const isObject = v => typeof v === "object" && v !== null;
+  const getKey = v => (isObject(v) ? v.value : v);
 
-  const isSelected = (val) =>
-    multiple
-      ? normalizedValue.includes(val)
-      : normalizedValue === val;
+  const selectedValues = multiple
+    ? Array.isArray(value) ? value : []
+    : value ? [value] : [];
 
+  const selectedOptions = selectedValues
+    .map(v => options.find(o => o.value === getKey(v)))
+    .filter(Boolean);
 
-  const handleSelect = (val) => {
+  const hasSelection = selectedOptions.length > 0;
+
+  /* ---------------------------------------
+     Selection logic
+  --------------------------------------- */
+  const handleSelect = (opt) => {
     if (!multiple) {
-      onChange(val);
+      onChange(opt);
       setOpen(false);
       return;
     }
 
-    // multi-select logic
-    if (normalizedValue.includes(val)) {
-      onChange(normalizedValue.filter(v => v !== val));
-    } else {
-      onChange([...normalizedValue, val]);
-    }
+    const exists = selectedValues.some(v => getKey(v) === opt.value);
 
+    if (exists) {
+      onChange(selectedValues.filter(v => getKey(v) !== opt.value));
+    } else {
+      onChange([...selectedValues, opt]);
+    }
   };
 
-  const selectedLabel = multiple
-  ? options
-      .filter(o => normalizedValue.includes(o.value))
-      .map(o => o.label)
-      .join(", ")
-  : options.find(o => o.value === normalizedValue)?.label ?? normalizedValue;
+  const handleRemove = (optValue) => {
+    if (!multiple) {
+      onChange(undefined);
+      return;
+    }
+    onChange(selectedValues.filter(v => getKey(v) !== optValue));
+  };
 
+  const isSelected = (opt) =>
+    selectedValues.some(v => getKey(v) === opt.value);
+
+  /* ---------------------------------------
+     UI
+  --------------------------------------- */
   return (
     <>
       <Popover open={open} onOpenChange={setOpen} modal>
@@ -72,47 +87,38 @@ export function RHFCombobox({
             disabled={disabled}
             className="w-full justify-between"
           >
-            <span className="block max-w-full truncate">
-              {multiple && normalizedValue.length > 0
-                ? `${normalizedValue.length} ${labelName}${normalizedValue.length > 1 ? "s" : ""} selected`
-                : selectedLabel || placeholder}
-
-
+            <span className="truncate">
+              {!hasSelection
+                ? placeholder
+                : multiple
+                  ? `${selectedOptions.length} ${selectionLabel}${selectedOptions.length > 1 ? "s" : ""} selected`
+                  : selectedOptions[0]?.label}
             </span>
 
             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
 
-        {/* ✅ SCROLL FIX IS HERE */}
         <PopoverContent
           className="w-[--radix-popover-trigger-width] p-0"
           align="start"
-          style={{
-            maxHeight: 180,
-            overflow: "hidden"
-          }}
         >
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
-
-            <CommandList className="max-h-60 overflow-y-auto overscroll-contain">
+            <CommandList className="max-h-60 overflow-y-auto">
               <CommandEmpty>No results found.</CommandEmpty>
 
               <CommandGroup>
                 {options.map((opt) => (
                   <CommandItem
                     key={opt.value}
-                    value={opt.value}
-                    onSelect={() => handleSelect(opt.value)}
+                    onSelect={() => handleSelect(opt)}
                     className="flex items-center"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        isSelected(opt.value)
-                          ? "opacity-100"
-                          : "opacity-0"
+                        isSelected(opt) ? "opacity-100" : "opacity-0"
                       )}
                     />
                     {opt.label}
@@ -123,27 +129,29 @@ export function RHFCombobox({
           </Command>
         </PopoverContent>
       </Popover>
-      {/* SELECTED TAGS */}
-      {multiple && normalizedValue.length > 0 && (
+
+      {/* ---------------------------------------
+         Selected tags (BOTTOM)
+      --------------------------------------- */}
+      {hasSelection && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {options
-            .filter(o => normalizedValue.includes(o.value))
-            .map(o => (
+          {selectedOptions.map((opt) => (
+            <span
+              key={opt.value}
+              className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm"
+            >
+              {opt.label}
               <button
-                key={o.value}
                 type="button"
-                className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm"
-                onClick={() =>
-                  onChange(normalizedValue.filter(v => v !== o.value))
-                }
+                onClick={() => handleRemove(opt.value)}
+                className="text-muted-foreground hover:text-foreground"
               >
-                {o.label}
-                <span className="text-muted-foreground hover:text-foreground">×</span>
+                <X size={14} />
               </button>
-            ))}
+            </span>
+          ))}
         </div>
       )}
-
     </>
   );
 }
