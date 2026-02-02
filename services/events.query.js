@@ -15,6 +15,7 @@ query EventsByRange(
         color
         all_day
         event_category
+        attending
         owner {
           name
           full_name
@@ -25,6 +26,7 @@ query EventsByRange(
           reference_doctype__name
           kly_lat_long
           reference_docname__name
+          attending
         }
       }
     }

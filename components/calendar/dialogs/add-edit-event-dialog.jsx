@@ -53,6 +53,11 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			endDate: new Date(event.endDate),
 		};
 	}, [event]);
+	const employeeParticipant = useMemo(() => {
+		return event?.participants?.find(
+			(p) => p.type === "Employee"
+		);
+	}, [event]);
 
 	const form = useForm({
 		resolver: zodResolver(eventSchema),
@@ -74,7 +79,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			priority: "Medium",
 			leavePeriod: "Full",
 			halfDayDate: event?.halfDayDate ?? "",
-			approvedBy: event?.approvedBy ?? ""
+			approvedBy: event?.approvedBy ?? "",
+			attending: employeeParticipant?.attending === 1,
+			kly_lat_long: employeeParticipant?.kly_lat_long ?? "",
 		},
 	});
 
@@ -83,7 +90,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const allDay = useWatch({ control: form.control, name: "allDay" });
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
-	const { doctor, employees, hqTerritory, tags: selectedTag, } = useWatch({ control: form.control });
+	const { doctor, employees, hqTerritory, tags: selectedTag, attending } = useWatch({ control: form.control });
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const visibleTags = useMemo(() => {
@@ -185,6 +192,52 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			});
 		}
 	}, [leavePeriod]); // 🔧 LEAVE HALF DAY FIX
+	/* ---------------------------------------------
+		   Longitude and latitude
+		--------------------------------------------- */
+
+	useEffect(() => {
+		if (!isEditing) return;
+		if (!attending) return;
+
+		// Do not override existing ERP value
+		if (form.getValues("kly_lat_long")) return;
+
+		if (!navigator.geolocation) {
+			toast.error("Geolocation not supported on this device");
+			return;
+		}
+
+		navigator.geolocation.getCurrentPosition(
+			(pos) => {
+				const latLong = `${pos.coords.latitude},${pos.coords.longitude}`;
+
+				form.setValue("kly_lat_long", latLong, {
+					shouldDirty: true,
+					shouldValidate: false,
+				});
+			},
+			(error) => {
+				console.error("Location error:", error);
+
+				// ✅ USER FRIENDLY MESSAGES
+				if (error.code === error.PERMISSION_DENIED) {
+					toast.error("Location permission denied");
+				} else if (error.code === error.POSITION_UNAVAILABLE) {
+					toast.error("Location unavailable");
+				} else if (error.code === error.TIMEOUT) {
+					toast.warning(
+						"Unable to fetch location automatically. You can continue without it."
+					);
+				}
+			},
+			{
+				enableHighAccuracy: false, // 🔑 VERY IMPORTANT (desktop-safe)
+				timeout: 20000,            // 🔑 increase timeout
+				maximumAge: 60000,
+			}
+		);
+	}, [attending, isEditing]);
 
 	/* ---------------------------------------------
 	   Leave Balance Fetching
@@ -619,7 +672,6 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		}
 		finalize("Leave applied successfully");
 	};
-
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -649,8 +701,8 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 											disabled={isEditing && tagConfig.ui?.lockTagOnEdit}
 											onClick={() => field.onChange(tag.id)}
 											className={`px-4 py-1 rounded-full ${field.value === tag.id
-													? "bg-black text-white"
-													: "bg-muted"
+												? "bg-black text-white"
+												: "bg-muted"
 												} ${isEditing ? "cursor-default" : ""}`}
 										>
 											{tag.label}
@@ -904,6 +956,33 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 									</RHFFieldWrapper>
 								)}
 							/>
+						)}
+						{/* ================= DOCTOR VISIT (EDIT ONLY) ================= */}
+						{isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
+							<div className="space-y-3 ">
+								<h4 className="font-medium">Visit Status</h4>
+
+								{/* Visited */}
+								<FormField
+									control={form.control}
+									name="attending"
+									render={({ field }) => (
+										<InlineCheckboxField
+											label="Visited"
+											checked={field.value}
+											onChange={field.onChange}
+										/>
+									)}
+								/>
+
+								{/* Latitude & Longitude */}
+								{form.watch("attending") && (
+									<div className="text-sm text-muted-foreground">
+										<span className="font-medium">Latitude & Longitude:</span>{" "}
+										{form.watch("kly_lat_long") || "Fetching location..."}
+									</div>
+								)}
+							</div>
 						)}
 
 						{/* ================= DESCRIPTION ================= */}

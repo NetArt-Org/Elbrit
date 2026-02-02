@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { COLOR_HEX_MAP } from "@/components/calendar/constants";
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
+import { TAG_IDS } from "@/components/calendar/mocks";
 
 /**
  * Maps form values to an ERP Event document
@@ -14,19 +15,33 @@ export function mapFormToErpEvent(values, options = {}) {
 
   function buildParticipants(values) {
     const participants = [];
-  
+    const isDoctorVisitPlan =
+    values.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
     // Employees
   if (values.employees) {
     const employeeIds = Array.isArray(values.employees)
       ? values.employees
       : [values.employees];
 
-    employeeIds.forEach((empId) => {
-      participants.push({
-        reference_doctype: "Employee",
-        reference_docname: empId,
+      employeeIds.forEach((empId) => {
+        const participant = {
+          reference_doctype: "Employee",
+          reference_docname: empId,
+        };
+  
+        // ✅ VISIT STATUS ONLY FOR DOCTOR VISIT PLAN
+        if (isDoctorVisitPlan) {
+          if (values.attending !== undefined) {
+            participant.attending = values.attending ? 1 : 0;
+          }
+  
+          if (values.kly_lat_long) {
+            participant.kly_lat_long = values.kly_lat_long;
+          }
+        }
+  
+        participants.push(participant);
       });
-    });
   }
   if (values.doctor) {
     const doctors = Array.isArray(values.doctor)

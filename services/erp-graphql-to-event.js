@@ -20,6 +20,8 @@ export function mapErpGraphqlEventToCalendar(node) {
   node.event_participants?.map((p) => ({
     type: p.reference_doctype__name,
     id: String(p.reference_docname__name), // 🔒 force scalar
+    attending: p.attending,
+    kly_lat_long: p.kly_lat_long,
   })) ?? [];
 
 

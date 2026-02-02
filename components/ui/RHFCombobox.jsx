@@ -27,7 +27,6 @@ export function RHFCombobox({
   multiple = false,
 }) {
   const [open, setOpen] = useState(false);
-console.log("OPTIONS",options,value)
   /* ---------------------------------------
      Helpers
   --------------------------------------- */
