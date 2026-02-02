@@ -1,6 +1,6 @@
 "use client";
 
-const GRAPHQL_ENDPOINT = "https://uat.elbrit.org/api/method/graphql";
+const GRAPHQL_ENDPOINT = process.env.NEXT_PUBLIC_ERP_URL;
 
 export async function uploadLeaveMedicalCertificate(values, leaveName) {
   if (!values?.medicalAttachment || !leaveName) return;

@@ -38,17 +38,13 @@ export function mapFormToErpTodo(values, resolvers) {
       erpName: todo.name,
       title: `To Do List-${todo.name}`,
       description: todo.description,
-  
       startDate: start.toISOString(),
       endDate: end.toISOString(),
-  
       tags: "Todo List",
       color: "orange",
       isTodo: true,
-  
       status: todo.status,
       priority: todo.priority,
-  
       employees: employeeId ? [employeeId] : [],
     };
   }

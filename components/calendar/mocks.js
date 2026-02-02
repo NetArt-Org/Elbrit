@@ -9,25 +9,35 @@ import { CALENDAR_USERS } from "@/components/auth/calendar-users";
 /* =========================================================
    TAGS
 ========================================================= */
+export const TAG_IDS = {
+  LEAVE: "Leave",
+  HQ_TOUR_PLAN: "HQ Tour Plan",
+  DOCTOR_VISIT_PLAN: "Doctor Visit plan",
+  BIRTHDAY: "Birthday",
+  TODO_LIST: "Todo List",
+  MEETING: "Meeting",
+  OTHER: "Other",
+};
 
 export const TAGS = [
-  { id: "Leave", label: "Leave" },
-  { id: "HQ Tour Plan", label: "HQ Tour Plan" },
-  { id: "Doctor Visit plan", label: "DR Tour Plan" },
-  { id: "Birthday", label: "DR Birthday" },
-  { id: "Todo List", label: "Todo List" },
-  { id: "Meeting", label: "Meeting" },
-  { id: "Other", label: "Other" },
+  { id: TAG_IDS.LEAVE, label: "Leave" },
+  { id: TAG_IDS.HQ_TOUR_PLAN, label: "HQ Tour Plan" },
+  { id: TAG_IDS.DOCTOR_VISIT_PLAN, label: "DR Tour Plan" },
+  { id: TAG_IDS.BIRTHDAY, label: "DR Birthday" },
+  { id: TAG_IDS.TODO_LIST, label: "Todo List" },
+  { id: TAG_IDS.MEETING, label: "Meeting" },
+  { id: TAG_IDS.OTHER, label: "Other" },
 ];
 export const PARTICIPANT_SOURCE_BY_TAG = {
-  "Leave": ["EMPLOYEE"],
-  "HQ Tour Plan": ["HQ_TERRITORY"],
-  "Meeting": ["EMPLOYEE"],
-  "Birthday": ["DOCTOR"],
-  "Doctor Visit plan": ["EMPLOYEE", "DOCTOR"],
-  "Todo List": ["EMPLOYEE"],
-  "Other": ["EMPLOYEE", "DOCTOR"],
+  [TAG_IDS.LEAVE]: ["EMPLOYEE"],
+  [TAG_IDS.HQ_TOUR_PLAN]: ["HQ_TERRITORY"],
+  [TAG_IDS.MEETING]: ["EMPLOYEE"],
+  [TAG_IDS.BIRTHDAY]: ["DOCTOR"],
+  [TAG_IDS.DOCTOR_VISIT_PLAN]: ["EMPLOYEE", "DOCTOR"],
+  [TAG_IDS.TODO_LIST]: ["EMPLOYEE"],
+  [TAG_IDS.OTHER]: ["EMPLOYEE", "DOCTOR"],
 };
+
 
 /* =========================================================
    MOCK GENERATOR

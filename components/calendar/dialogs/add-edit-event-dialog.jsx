@@ -4,50 +4,21 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
-import { Button } from "@/components/ui/button";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
-import { TAGS } from "@/components/calendar/mocks";
+import { TAG_IDS, TAGS } from "@/components/calendar/mocks";
 import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
 import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
 import { TodoWysiwyg } from "@/components/ui/TodoWysiwyg";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-} from "@/components/ui/form";
-
+import { Form, FormControl, FormField, } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-
-import {
-	Modal,
-	ModalClose,
-	ModalContent,
-	ModalDescription,
-	ModalFooter,
-	ModalHeader,
-	ModalTitle,
-	ModalTrigger,
-} from "@/components/ui/responsive-modal";
-
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-
+import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@/components/ui/responsive-modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, } from "@/components/calendar/form-fields";
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { useDisclosure } from "@/components/calendar/hooks";
 import { eventSchema } from "@/components/calendar/schemas";
 import { buildCalendarParticipants } from "@/lib/utils";
-import { RHFCombobox } from "@/components/ui/RHFCombobox";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@/lib/participants";
 import { TimePicker } from "@/components/ui/TimePicker";
@@ -56,11 +27,7 @@ import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-er
 import { useEmployeeResolvers } from "@/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@/services/file.service";
 
-export function AddEditEventDialog({
-	children,
-	event,
-	defaultTag,
-}) {
+export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent } = useCalendar();
 	const isEditing = !!event;
@@ -91,23 +58,7 @@ export function AddEditEventDialog({
 		resolver: zodResolver(eventSchema),
 		mode: "onChange",
 		defaultValues: {
-			title: event?.title ?? "",
-			description: event?.description ?? "",
-			startDate: initialDates.startDate,
-			endDate: initialDates.endDate,
-			tags: event?.tags ?? defaultTag ?? "Other",
-			hqTerritory: event?.hqTerritory ?? "",
-			employees: undefined,
-			doctor: undefined,
-			leaveType: event?.leaveType ?? "Casual Leave",
-			reportTo: undefined,
-			medicalAttachment: event?.medicalAttachment ?? "",
-			allDay: false,
-			todoStatus: "Open",
-			priority: "Medium",
-			leavePeriod: "Full",
-			halfDayDate: undefined,
-			approvedBy: undefined
+			title: event?.title ?? "", description: event?.description ?? "", startDate: initialDates.startDate, endDate: initialDates.endDate, tags: event?.tags ?? defaultTag ?? "Other", hqTerritory: event?.hqTerritory ?? "", employees: undefined, doctor: undefined, leaveType: event?.leaveType ?? "Casual Leave", reportTo: undefined, medicalAttachment: event?.medicalAttachment ?? "", allDay: false, todoStatus: "Open", priority: "Medium", leavePeriod: "Full", halfDayDate: undefined, approvedBy: undefined
 		},
 	});
 
@@ -116,12 +67,7 @@ export function AddEditEventDialog({
 	const allDay = useWatch({ control: form.control, name: "allDay" });
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
-	const {
-		doctor,
-		employees,
-		hqTerritory,
-		tags: selectedTag,
-	} = useWatch({ control: form.control });
+	const { doctor, employees, hqTerritory, tags: selectedTag, } = useWatch({ control: form.control });
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const isMulti = tagConfig?.employee?.multiselect === true;
@@ -145,11 +91,11 @@ export function AddEditEventDialog({
 			todoStatus: "Open", priority: "Medium", title: "",
 		});
 		// ❌ HQ is REQUIRED for this tag — never reset it
-		if (selectedTag !== "HQ Tour Plan") {
+		if (selectedTag !== TAG_IDS.HQ_TOUR_PLAN) {
 			reset({ hqTerritory: "" });
 		}
 
-		if (selectedTag !== "Leave") {
+		if (selectedTag !== TAG_IDS.LEAVE) {
 			reset({
 				leaveType: undefined,
 				leavePeriod: "Full",
@@ -160,7 +106,7 @@ export function AddEditEventDialog({
 
 
 	const leaveDays = useMemo(() => {
-		if (selectedTag !== "Leave") return 0;
+		if (selectedTag !== TAG_IDS.LEAVE) return 0;
 		if (!startDate || !endDate) return 0;
 
 		// Half day is always 1 day logically
@@ -174,7 +120,7 @@ export function AddEditEventDialog({
 		return differenceInCalendarDays(endDate, startDate) + 1;
 	}, [selectedTag, startDate, endDate, leavePeriod]);
 	const requiresMedical = useMemo(() => {
-		if (selectedTag !== "Leave") return false;
+		if (selectedTag !== TAG_IDS.LEAVE) return false;
 		if (leaveType !== "Sick Leave") return false;
 
 		const threshold =
@@ -222,7 +168,7 @@ export function AddEditEventDialog({
 	   Leave Balance Fetching
 	--------------------------------------------- */
 	useEffect(() => {
-		if (!isOpen || selectedTag !== "Leave") return;
+		if (!isOpen || selectedTag !== TAG_IDS.LEAVE) return;
 		let alive = true;
 		setLeaveLoading(true);
 
@@ -248,7 +194,7 @@ export function AddEditEventDialog({
 	   TODO: FORCE START DATE = NOW (HIDDEN)
 	--------------------------------------------- */
 	useEffect(() => {
-		if (selectedTag !== "Todo List") return;
+		if (selectedTag !== TAG_IDS.TODO_LIST) return;
 		if (isEditing) return;
 
 		const now = new Date();
@@ -353,15 +299,7 @@ export function AddEditEventDialog({
 				shouldValidate: true, // 🔑 REQUIRED
 			});
 		}
-	}, [
-		selectedTag,
-		hqTerritory,
-		doctor,
-		employees,
-		doctorOptions,
-		employeeOptions,
-		isEditing,
-	]);
+	}, [selectedTag, hqTerritory, doctor, employees, doctorOptions, employeeOptions, isEditing,]);
 
 	/* --------------------------------------------------
 	   AUTO SELECT LOGGED IN USER
@@ -369,15 +307,7 @@ export function AddEditEventDialog({
 	useEffect(() => {
 		if (!selectedTag) return;
 
-		loadParticipantOptionsByTag({
-			tag: selectedTag,
-			employeeOptions,
-			hqTerritoryOptions,
-			doctorOptions,
-			setEmployeeOptions,
-			setHqTerritoryOptions,
-			setDoctorOptions,
-		});
+		loadParticipantOptionsByTag({ tag: selectedTag, employeeOptions, hqTerritoryOptions, doctorOptions, setEmployeeOptions, setHqTerritoryOptions, setDoctorOptions, });
 
 		// 🔒 ABSOLUTE GUARD
 		if (isEditing) return;
@@ -397,7 +327,7 @@ export function AddEditEventDialog({
 --------------------------------------------- */
 	useEffect(() => {
 		if (!startDate) return;
-		if (selectedTag === "Meeting" || selectedTag === "Birthday") return;
+		if (selectedTag === TAG_IDS.MEETING || selectedTag === TAG_IDS.BIRTHDAY) return;
 		if (endDateTouchedRef.current) return;
 
 		const now = new Date();
@@ -436,7 +366,7 @@ export function AddEditEventDialog({
    MEETING TIME LOGIC (MERGED)
 --------------------------------------------- */
 	useEffect(() => {
-		if (selectedTag !== "Meeting") return;
+		if (selectedTag !== TAG_IDS.MEETING) return;
 		if (!startDate) return;
 		// ❌ DO NOT override manual edits
 		if (endDateTouchedRef.current) return;
@@ -482,19 +412,20 @@ export function AddEditEventDialog({
 
 		return `${doctorName}-${employeeName}`;
 	};
+	const finalize = (message) => {
+		toast.success(message);
+		onClose();
+	};
 
-
-	/* --------------------------------------------------
-   SUBMIT
--------------------------------------------------- */
-	const onSubmit = async (values) => {
-		/* ==================================================
-		   NORMALIZATION
-		================================================== */
-		if (values.tags === "Birthday" && !values.endDate) {
+	const upsertCalendarEvent = (calendarEvent) => {
+		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+	};
+	const handleBirthday = async (values) => {
+		if (!values.endDate) {
 			values.endDate = values.startDate;
 		}
-		if (values.tags === "Birthday" && values.doctor) {
+
+		if (values.doctor) {
 			const doctorId = Array.isArray(values.doctor)
 				? values.doctor[0]
 				: values.doctor;
@@ -504,145 +435,94 @@ export function AddEditEventDialog({
 			} catch (err) {
 				console.error("Failed to update doctor DOB", err);
 				toast.error("Failed to update Doctor DOB");
-				return;
+				return false;
 			}
 		}
-		/* ==================================================
-		   LEAVE FLOW (ONLY)
-		================================================== */
-		if (values.tags === "Leave") {
-			if (requiresMedical && !values.medicalAttachment) {
-				toast.error("Medical certificate required");
-				return;
-			}
-			const leaveDoc = mapFormToErpLeave(values);
-			delete leaveDoc.fsl_attach;
-			console.log("LEAVE DOC", leaveDoc);
 
-			const savedLeave = await saveLeaveApplication(leaveDoc);
-
-			if (requiresMedical && values.medicalAttachment) {
-				const uploadResult = await uploadLeaveMedicalCertificate(
-					values,
-					savedLeave.name
-				);
-
-				if (uploadResult?.fileUrl) {
-					await updateLeaveAttachment(
-						savedLeave.name,
-						uploadResult.fileUrl
-					);
-				}
-			}
-
-			const calendarLeave = mapErpLeaveToCalendar({
-				...leaveDoc,
-				name: savedLeave.name,
-				color: "#DC2626",
-			});
-
-			event ? updateEvent(calendarLeave) : addEvent(calendarLeave);
-			toast.success("Leave applied successfully");
-			onClose();
+		return true;
+	};
+	const handleLeave = async (values) => {
+		if (requiresMedical && !values.medicalAttachment) {
+			toast.error("Medical certificate required");
 			return;
 		}
 
-		/* ==================================================
-		   TODO LIST FLOW (ONLY)
-		================================================== */
-		if (values.tags === "Todo List") {
-			const todoDoc = mapFormToErpTodo(values, employeeResolvers);
+		const leaveDoc = mapFormToErpLeave(values);
+		delete leaveDoc.fsl_attach;
 
+		const savedLeave = await saveLeaveApplication(leaveDoc);
 
-			console.log("ERP TODO DOC", todoDoc, values);
-
-			const savedTodo = await saveDocToErp(todoDoc);
-
-			const calendarTodo = mapErpTodoToCalendar({
-				...todoDoc,
-				name: savedTodo.name,
-			}, employeeResolvers);
-			console.log("CAlendar TODO DOC", calendarTodo);
-			event ? updateEvent(calendarTodo) : addEvent(calendarTodo);
-			toast.success("Todo saved");
-			onClose();
-			return;
-		}
-		/* ==================================================
-			 DOCTOR VISIT PLAN (FAN-OUT ONLY, NO UPDATE)
-		  ================================================== */
-		if (
-			values.tags === "Doctor Visit plan" &&
-			Array.isArray(values.doctor) &&
-			values.doctor.length > 0
-		) {
-			for (const doctorId of values.doctor) {
-				// 1️⃣ ERP DOC (ONE PER DOCTOR)
-				const perDoctorErpDoc = mapFormToErpEvent(
-					{
-						...values,
-						title: buildDoctorVisitTitle(doctorId, values),
-						doctor: doctorId, // 👈 single doctor
-					},
-					{}
-				);
-
-				const savedEvent = await saveEvent(perDoctorErpDoc);
-				console.log("DOCTOR", perDoctorErpDoc, doctorId)
-
-				// 2️⃣ CALENDAR EVENT (ALWAYS ADD, NEVER UPDATE)
-				const calendarEvent = {
-					erpName: savedEvent.name,
-					title: buildDoctorVisitTitle(doctorId, values),
-					description: values.description,
-					startDate: perDoctorErpDoc.starts_on,
-					endDate: perDoctorErpDoc.ends_on,
-					color: tagConfig.fixedColor,
-					tags: values.tags,
-					owner: LOGGED_IN_USER.id,
-					participants: buildCalendarParticipants(
-						{
-							...values,
-							doctor: doctorId, // 👈 single doctor
-						},
-						employeeOptions,
-						doctorOptions
-					),
-				};
-
-				addEvent(calendarEvent); // ✅ ALWAYS ADD
-			}
-
-			toast.success(
-				`Created ${values.doctor.length} Doctor Visit events`
+		if (requiresMedical && values.medicalAttachment) {
+			const uploadResult = await uploadLeaveMedicalCertificate(
+				values,
+				savedLeave.name
 			);
-			onClose();
-			return; // 🔑 STOP HERE
+
+			if (uploadResult?.fileUrl) {
+				await updateLeaveAttachment(
+					savedLeave.name,
+					uploadResult.fileUrl
+				);
+			}
 		}
 
-		/* ==================================================
-		   DEFAULT EVENT FLOW
-		================================================== */
+		const calendarLeave = mapErpLeaveToCalendar({
+			...leaveDoc,
+			name: savedLeave.name,
+			color: "#DC2626",
+		});
+
+		upsertCalendarEvent(calendarLeave);
+		finalize("Leave applied successfully");
+	};
+	const handleTodo = async (values) => {
+		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
+		const savedTodo = await saveDocToErp(todoDoc);
+
+		const calendarTodo = mapErpTodoToCalendar(
+			{ ...todoDoc, name: savedTodo.name },
+			employeeResolvers
+		);
+
+		upsertCalendarEvent(calendarTodo);
+		finalize("Todo saved");
+	};
+	const handleDoctorVisitPlan = async (values) => {
+		for (const doctorId of values.doctor) {
+			const erpDoc = mapFormToErpEvent(
+				{
+					...values,
+					title: buildDoctorVisitTitle(doctorId, values),
+					doctor: doctorId,
+				},
+				{}
+			);
+
+			const savedEvent = await saveEvent(erpDoc);
+
+			const calendarEvent = {
+				erpName: savedEvent.name, title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
+				participants: buildCalendarParticipants(
+					{ ...values, doctor: doctorId },
+					employeeOptions,
+					doctorOptions
+				),
+			};
+
+			addEvent(calendarEvent);
+		}
+
+		finalize(`Created ${values.doctor.length} Doctor Visit events`);
+	};
+	const handleDefaultEvent = async (values) => {
 		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
 		});
 
-
-		console.log("ERP DOC", erpDoc);
-
 		const savedEvent = await saveEvent(erpDoc);
 
 		const calendarEvent = {
-			...(event ?? {}),
-			erpName: savedEvent.name,
-			title: values.title,
-			description: values.description,
-			startDate: erpDoc.starts_on,
-			endDate: erpDoc.ends_on,
-			color: tagConfig.fixedColor,
-			tags: values.tags,
-			owner: event ? event.owner : LOGGED_IN_USER.id,
-			hqTerritory: values.hqTerritory || "",
+			...(event ?? {}), erpName: savedEvent.name, title: values.title, description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id, hqTerritory: values.hqTerritory || "",
 			participants: buildCalendarParticipants(
 				values,
 				employeeOptions,
@@ -650,32 +530,55 @@ export function AddEditEventDialog({
 			),
 		};
 
-		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
-		toast.success("Event saved");
-		onClose();
+		upsertCalendarEvent(calendarEvent);
+		finalize("Event saved");
 	};
+	const onSubmit = async (values) => {
+		/* ========= NORMALIZATION ========= */
+		if (values.tags === "Birthday") {
+			const ok = await handleBirthday(values);
+			if (!ok) return;
+		}
 
+		/* ========= TAG ROUTING ========= */
+		switch (values.tags) {
+			case TAG_IDS.LEAVE:
+				await handleLeave(values);
+				return;
+
+			case TAG_IDS.TODO_LIST:
+				await handleTodo(values);
+				return;
+
+			case TAG_IDS.DOCTOR_VISIT_PLAN:
+				if (Array.isArray(values.doctor) && values.doctor.length) {
+					await handleDoctorVisitPlan(values);
+				}
+				return;
+
+			default:
+				await handleDefaultEvent(values);
+		}
+		finalize("Leave applied successfully");
+	};
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
 
-			<ModalContent className="
-    max-h-[90vh] min-h-[70vh] flex flex-col
-    overflow-scroll
-  ">
+			<ModalContent className=" max-h-[90vh] min-h-[70vh] flex flex-col overflow-scroll">
 				<ModalHeader>
 					<ModalTitle>{isEditing ? "Edit Event" : "Add Event"}</ModalTitle>
 					{/* <ModalDescription /> */}
 				</ModalHeader>
 
-				<Form {...form}>
+				<Form {...form} >
 					<form
 						id="event-form"
 						onSubmit={form.handleSubmit(onSubmit)}
 						className="grid gap-4"
 					>
-						{/* TAGS */}
+						{/* ================= TAGS ================= */}
 						<FormField
 							control={form.control}
 							name="tags"
@@ -697,238 +600,160 @@ export function AddEditEventDialog({
 								</div>
 							)}
 						/>
-						{selectedTag === "Leave" && (
-							<>
-								<FormField
-									control={form.control}
-									name="leaveType"
-									render={({ field, fieldState }) => (
-										<FormItem>
-											<FormLabel>Leave Type</FormLabel>
 
-											<LeaveTypeCards
-												balance={leaveBalance}
-												loading={leaveLoading}
-												value={field.value}
-												onChange={field.onChange}
-											/>
-											{field.value && leaveBalance?.[field.value] && (
-												<div className="mt-2 text-sm text-muted-foreground">
-													Balance:{" "}
-													{leaveBalance[field.value].available}
-													{" / "}
-													{leaveBalance[field.value].allocated}
-												</div>
-											)}
-											{fieldState.error && (
-												<p className="text-sm text-red-500">
-													{fieldState.error.message}
-												</p>
-											)}
-										</FormItem>
-									)}
-								/>
-							</>
+						{/* ================= LEAVE TYPE ================= */}
+						{selectedTag === TAG_IDS.LEAVE && (
+							<FormField
+								control={form.control}
+								name="leaveType"
+								render={({ field, fieldState }) => (
+									<RHFFieldWrapper
+										label="Leave Type"
+										error={fieldState.error?.message}
+									>
+										<LeaveTypeCards
+											balance={leaveBalance}
+											loading={leaveLoading}
+											value={field.value}
+											onChange={field.onChange}
+										/>
+										{field.value && leaveBalance?.[field.value] && (
+											<div className="mt-2 text-sm text-muted-foreground">
+												Balance: {leaveBalance[field.value].available} /{" "}
+												{leaveBalance[field.value].allocated}
+											</div>
+										)}
+									</RHFFieldWrapper>
+								)}
+							/>
 						)}
-						{/* TITLE ALWAYS BELOW TAGS */}
+
+						{/* ================= TITLE ================= */}
 						{!tagConfig.hide?.includes("title") && (
 							<FormField
 								control={form.control}
 								name="title"
 								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>Title</FormLabel>
+									<RHFFieldWrapper
+										label="Title"
+										error={fieldState.error?.message}
+									>
 										<FormControl>
 											<Input placeholder="Enter title" {...field} />
 										</FormControl>
-										{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
-									</FormItem>
+									</RHFFieldWrapper>
 								)}
 							/>
 						)}
-						{selectedTag === "HQ Tour Plan" && (
-							<FormField
-								control={form.control}
-								name="hqTerritory"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>HQ Territory</FormLabel>
-										<FormControl>
-											<RHFCombobox
-												options={hqTerritoryOptions}
-												value={field.value}
-												onChange={field.onChange}
-												placeholder="Select HQ Territory"
-											/>
-										</FormControl>
-										{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
-									</FormItem>
-								)}
-							/>
-						)}
-						{/* DOCTOR FIRST */}
-						{!tagConfig.hide?.includes("doctor") && (
-							<FormField
-								control={form.control}
-								name="doctor"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>Doctor</FormLabel>
-										<FormControl>
-											<RHFCombobox
-												options={doctorOptions}
-												value={field.value}
-												onChange={field.onChange}
-												placeholder="Select doctor"
-												multiple={isDoctorMulti}
-												selectionLabel={'doctor'}
-											/>
-										</FormControl>
-										{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
-									</FormItem>
-								)}
-							/>
-						)}
-						{selectedTag === "Meeting" ? (
-							<>
-								{/* DATE ROW */}
-								<div className="grid">
-									<FormField
-										control={form.control}
-										name="startDate"
-										render={({ field }) => (
-											<DateTimePicker
-												form={form}
-												field={field}
-												hideTime={true}
-												label="Date"
-											/>
-										)}
-									/>
-								</div>
 
-								{/* ALL DAY */}
+						{/* ================= HQ TERRITORY ================= */}
+						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
+							<RHFComboboxField control={form.control} name="hqTerritory" label="HQ Territory" options={hqTerritoryOptions} placeholder="Select HQ Territory"
+							/>
+						)}
+
+						{/* ================= DOCTOR ================= */}
+						{!tagConfig.hide?.includes("doctor") && (
+							<RHFComboboxField control={form.control} name="doctor" label="Doctor" options={doctorOptions} multiple={isDoctorMulti} placeholder="Select doctor" selectionLabel="doctor"
+							/>
+						)}
+
+						{/* ================= MEETING ================= */}
+						{selectedTag === TAG_IDS.MEETING ? (
+							<>
+								<RHFDateTimeField
+									control={form.control}
+									form={form}
+									name="startDate"
+									label="Date"
+									hideTime
+								/>
+
 								<FormField
 									control={form.control}
 									name="allDay"
 									render={({ field }) => (
-										<FormItem className="flex items-center gap-2">
-											<Checkbox
-												checked={field.value}
-												onCheckedChange={field.onChange}
-											/>
-											<FormLabel style={{ marginTop: 0 }}>All day</FormLabel>
-										</FormItem>
+										<InlineCheckboxField
+											label="All day"
+											checked={field.value}
+											onChange={field.onChange}
+										/>
 									)}
 								/>
 
-								{/* TIME ROW */}
 								{!form.watch("allDay") && (
 									<div className="grid grid-cols-2 gap-3">
-										{/* START TIME */}
 										<FormField
 											control={form.control}
 											name="startDate"
 											render={({ field }) => (
-												<FormItem>
-													<FormLabel>Start Time</FormLabel>
+												<RHFFieldWrapper label="Start Time">
 													<TimePicker
 														value={field.value}
-														onChange={(date) => field.onChange(date)}
+														onChange={field.onChange}
 														use24Hour={false}
 													/>
-												</FormItem>
+												</RHFFieldWrapper>
 											)}
 										/>
 
-										{/* END TIME */}
 										<FormField
 											control={form.control}
 											name="endDate"
 											render={({ field }) => (
-												<FormItem>
-													<FormLabel>End Time</FormLabel>
+												<RHFFieldWrapper label="End Time">
 													<TimePicker
 														value={field.value}
+														minTime={startDate}
+														use24Hour={false}
 														onChange={(date) => {
 															endDateTouchedRef.current = true;
 															field.onChange(date);
 														}}
-														use24Hour={false}
-														minTime={startDate}
 													/>
-												</FormItem>
+												</RHFFieldWrapper>
 											)}
 										/>
 									</div>
 								)}
 							</>
 						) : (
-							/* EXISTING NON-MEETING LOGIC (UNCHANGED) */
+							/* ================= NON-MEETING ================= */
 							<div
-								className={`grid gap-3 ${isFieldVisible("startDate") && isFieldVisible("endDate") || selectedTag === "Todo List"
+								className={`grid gap-3 ${(isFieldVisible("startDate") &&
+									isFieldVisible("endDate")) ||
+									selectedTag === TAG_IDS.TODO_LIST
 									? "grid-cols-2"
 									: "grid-cols-1"
 									}`}
 							>
-								{/* START DATE */}
 								{isFieldVisible("startDate") && (
-									<FormField
-										control={form.control}
-										name="startDate"
-										render={({ field }) => (
-											<DateTimePicker
-												form={form}
-												field={field}
-												label={getFieldLabel("startDate", "Start Date")}
-												hideTime={tagConfig.dateOnly}
-												allowAllDates={selectedTag === "Birthday"}
-											/>
-										)}
+									<RHFDateTimeField control={form.control} form={form} name="startDate" label={getFieldLabel("startDate", "Start Date")} hideTime={tagConfig.dateOnly} allowAllDates={selectedTag === TAG_IDS.BIRTHDAY}
 									/>
 								)}
 
-								{/* END / DUE DATE */}
 								{isFieldVisible("endDate") && (
-									<FormField
-										control={form.control}
-										name="endDate"
-										render={({ field }) => (
-											<DateTimePicker
-												form={form}
-												field={{
-													...field,
-													onChange: (date) => {
-														endDateTouchedRef.current = true;
-														field.onChange(date);
-													},
-												}}
-												label={getFieldLabel("endDate", "End Date")}
-												hideTime={tagConfig.dateOnly}
-											/>
-										)}
+									<RHFDateTimeField control={form.control} form={form} name="endDate" label={getFieldLabel("endDate", "End Date")} hideTime={tagConfig.dateOnly}
+										onChange={(date) => {
+											endDateTouchedRef.current = true;
+											form.setValue("endDate", date);
+										}}
 									/>
 								)}
-								{selectedTag === "Todo List" && (
-									<FormField
+
+								{selectedTag === TAG_IDS.TODO_LIST && (
+									<FormField 
 										control={form.control}
 										name="priority"
 										render={({ field, fieldState }) => (
-											<FormItem className="flex flex-col" >
-												<FormLabel>Priority</FormLabel>
-												<Select value={field.value} onValueChange={field.onChange}>
+											<RHFFieldWrapper
+												label="Priority"
+												error={fieldState.error?.message}
+											>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
 													<SelectTrigger>
 														<SelectValue placeholder="Select priority" />
 													</SelectTrigger>
@@ -940,178 +765,110 @@ export function AddEditEventDialog({
 														))}
 													</SelectContent>
 												</Select>
-												{fieldState.error && (
-													<p className="text-sm text-red-500">
-														{fieldState.error.message}
-													</p>
-												)}
-											</FormItem>
+											</RHFFieldWrapper>
 										)}
 									/>
 								)}
 							</div>
 						)}
-						{/* Assigned to Display */}
-						{selectedTag == "Todo List" &&
-							<FormField
-								control={form.control}
-								name="assignedTo"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>Assigned To</FormLabel>
-										<FormControl>
-											<RHFCombobox
-												value={field.value}
-												onChange={field.onChange}
-												options={employeeOptions}
-												placeholder="Select employees"
-												searchPlaceholder="Search employee"
-												multiple={true}
-											/>
-										</FormControl>
-										{fieldState.error && (
-											<p className="text-sm text-red-500">
-												{fieldState.error.message}
-											</p>
-										)}
-									</FormItem>
-								)}
+
+						{/* ================= ASSIGNED TO ================= */}
+						{selectedTag === TAG_IDS.TODO_LIST && (
+							<RHFComboboxField control={form.control} name="assignedTo" label="Assigned To" options={employeeOptions} multiple placeholder="Select employees" searchPlaceholder="Search employee"
 							/>
-						}
-						{/* EMPLOYEES */}
+						)}
+
+						{/* ================= EMPLOYEES ================= */}
 						{!tagConfig.hide?.includes("employees") &&
 							(!tagConfig.employee?.autoSelectLoggedIn ||
 								tagConfig.employee?.multiselect) && (
-								<FormField
+								<RHFComboboxField
 									control={form.control}
 									name="employees"
-									render={({ field, fieldState }) => (
-										<FormItem>
-											<FormLabel> {selectedTag === "Todo List" ? "Allocated To" : "Employees"}</FormLabel>
-											<FormControl>
-												<RHFCombobox
-													value={field.value}
-													onChange={field.onChange}
-													options={employeeOptions}
-													placeholder="Select employees"
-													searchPlaceholder="Search employee"
-													multiple={isMulti}
-												/>
-											</FormControl>
-											{fieldState.error && (
-												<p className="text-sm text-red-500">
-													{fieldState.error.message}
-												</p>
-											)}
-										</FormItem>
-									)}
+									label={
+										selectedTag === TAG_IDS.TODO_LIST
+											? "Allocated To"
+											: "Employees"
+									} 
+									options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
 								/>
 							)}
-						{selectedTag === "Leave" && (
+
+						{/* ================= HALF DAY ================= */}
+						{selectedTag === TAG_IDS.LEAVE && (
 							<FormField
 								control={form.control}
 								name="leavePeriod"
 								render={({ field }) => (
-									<FormItem className="flex items-center gap-2">
-										{/* 🔧 LEAVE HALF DAY FIX: checkbox instead of radio */}
-										<Checkbox
-											checked={field.value === "Half"}
-											onCheckedChange={(checked) => {
-												field.onChange(checked ? "Half" : "Full");
-											}}
-										/>
-										<FormLabel style={{ marginTop: 0 }}>
-											Half Day
-										</FormLabel>
-									</FormItem>
-								)}
-							/>
-						)}
-						{selectedTag === "Leave" && leavePeriod === "Half" && (
-							<FormField
-								control={form.control}
-								name="halfDayDate"
-								render={({ field, fieldState }) => (
-									<DateTimePicker
-										form={form}
-										field={{
-											...field,
-											onChange: (date) => {
-												// 🔧 LEAVE HALF DAY FIX: range validation
-												if (date < startDate || date > endDate) {
-													toast.error("Half Day date must be between From and To dates");
-													return;
-												}
-												field.onChange(date);
-											},
-										}}
-										label="Half Day Date"
-										hideTime={true}
-										minDate={startDate}
-										maxDate={endDate}
+									<InlineCheckboxField
+										label="Half Day"
+										checked={field.value === "Half"}
+										onChange={(checked) =>
+											field.onChange(checked ? "Half" : "Full")
+										}
 									/>
 								)}
 							/>
 						)}
 
-						{selectedTag === "Leave" && requiresMedical && (
+						{selectedTag === TAG_IDS.LEAVE && leavePeriod === "Half" && (
+							<RHFDateTimeField control={form.control} form={form} name="halfDayDate" label="Half Day Date" hideTime minDate={startDate} maxDate={endDate}
+								onChange={(date) => {
+									if (date < startDate || date > endDate) {
+										toast.error(
+											"Half Day date must be between From and To dates"
+										);
+										return;
+									}
+									form.setValue("halfDayDate", date);
+								}}
+							/>
+						)}
+
+						{/* ================= MEDICAL ATTACHMENT ================= */}
+						{selectedTag === TAG_IDS.LEAVE && requiresMedical && (
 							<FormField
 								control={form.control}
 								name="medicalAttachment"
 								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>Medical Certificate</FormLabel>
-										<Input type="file" onChange={e => field.onChange(e.target.files?.[0])} />
-										{/* ✅ Existing attachment link */}
-										{event?.medicalAttachment && (
-											<div className="mt-2 text-sm">
-												<span className="text-muted-foreground">
-													Existing file:
-												</span>{" "}
-												<a
-													href={process.env.NEXT_PUBLIC_ERP_URL + event.medicalAttachment}
-													target="_blank"
-													rel="noopener noreferrer"
-													className="text-blue-600 underline"
-												>
-													View / Download
-												</a>
-											</div>
-										)}
-
-										{fieldState.error && (
-											<p className="text-sm text-red-500">{fieldState.error.message}</p>
-										)}
-									</FormItem>
+									<RHFFieldWrapper
+										label="Medical Certificate"
+										error={fieldState.error?.message}
+									>
+										<Input
+											type="file"
+											onChange={(e) =>
+												field.onChange(e.target.files?.[0])
+											}
+										/>
+									</RHFFieldWrapper>
 								)}
 							/>
 						)}
+
+						{/* ================= DESCRIPTION ================= */}
 						{!tagConfig.hide?.includes("description") && (
 							<FormField
 								control={form.control}
 								name="description"
 								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Description</FormLabel>
+									<RHFFieldWrapper label="Description">
 										<TodoWysiwyg
 											value={field.value}
 											onChange={field.onChange}
 										/>
-									</FormItem>
+									</RHFFieldWrapper>
 								)}
 							/>
 						)}
 					</form>
 				</Form>
+
 				<div className="pt-4 flex mt-auto justify-end">
-					<ModalFooter className="gap-2">
-						<ModalClose asChild>
-							<Button variant="outline">Cancel</Button>
-						</ModalClose>
-						<Button type="submit" form="event-form" disabled={!form.formState.isValid || form.formState.isSubmitting}>
-							{isEditing ? "Update" : "Submit"}
-						</Button>
-					</ModalFooter>
+					<FormFooter
+						isEditing={isEditing}
+						disabled={form.formState.isSubmitting}
+					/>
 				</div>
 			</ModalContent>
 		</Modal>
