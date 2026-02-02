@@ -1,8 +1,25 @@
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { z } from "zod";
-import {differenceInCalendarDays} from "date-fns"
+import { differenceInCalendarDays } from "date-fns"
 
 
+const pobItemSchema = z.object({
+	item__name: z
+	  .union([
+		z.string(),
+		z.object({
+		  value: z.string(),
+		  label: z.string(),
+		}),
+	  ])
+	  .transform(v => typeof v === "string" ? v : v.value),
+  
+	qty: z.number().min(1),
+	rate: z.number(),
+	amount: z.number(),
+  });
+
+  
 export const eventSchema = z.object({
 	title: z.string().optional().or(z.literal("")),
 	tags: z.string(),
@@ -17,75 +34,78 @@ export const eventSchema = z.object({
 	leaveType: z.string().optional(),
 	leavePeriod: z.enum(["Full", "Half"]).optional(),
 	medicalAttachment: z.any().optional(),
-	halfDayDate:  z.date().optional(),
-	approvedBy:  z.date().optional(),
+	halfDayDate: z.date().optional(),
+	approvedBy: z.date().optional(),
 	todoStatus: z.enum(["Open", "Closed", "Cancelled"]).optional(),
 	priority: z.enum(["High", "Medium", "Low"]).optional(),
-  }).superRefine((data, ctx) => {
+	pob_given: z.enum(["Yes", "No"]).optional(),
+	fsl_doctor_item: z.array(pobItemSchema).optional(),
+
+
+}).superRefine((data, ctx) => {
 	const config = TAG_FORM_CONFIG[data.tags] ?? TAG_FORM_CONFIG.DEFAULT;
-  
+
 	/* ---------------------------------------------
 	   REQUIRED FIELDS (GENERIC)
 	--------------------------------------------- */
 	config.required?.forEach((field) => {
-	  const value = data[field];
-  
-	  const isEmpty =
-		value === undefined ||
-		value === null ||
-		value === "" ||
-		(Array.isArray(value) && value.length === 0);
-  
-	  if (isEmpty) {
-		ctx.addIssue({
-		  path: [field],
-		  message: "This field is required",
-		  code: z.ZodIssueCode.custom,
-		});
-	  }
+		const value = data[field];
+
+		const isEmpty =
+			value === undefined ||
+			value === null ||
+			value === "" ||
+			(Array.isArray(value) && value.length === 0);
+
+		if (isEmpty) {
+			ctx.addIssue({
+				path: [field],
+				message: "This field is required",
+				code: z.ZodIssueCode.custom,
+			});
+		}
 	});
-  
+
 	/* ---------------------------------------------
    LEAVE: MEDICAL CERTIFICATE RULE (ALIGNED)
 --------------------------------------------- */
-if (
-	data.tags === "Leave" &&
-	data.leaveType === "Sick Leave" &&
-	data.startDate &&
-	data.endDate
-  ) {
-	const config = TAG_FORM_CONFIG.Leave;
-	const threshold =
-	  config.leave?.medicalCertificateAfterDays ?? 2;
-  
-	const days =
-	  differenceInCalendarDays(data.endDate, data.startDate) + 1;
-  
-	if (days > threshold && !data.medicalAttachment) {
-	  ctx.addIssue({
-		path: ["medicalAttachment"],
-		message: "Medical certificate is required",
-		code: z.ZodIssueCode.custom,
-	  });
+	if (
+		data.tags === "Leave" &&
+		data.leaveType === "Sick Leave" &&
+		data.startDate &&
+		data.endDate
+	) {
+		const config = TAG_FORM_CONFIG.Leave;
+		const threshold =
+			config.leave?.medicalCertificateAfterDays ?? 2;
+
+		const days =
+			differenceInCalendarDays(data.endDate, data.startDate) + 1;
+
+		if (days > threshold && !data.medicalAttachment) {
+			ctx.addIssue({
+				path: ["medicalAttachment"],
+				message: "Medical certificate is required",
+				code: z.ZodIssueCode.custom,
+			});
+		}
 	}
-  }
-  
-  
+
+
 	/* ---------------------------------------------
 	   LEAVE: HALF DAY DATE REQUIRED
 	--------------------------------------------- */
 	if (
-	  data.tags === "Leave" &&
-	  data.leavePeriod === "Half" &&
-	  !data.halfDayDate
+		data.tags === "Leave" &&
+		data.leavePeriod === "Half" &&
+		!data.halfDayDate
 	) {
-	  ctx.addIssue({
-		path: ["halfDayDate"],
-		message: "Half Day Date is required",
-		code: z.ZodIssueCode.custom,
-	  });
+		ctx.addIssue({
+			path: ["halfDayDate"],
+			message: "Half Day Date is required",
+			code: z.ZodIssueCode.custom,
+		});
 	}
-  });
-  
+});
 
-  
+

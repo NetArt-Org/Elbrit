@@ -26,6 +26,9 @@ import { mapFormToErpTodo, mapErpTodoToCalendar } from "@/services/todo-to-erp-g
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-erp";
 import { useEmployeeResolvers } from "@/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@/services/file.service";
+import { fetchItems } from "@/services/participants.service";
+import { getAvailableItems, updatePobRow } from "@/lib/helper";
+import { Button } from "@/components/ui/button";
 
 export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
@@ -37,7 +40,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
-
+	const [itemOptions, setItemOptions] = useState([]);
 	const endDateTouchedRef = useRef(false); // existing
 
 	const initialDates = useMemo(() => {
@@ -82,6 +85,8 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			approvedBy: event?.approvedBy ?? "",
 			attending: employeeParticipant?.attending === 1,
 			kly_lat_long: employeeParticipant?.kly_lat_long ?? "",
+			pob_given: event?.pob_given ?? "No",
+			fsl_doctor_item: event?.fsl_doctor_item ?? [],
 		},
 	});
 
@@ -91,6 +96,31 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
 	const { doctor, employees, hqTerritory, tags: selectedTag, attending } = useWatch({ control: form.control });
+	const pobGiven = useWatch({
+		control: form.control,
+		name: "pob_given",
+	});
+	const pobItems = useWatch({
+		control: form.control,
+		name: "fsl_doctor_item",
+	});
+	useEffect(() => {
+		if (!pobItems?.length || !itemOptions.length) return;
+
+		pobItems.forEach((row, index) => {
+			if (!row?.item__name) return;
+
+			const item = itemOptions.find(i => i.value === row.item__name);
+			if (!item) return;
+
+			// avoid infinite loop
+			if (row.rate === item.rate) return;
+
+			updatePobRow(form, index, {
+				rate: Number(item.rate) || 0,
+			});
+		});
+	}, [pobItems, itemOptions]);
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const visibleTags = useMemo(() => {
@@ -181,6 +211,29 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			});
 		}
 	}, [selectedTag]);
+	/* ---------------------------------------------
+	  Fetch POB ITEMS
+	--------------------------------------------- */
+	useEffect(() => {
+		if (!isEditing) return;
+		if (selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN) return;
+		if (pobGiven !== "Yes") return;
+		if (itemOptions.length) return;
+
+		fetchItems().then(setItemOptions);
+	}, [isEditing, pobGiven, selectedTag]);
+
+	/* ---------------------------------------------
+	  RESET POB ITEMS
+	--------------------------------------------- */
+	useEffect(() => {
+		if (pobGiven !== "Yes") {
+			form.setValue("fsl_doctor_item", [], {
+				shouldDirty: true,
+			});
+		}
+	}, [pobGiven]);
+
 	/* ---------------------------------------------
 		   Half day logic
 		--------------------------------------------- */
@@ -580,9 +633,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		finalize("Todo saved");
 	};
 	const handleDoctorVisitPlan = async (values) => {
-		console.log("SUBMIT doctors raw:", values.doctor);
-		console.log("SUBMIT doctorOptions:", doctorOptions);
-		console.log("SUBMIT doctorOptions length:", doctorOptions.length);
+		// console.log("SUBMIT doctors raw:", values.doctor);
+		// console.log("SUBMIT doctorOptions:", doctorOptions);
+		// console.log("SUBMIT doctorOptions length:", doctorOptions.length);
 		const normalizedDoctors = (Array.isArray(values.doctor)
 			? values.doctor
 			: [values.doctor]
@@ -760,13 +813,28 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 						{/* ================= HQ TERRITORY ================= */}
 						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
-							<RHFComboboxField control={form.control} name="hqTerritory" label="HQ Territory" options={hqTerritoryOptions} placeholder="Select HQ Territory"
+							<FormField
+								control={form.control}
+								name="hqTerritory"
+								render={({ field }) => (
+									<RHFFieldWrapper label="HQ Territory">
+										<RHFComboboxField  {...field} options={hqTerritoryOptions} placeholder="Select HQ Territory" />
+									</RHFFieldWrapper>
+								)}
 							/>
 						)}
 
 						{/* ================= DOCTOR ================= */}
 						{!tagConfig.hide?.includes("doctor") && (
-							<RHFComboboxField control={form.control} name="doctor" label="Doctor" options={doctorOptions} multiple={isDoctorMulti} placeholder="Select doctor" selectionLabel="doctor"
+							<FormField
+								control={form.control}
+								name="doctor"
+								render={({ field }) => (
+									<RHFFieldWrapper label="Doctor">
+										<RHFComboboxField {...field} options={doctorOptions} multiple={isDoctorMulti} placeholder="Select doctor" selectionLabel="doctor"
+										/>
+									</RHFFieldWrapper>
+								)}
 							/>
 						)}
 
@@ -886,7 +954,15 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 						{/* ================= ASSIGNED TO ================= */}
 						{selectedTag === TAG_IDS.TODO_LIST && (
-							<RHFComboboxField control={form.control} name="assignedTo" label="Assigned To" options={employeeOptions} multiple placeholder="Select employees" searchPlaceholder="Search employee"
+							<FormField
+								control={form.control}
+								name="assignedTo"
+								render={({ field }) => (
+									<RHFFieldWrapper label="Assigned To">
+										<RHFComboboxField {...field} options={employeeOptions} multiple placeholder="Select employees" searchPlaceholder="Search employee"
+										/>
+									</RHFFieldWrapper>
+								)}
 							/>
 						)}
 
@@ -894,15 +970,20 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 						{!tagConfig.hide?.includes("employees") &&
 							(!tagConfig.employee?.autoSelectLoggedIn ||
 								tagConfig.employee?.multiselect) && (
-								<RHFComboboxField
+								<FormField
 									control={form.control}
 									name="employees"
-									label={
-										selectedTag === TAG_IDS.TODO_LIST
-											? "Allocated To"
-											: "Employees"
-									}
-									options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
+
+									render={({ field }) => (
+										<RHFFieldWrapper label={
+											selectedTag === TAG_IDS.TODO_LIST
+												? "Allocated To"
+												: "Employees"
+										}>
+											<RHFComboboxField {...field} options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
+											/>
+										</RHFFieldWrapper>
+									)}
 								/>
 							)}
 
@@ -984,6 +1065,146 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 								)}
 							</div>
 						)}
+						{/* ================= POB QUESTION ================= */}
+						{isEditing &&
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && attending && (
+								<FormField
+									control={form.control}
+									name="pob_given"
+									render={({ field }) => (
+										<RHFFieldWrapper label="Did POB Given ?">
+											<div className="flex gap-6">
+												<label className="flex items-center gap-2">
+													<input
+														type="radio"
+														value="Yes"
+														checked={field.value === "Yes"}
+														onChange={() => field.onChange("Yes")}
+													/>
+													<span>Yes</span>
+												</label>
+
+												<label className="flex items-center gap-2">
+													<input
+														type="radio"
+														value="No"
+														checked={field.value === "No"}
+														onChange={() => field.onChange("No")}
+													/>
+													<span>No</span>
+												</label>
+											</div>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
+
+						{/* ================= POB ================= */}
+						{isEditing &&
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+							pobGiven === "Yes" && (
+								<div className="space-y-4">
+									<h4 className="font-medium">POB Details</h4>
+
+									{(form.watch("fsl_doctor_item") ?? []).map((row, index) => (
+										<div
+											key={index}
+											className="flex gap-3 items-end"
+										>
+											{/* Item */}
+											<div className="w-[280px]">
+												<FormField
+													control={form.control}
+													name={`fsl_doctor_item.${index}.item__name`}
+													render={({ field }) => (
+														<RHFFieldWrapper label="Item">
+															<RHFComboboxField
+																{...field}
+																tagsDisplay={false}
+																options={getAvailableItems(
+																	itemOptions,
+																	form.watch("fsl_doctor_item")
+																)}
+																placeholder="Select Item"
+															/>
+														</RHFFieldWrapper>
+													)}
+												/>
+											</div>
+
+											{/* Qty */}
+											<div className="w-[90px]">
+												<FormField
+													control={form.control}
+													name={`fsl_doctor_item.${index}.qty`}
+													render={({ field }) => (
+														<RHFFieldWrapper label="Qty">
+															<Input
+																type="number"
+																min={1}
+																{...field}
+																onChange={(e) => {
+																	const qty = Number(e.target.value);
+																	field.onChange(qty);
+																	updatePobRow(form, index, { qty });
+																}}
+															/>
+														</RHFFieldWrapper>
+													)}
+												/>
+											</div>
+
+											{/* Rate (read-only) */}
+											<div className="w-[110px] space-y-1">
+												<label className="text-sm font-medium text-muted-foreground">
+													Rate
+												</label>
+												<Input value={row.rate} disabled />
+											</div>
+
+											{/* Amount (read-only) */}
+											<div className="w-[120px] space-y-1">
+												<label className="text-sm font-medium text-muted-foreground">
+													Amount
+												</label>
+												<Input value={row.amount} disabled />
+											</div>
+
+											{/* Remove */}
+											<Button
+												type="button"
+												variant="ghost"
+												className="mb-1"
+												onClick={() => {
+													const items = [...form.getValues("fsl_doctor_item")];
+													items.splice(index, 1);
+													form.setValue("fsl_doctor_item", items, {
+														shouldDirty: true,
+													});
+												}}
+											>
+												✕
+											</Button>
+										</div>
+									))}
+
+									{/* Add Item */}
+									<Button
+										type="button"
+										onClick={() => {
+											const items = form.getValues("fsl_doctor_item") ?? [];
+											form.setValue(
+												"fsl_doctor_item",
+												[...items, { item__name: "", qty: 1, rate: 0, amount: 0 }],
+												{ shouldDirty: true }
+											);
+										}}
+									>
+										+ Add Item
+									</Button>
+								</div>
+
+							)}
 
 						{/* ================= DESCRIPTION ================= */}
 						{!tagConfig.hide?.includes("description") && (

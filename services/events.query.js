@@ -28,6 +28,12 @@ query EventsByRange(
           reference_docname__name
           attending
         }
+          fsl_doctor_item {
+          amount
+          item__name
+          qty
+          rate
+        }
       }
     }
     pageInfo {
@@ -73,9 +79,30 @@ query GetEmployees($first: Int!) {
   }
 }
 `;
+export const ITEMS_QUERY = `
+query Items(
+  $first: Int!
+  $after: String
+  $filters: [DBFilterInput!]
+) {
+  Items(first: $first, after: $after, filter: $filters) {
+    edges {
+      node {
+        item_code
+        item_name
+        whg_last_pts
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+`;
 
 
-export const DOCTOR_QUERY=`
+export const DOCTOR_QUERY = `
 query Doctors($first: Int) {
   Leads(first: $first) {
     edges {
@@ -89,7 +116,7 @@ query Doctors($first: Int) {
 }
 `
 
-export const LEAVE_QUERY=`
+export const LEAVE_QUERY = `
 query LeaveApplications($first: Int) {
   LeaveApplications(first: $first) {
     edges {

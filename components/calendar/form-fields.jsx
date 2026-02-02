@@ -40,6 +40,7 @@ import {
     placeholder,
     searchPlaceholder,
     selectionLabel,
+    tagsDisplay
   }) {
     return (
       <FormField
@@ -59,6 +60,7 @@ import {
                 placeholder={placeholder}
                 searchPlaceholder={searchPlaceholder}
                 selectionLabel={selectionLabel}
+                tagsDisplay={tagsDisplay}
               />
             </FormControl>
           </RHFFieldWrapper>

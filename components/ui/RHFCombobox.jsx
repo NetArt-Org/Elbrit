@@ -25,6 +25,7 @@ export function RHFCombobox({
   disabled = false,
   selectionLabel = "item",
   multiple = false,
+  tagsDisplay = true,
 }) {
   const [open, setOpen] = useState(false);
   /* ---------------------------------------
@@ -132,7 +133,7 @@ export function RHFCombobox({
       {/* ---------------------------------------
          Selected tags (BOTTOM)
       --------------------------------------- */}
-      {hasSelection && (
+      {hasSelection && tagsDisplay && (
         <div className="mt-2 flex flex-wrap gap-2">
           {selectedOptions.map((opt) => (
             <span
