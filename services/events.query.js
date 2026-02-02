@@ -20,9 +20,7 @@ query EventsByRange(
           full_name
           email
         }
-          fsl_territory {
-          name
-        }
+         fsl_territory__name
           event_participants {
           reference_doctype__name
           kly_lat_long

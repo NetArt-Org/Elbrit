@@ -57,6 +57,7 @@ export function mapErpLeaveToCalendar(leave) {
     startDate: start.toISOString(), // ✅ normalized
     endDate: end.toISOString(),     // ✅ normalized
     status: leave.status,
+    halfDayDate:leave.half_day_date ?? "",
     description: leave.description,
     color: "red",
     allDay: true,

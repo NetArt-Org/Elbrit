@@ -15,7 +15,6 @@ import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
 import { deleteEventFromErp } from "@/services/event.service";
 import { EventDetailsFields } from "./EventDetailsFields";
-import { TAG_IDS } from "@/components/calendar/mocks";
 export function EventDetailsDialog({
 	event,
 	children
@@ -25,6 +24,11 @@ export function EventDetailsDialog({
 	const deleteLockRef = useRef(false);
 	const tagConfig =
 		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
+
+	const canDelete =
+		tagConfig.ui?.allowDelete?.(event) ?? true;
+	const canEdit =
+		tagConfig.ui?.allowEdit?.(event) ?? true;
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
@@ -42,34 +46,37 @@ export function EventDetailsDialog({
 						/>
 					</div>
 				</ScrollArea>
-				{event.tags=="Leave" && event.status=="APPROVED"?null:
 				<div className="flex justify-end gap-2">
-					<AddEditEventDialog event={event}>
-						<Button variant="outline">Edit</Button>
-					</AddEditEventDialog>
-					<Button
-						variant="destructive"
-						onClick={async () => {
-							if (deleteLockRef.current) return;
-							deleteLockRef.current = true;
+					{canEdit && (
+						<AddEditEventDialog event={event}>
+							<Button variant="outline">Edit</Button>
+						</AddEditEventDialog>
+					)}
 
-							try {
-								await deleteEventFromErp(event.erpName); // SINGLE SOURCE
-								removeEvent(event.erpName);              // UI update
-								setOpen(false);
-								toast.success("Event deleted successfully.");
-							} catch (e) {
-								toast.error("Error deleting event.");
-							} finally {
-								deleteLockRef.current = false;
-							}
-						}}
+					{canDelete && (
+						<Button
+							variant="destructive"
+							onClick={async () => {
+								if (deleteLockRef.current) return;
+								deleteLockRef.current = true;
 
-					>
-						Delete
-					</Button>
+								try {
+									await deleteEventFromErp(event.erpName);
+									removeEvent(event.erpName);
+									setOpen(false);
+									toast.success("Event deleted successfully.");
+								} catch (e) {
+									toast.error("Error deleting event.");
+								} finally {
+									deleteLockRef.current = false;
+								}
+							}}
+						>
+							Delete
+						</Button>
+					)}
 				</div>
-				}
+
 			</DialogContent>
 		</Dialog>
 	);

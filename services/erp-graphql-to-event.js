@@ -75,7 +75,7 @@ export function mapErpGraphqlEventToCalendar(node) {
       mapHexToColor(node.color) ??
       "blue",
 
-    hqTerritory: node.fsl_territory?.name ?? "",
+    hqTerritory: node.fsl_territory__name ?? "",
 
     owner: node.owner
       ? {

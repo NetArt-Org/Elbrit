@@ -58,7 +58,23 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		resolver: zodResolver(eventSchema),
 		mode: "onChange",
 		defaultValues: {
-			title: event?.title ?? "", description: event?.description ?? "", startDate: initialDates.startDate, endDate: initialDates.endDate, tags: event?.tags ?? defaultTag ?? "Other", hqTerritory: event?.hqTerritory ?? "", employees: undefined, doctor: undefined, leaveType: event?.leaveType ?? "Casual Leave", reportTo: undefined, medicalAttachment: event?.medicalAttachment ?? "", allDay: false, todoStatus: "Open", priority: "Medium", leavePeriod: "Full", halfDayDate: undefined, approvedBy: undefined
+			title: event?.title ?? "",
+			description: event?.description ?? "",
+			startDate: initialDates.startDate,
+			endDate: initialDates.endDate,
+			tags: event?.tags ?? defaultTag ?? "Other",
+			hqTerritory: event?.hqTerritory ?? "",
+			employees: event?.employees,
+			doctor: event?.doctor,
+			leaveType: event?.leaveType ?? "Casual Leave",
+			reportTo: event?.reportTo ?? "",
+			medicalAttachment: event?.medicalAttachment ?? "",
+			allDay: event?.allDay ?? false,
+			todoStatus: "Open",
+			priority: "Medium",
+			leavePeriod: "Full",
+			halfDayDate: event?.halfDayDate ?? "",
+			approvedBy: event?.approvedBy ?? ""
 		},
 	});
 
@@ -70,6 +86,12 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const { doctor, employees, hqTerritory, tags: selectedTag, } = useWatch({ control: form.control });
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
+	const visibleTags = useMemo(() => {
+		if (isEditing && tagConfig.ui?.lockTagOnEdit) {
+			return TAGS.filter(t => t.id === selectedTag);
+		}
+		return TAGS;
+	}, [isEditing, selectedTag, tagConfig]);
 	const isMulti = tagConfig?.employee?.multiselect === true;
 	const isFieldVisible = (field) => {
 		if (tagConfig.show) return tagConfig.show.includes(field);
@@ -217,34 +239,51 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	--------------------------------------------- */
 	useEffect(() => {
 		if (!isOpen || !event?.participants?.length) return;
+		if (!employeeOptions.length && !doctorOptions.length) return;
 
 		const employeeIds = event.participants
-			.filter((p) => p.type === "Employee")
-			.map((p) => p.id);
+			.filter(p => p.type === "Employee")
+			.map(p => String(p.id));
 
-		const doctor = event.participants.find(
-			(p) => p.type === "Lead"
-		);
+		const doctorIds = event.participants
+			.filter(p => p.type === "Lead")
+			.map(p => String(p.id));
 
+		/* ---------- Employees ---------- */
 		if (employeeIds.length) {
+			const employeeValues = employeeIds
+				.map(id => employeeOptions.find(o => o.value === id))
+				.filter(Boolean);
+
 			form.setValue(
 				"employees",
 				tagConfig.employee?.multiselect
-					? employeeIds
-					: employeeIds[0],
-				{ shouldDirty: false, shouldValidate: false }
+					? employeeValues
+					: employeeValues[0],
+				{ shouldDirty: false }
 			);
 		}
 
-		if (doctor) {
-			form.setValue("doctor", doctor.id, {
-				shouldDirty: false,
-				shouldValidate: false,
-			});
+		/* ---------- Doctors ---------- */
+		if (doctorIds.length) {
+			const doctorValues = doctorIds
+				.map(id => doctorOptions.find(o => o.value === id))
+				.filter(Boolean);
+
+			form.setValue(
+				"doctor",
+				tagConfig.doctor?.multiselect
+					? doctorValues
+					: doctorValues[0],
+				{ shouldDirty: false }
+			);
 		}
-	}, [isOpen, event?.participants]);
-
-
+	}, [
+		isOpen,
+		event?.participants,
+		employeeOptions,
+		doctorOptions,
+	]);
 
 	/* ---------------------------------------------
 	   FORCE ALL-DAY CHECKBOX ONLY
@@ -492,15 +531,15 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		console.log("SUBMIT doctorOptions:", doctorOptions);
 		console.log("SUBMIT doctorOptions length:", doctorOptions.length);
 		const normalizedDoctors = (Array.isArray(values.doctor)
-		? values.doctor
-		: [values.doctor]
-	  ).map((d) =>
-		typeof d === "object"
-		  ? d
-		  : doctorOptions.find((o) => o.value === d) ?? d
-	  );
-	
-	  console.log("Normalized doctors:", normalizedDoctors);
+			? values.doctor
+			: [values.doctor]
+		).map((d) =>
+			typeof d === "object"
+				? d
+				: doctorOptions.find((o) => o.value === d) ?? d
+		);
+
+		console.log("Normalized doctors:", normalizedDoctors);
 		for (const doctor of normalizedDoctors) {
 			const doctorId =
 				typeof doctor === "object" ? doctor.value : doctor;
@@ -517,7 +556,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = {
-				erpName: savedEvent.name, 
+				erpName: savedEvent.name,
 				title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
 				participants: buildCalendarParticipants(
 					{ ...values, doctor: doctorId },
@@ -603,19 +642,21 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 							name="tags"
 							render={({ field }) => (
 								<div className="flex flex-wrap gap-2">
-									{TAGS.map((tag) => (
+									{visibleTags.map((tag) => (
 										<button
 											key={tag.id}
 											type="button"
+											disabled={isEditing && tagConfig.ui?.lockTagOnEdit}
 											onClick={() => field.onChange(tag.id)}
 											className={`px-4 py-1 rounded-full ${field.value === tag.id
-												? "bg-black text-white"
-												: "bg-muted"
-												}`}
+													? "bg-black text-white"
+													: "bg-muted"
+												} ${isEditing ? "cursor-default" : ""}`}
 										>
 											{tag.label}
 										</button>
 									))}
+
 								</div>
 							)}
 						/>
