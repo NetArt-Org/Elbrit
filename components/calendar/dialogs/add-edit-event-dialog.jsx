@@ -27,7 +27,7 @@ import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-er
 import { useEmployeeResolvers } from "@/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@/services/file.service";
 import { fetchItems } from "@/services/participants.service";
-import { getAvailableItems, updatePobRow } from "@/lib/helper";
+import { getAvailableItems, showFirstFormErrorAsToast, showFormErrorsAsToast, updatePobRow } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 
 export function AddEditEventDialog({ children, event, defaultTag, }) {
@@ -112,10 +112,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 			const item = itemOptions.find(i => i.value === row.item__name);
 			if (!item) return;
-            console.log("ITEM USEEFFECt",item,row.rate,item.rate,row)
 			// avoid infinite loop
 			if (row.rate === item.rate) return;
-            
+
 			updatePobRow(form, index, {
 				rate: Number(item.rate) || 0,
 			});
@@ -248,6 +247,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	/* ---------------------------------------------
 		   Longitude and latitude
 		--------------------------------------------- */
+	const FALLBACK_LAT_LONG = "0,0";
 
 	useEffect(() => {
 		if (!isEditing) return;
@@ -256,8 +256,16 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		// Do not override existing ERP value
 		if (form.getValues("kly_lat_long")) return;
 
+		const setFallback = () => {
+			form.setValue("kly_lat_long", FALLBACK_LAT_LONG, {
+				shouldDirty: true,
+				shouldValidate: false,
+			});
+		};
+
 		if (!navigator.geolocation) {
-			toast.error("Geolocation not supported on this device");
+			toast.warning("Location not supported. Using fallback location.");
+			setFallback();
 			return;
 		}
 
@@ -275,22 +283,25 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 				// ✅ USER FRIENDLY MESSAGES
 				if (error.code === error.PERMISSION_DENIED) {
-					toast.error("Location permission denied");
+					toast.error("Location permission denied. Using fallback location.");
 				} else if (error.code === error.POSITION_UNAVAILABLE) {
-					toast.error("Location unavailable");
+					toast.error("Location unavailable. Using fallback location.");
 				} else if (error.code === error.TIMEOUT) {
 					toast.warning(
-						"Unable to fetch location automatically. You can continue without it."
+						"Unable to fetch location automatically. Using fallback location."
 					);
 				}
+
+				setFallback();
 			},
 			{
-				enableHighAccuracy: false, // 🔑 VERY IMPORTANT (desktop-safe)
-				timeout: 20000,            // 🔑 increase timeout
+				enableHighAccuracy: false,
+				timeout: 20000,
 				maximumAge: 60000,
 			}
 		);
 	}, [attending, isEditing]);
+
 
 	/* ---------------------------------------------
 	   Leave Balance Fetching
@@ -633,9 +644,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		finalize("Todo saved");
 	};
 	const handleDoctorVisitPlan = async (values) => {
-		// console.log("SUBMIT doctors raw:", values.doctor);
-		// console.log("SUBMIT doctorOptions:", doctorOptions);
-		// console.log("SUBMIT doctorOptions length:", doctorOptions.length);
+
 		const normalizedDoctors = (Array.isArray(values.doctor)
 			? values.doctor
 			: [values.doctor]
@@ -659,10 +668,10 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				{}
 			);
 			console.log("ERP DOC DR VISIT PLAN", erpDoc)
-			const savedEvent = await saveEvent(erpDoc);
+			// const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = {
-				erpName: savedEvent.name,
+				// erpName: savedEvent.name,
 				title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
 				participants: buildCalendarParticipants(
 					{ ...values, doctor: doctorId },
@@ -671,21 +680,21 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				),
 			};
 
-			addEvent(calendarEvent);
+			// addEvent(calendarEvent);
 		}
 
-		finalize(`Created ${values.doctor.length} Doctor Visit events`);
+		// finalize(`Created ${values.doctor.length} Doctor Visit events`);
 	};
 	const handleDefaultEvent = async (values) => {
 		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
 		});
 
-		const savedEvent = await saveEvent(erpDoc);
+		// const savedEvent = await saveEvent(erpDoc);
 		console.log("ERP DOC ", erpDoc)
 		const calendarEvent = {
 			...(event ?? {}),
-			erpName: savedEvent.name,
+			// erpName: savedEvent.name,
 			title: values.title, description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id, hqTerritory: values.hqTerritory || "",
 			participants: buildCalendarParticipants(
 				values,
@@ -694,9 +703,14 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			),
 		};
 
-		upsertCalendarEvent(calendarEvent);
-		finalize("Event saved");
+		// upsertCalendarEvent(calendarEvent);
+		// finalize("Event saved");
 	};
+	const onInvalid = (errors) => {
+		showFirstFormErrorAsToast(errors);
+	  };
+	  
+	  
 	const onSubmit = async (values) => {
 		/* ========= NORMALIZATION ========= */
 		if (values.tags === TAG_IDS.BIRTHDAY) {
@@ -715,7 +729,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				return;
 
 			case TAG_IDS.DOCTOR_VISIT_PLAN:
-				if (Array.isArray(values.doctor) && values.doctor.length) {
+				if (isEditing) {
+					await handleDefaultEvent(values);
+				} else if (Array.isArray(values.doctor) && values.doctor.length) {
 					await handleDoctorVisitPlan(values);
 				}
 				return;
@@ -740,7 +756,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				<Form {...form} >
 					<form
 						id="event-form"
-						onSubmit={form.handleSubmit(onSubmit)}
+						onSubmit={form.handleSubmit(onSubmit,onInvalid)}
 						className="grid gap-4"
 					>
 						{/* ================= TAGS ================= */}
@@ -1060,9 +1076,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 								{/* Latitude & Longitude */}
 								{form.watch("attending") && (
-									<div className="text-sm text-muted-foreground">
-										<span className="font-medium">Latitude & Longitude:</span>{" "}
-										{form.watch("kly_lat_long") || "Fetching location..."}
+									<div className="text-sm text-muted-foreground flex flex-col gap-1">
+										<div className="font-medium">Latitude & Longitude:</div>{" "}
+										<div>{form.watch("kly_lat_long") || "Fetching location..."}</div>
 									</div>
 								)}
 							</div>
@@ -1122,53 +1138,56 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 														<RHFFieldWrapper label="Item">
 															<RHFComboboxField
 																{...field}
+																multiple={false}
 																tagsDisplay={false}
 																options={getAvailableItems(
 																	itemOptions,
-																	form.watch("fsl_doctor_item")
+																	form.watch("fsl_doctor_item"),
+																	field.value // 👈 this row’s selected item
 																)}
 																placeholder="Select Item"
 															/>
-														</RHFFieldWrapper>
-													)}
-												/>
-</div>
-											{/* Qty */}
-												<FormField
-													control={form.control}
-													name={`fsl_doctor_item.${index}.qty`}
-													render={({ field }) => (
-														<RHFFieldWrapper label="Qty">
-															<Input
-																type="number"
-																min={1}
-																{...field}
-																onChange={(e) => {
-																	const qty = Number(e.target.value);
-																	field.onChange(qty);
-																	updatePobRow(form, index, { qty });
-																}}
-															/>
-														</RHFFieldWrapper>
-													)}
-												/>
-<div className="flex gap-3">
-											{/* Rate (read-only) */}
-											<div >
-												<label className="text-sm font-medium text-muted-foreground">
-													Rate
-												</label>
-												<Input value={row.rate} disabled />
-											</div>
 
-											{/* Amount (read-only) */}
-											<div >
-												<label className="text-sm font-medium text-muted-foreground">
-													Amount
-												</label>
-												<Input value={row.amount} disabled />
+														</RHFFieldWrapper>
+													)}
+												/>
 											</div>
-</div>
+											{/* Qty */}
+											<FormField
+												control={form.control}
+												name={`fsl_doctor_item.${index}.qty`}
+												render={({ field }) => (
+													<RHFFieldWrapper label="Qty">
+														<Input
+															type="number"
+															min={1}
+															{...field}
+															onChange={(e) => {
+																const qty = Number(e.target.value);
+																field.onChange(qty);
+																updatePobRow(form, index, { qty });
+															}}
+														/>
+													</RHFFieldWrapper>
+												)}
+											/>
+											<div className="flex gap-3">
+												{/* Rate (read-only) */}
+												<div >
+													<label className="text-sm font-medium text-muted-foreground">
+														Rate
+													</label>
+													<Input value={row.rate} disabled />
+												</div>
+
+												{/* Amount (read-only) */}
+												<div >
+													<label className="text-sm font-medium text-muted-foreground">
+														Amount
+													</label>
+													<Input value={row.amount} disabled />
+												</div>
+											</div>
 											{/* Remove */}
 											<Button
 												type="button"

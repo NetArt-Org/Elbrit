@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+/* =====================================================
+   RHF COMBOBOX (ID-BASED, LEGACY SAFE)
+===================================================== */
 export function RHFCombobox({
   value,
   onChange,
@@ -28,49 +31,67 @@ export function RHFCombobox({
   tagsDisplay = true,
 }) {
   const [open, setOpen] = useState(false);
+
   /* ---------------------------------------
-     Helpers
+     Normalize incoming value → IDs (DISPLAY ONLY)
+     Supports:
+       - "ID"
+       - { value, label }
+       - ["ID"]
+       - [{ value, label }]
   --------------------------------------- */
-  const isObject = v => typeof v === "object" && v !== null;
-  const getKey = v => (isObject(v) ? v.value : v);
+  const selectedIds = useMemo(() => {
+    if (!value) return [];
 
-  const selectedValues = multiple
-  ? Array.isArray(value) ? value : []
-  : value ? [value] : [];
+    const arr = multiple ? (Array.isArray(value) ? value : []) : [value];
 
-const selectedOptions = selectedValues
-  .map(v => options.find(o => o.value === v))
-  .filter(Boolean);
+    return arr
+      .map((v) => {
+        if (typeof v === "string") return v;
+        if (typeof v === "object" && v?.value) return v.value;
+        return null;
+      })
+      .filter(Boolean);
+  }, [value, multiple]);
+
+  /* ---------------------------------------
+     Resolve options from IDs
+  --------------------------------------- */
+  const selectedOptions = useMemo(() => {
+    if (!selectedIds.length) return [];
+    return selectedIds
+      .map((id) => options.find((o) => o.value === id))
+      .filter(Boolean);
+  }, [selectedIds, options]);
 
   const hasSelection = selectedOptions.length > 0;
 
   /* ---------------------------------------
-     Selection logic
+     Selection helpers (ID-ONLY OUTPUT)
   --------------------------------------- */
+  const isSelected = (opt) => selectedIds.includes(opt.value);
+
   const handleSelect = (opt) => {
     if (!multiple) {
-      onChange(opt.value);
+      onChange(opt.value); // ✅ always ID
       setOpen(false);
       return;
     }
-  
-    if (selectedValues.includes(opt.value)) {
-      onChange(selectedValues.filter(v => v !== opt.value));
+
+    if (selectedIds.includes(opt.value)) {
+      onChange(selectedIds.filter((v) => v !== opt.value));
     } else {
-      onChange([...selectedValues, opt.value]);
+      onChange([...selectedIds, opt.value]);
     }
   };
-  
 
   const handleRemove = (optValue) => {
     if (!multiple) {
       onChange(undefined);
     } else {
-      onChange(selectedValues.filter(v => v !== optValue));
+      onChange(selectedIds.filter((v) => v !== optValue));
     }
   };
-
-  const isSelected = (opt) => selectedValues.includes(opt.value);
 
   /* ---------------------------------------
      UI
@@ -89,8 +110,10 @@ const selectedOptions = selectedValues
               {!hasSelection
                 ? placeholder
                 : multiple
-                  ? `${selectedOptions.length} ${selectionLabel}${selectedOptions.length > 1 ? "s" : ""} selected`
-                  : selectedOptions[0]?.label}
+                ? `${selectedOptions.length} ${selectionLabel}${
+                    selectedOptions.length > 1 ? "s" : ""
+                  } selected`
+                : selectedOptions[0]?.label}
             </span>
 
             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />

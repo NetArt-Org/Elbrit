@@ -10,64 +10,68 @@ import { TAG_IDS } from "@/components/calendar/mocks";
  */
 
 export function mapFormToErpEvent(values, options = {}) {
-  
-  const { erpName} = options;
 
+  const { erpName } = options;
+  const isDoctorVisitPlan =
+    values.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
+
+  const isUpdate = Boolean(erpName);
+  console.log("ERPNAME", erpName)
   function buildParticipants(values) {
     const participants = [];
-    const isDoctorVisitPlan =
-    values.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
-    // Employees
-  if (values.employees) {
-    const employeeIds = Array.isArray(values.employees)
-      ? values.employees
-      : [values.employees];
+    /* ---------- Employees ---------- */
+    if (values.employees) {
+      const employeeIds = Array.isArray(values.employees)
+        ? values.employees
+        : [values.employees];
 
-      employeeIds.forEach((empId) => {
+      employeeIds.forEach((emp) => {
+        const empId =
+          typeof emp === "object" ? emp.value : emp;
+
         const participant = {
           reference_doctype: "Employee",
           reference_docname: empId,
         };
-  
-        // ✅ VISIT STATUS ONLY FOR DOCTOR VISIT PLAN
-        if (isDoctorVisitPlan) {
-          if (values.attending !== undefined) {
+
+        // ✅ ONLY ON EDIT + DOCTOR VISIT PLAN
+        if (isDoctorVisitPlan && isUpdate) {
+          if (typeof values.attending === "boolean") {
             participant.attending = values.attending ? 1 : 0;
           }
-  
+
           if (values.kly_lat_long) {
             participant.kly_lat_long = values.kly_lat_long;
           }
         }
-  
+
         participants.push(participant);
       });
-  }
-  if (values.doctor) {
-    const doctors = Array.isArray(values.doctor)
-      ? values.doctor
-      : [values.doctor];
+    }
 
-    doctors.forEach((doctor) => {
-      const isObject = typeof doctor === "object" && doctor !== null;
+    /* ---------- Doctors (UNTOUCHED) ---------- */
+    if (values.doctor) {
+      const doctors = Array.isArray(values.doctor)
+        ? values.doctor
+        : [values.doctor];
 
-      const participant = {
-        reference_doctype: "Lead",
-        reference_docname: isObject ? doctor.value : doctor,
-      };
+      doctors.forEach((doctor) => {
+        const participant = {
+          reference_doctype: "Lead",
+          reference_docname:
+            typeof doctor === "object" ? doctor.value : doctor,
+        };
 
-      if (isObject && doctor.kly_lat_long) {
-        participant.kly_lat_long = doctor.kly_lat_long;
-      }
+        participants.push(participant);
+      });
+    }
 
-      participants.push(participant);
-    });
-  }
     return participants;
   }
+
   const isBirthday = values.tags === "Birthday";
   const doc = {
-    doctype: "Event",
+    // doctype: "Event",
     subject: values.title,
     description: values.description,
     starts_on: format(values.startDate, "yyyy-MM-dd HH:mm:ss"),
@@ -79,8 +83,23 @@ export function mapFormToErpEvent(values, options = {}) {
     status: "Open",
     docstatus: 0,
     event_participants: buildParticipants(values),
-    fsl_territory:values.hqTerritory || "",
+    fsl_territory: values.hqTerritory || "",
   };
+  // ✅ POB DETAILS (Doctor Visit Plan – Edit only)
+if (
+  isDoctorVisitPlan &&
+  isUpdate &&
+  values.pob_given === "Yes" &&
+  Array.isArray(values.fsl_doctor_item)
+) {
+  doc.fsl_doctor_item = values.fsl_doctor_item.map((row) => ({
+    item__name: row.item__name,
+    qty: Number(row.qty) || 0,
+    rate: Number(row.rate) || 0,
+    amount: Number(row.amount) || 0,
+  }));
+}
+
   /* ------------------------------------
      🎂 Birthday repeat logic (ERP)
   ------------------------------------ */
@@ -101,6 +120,5 @@ export function mapFormToErpEvent(values, options = {}) {
 
 
 export function serializeEventDoc(doc) {
-    return JSON.stringify(doc);
-  }
-  
+  return JSON.stringify(doc);
+}
