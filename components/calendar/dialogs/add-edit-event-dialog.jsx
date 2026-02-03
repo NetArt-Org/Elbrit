@@ -27,22 +27,23 @@ import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-er
 import { useEmployeeResolvers } from "@/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@/services/file.service";
 import { fetchItems } from "@/services/participants.service";
-import { getAvailableItems, showFirstFormErrorAsToast, showFormErrorsAsToast, updatePobRow } from "@/lib/helper";
+import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 
 export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
-	const { addEvent, updateEvent } = useCalendar();
+	const { addEvent, updateEvent, employeeOptions,
+		doctorOptions,
+		hqTerritoryOptions,
+		setEmployeeOptions,
+		setDoctorOptions,
+		setHqTerritoryOptions, } = useCalendar();
 	const isEditing = !!event;
-	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
-	const [doctorOptions, setDoctorOptions] = useState([]);
-	const [employeeOptions, setEmployeeOptions] = useState([]);
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
 	const [itemOptions, setItemOptions] = useState([]);
 	const endDateTouchedRef = useRef(false); // existing
-
 	const initialDates = useMemo(() => {
 		if (!event) {
 			const now = new Date();
@@ -105,20 +106,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		name: "fsl_doctor_item",
 	});
 	useEffect(() => {
-		if (!pobItems?.length || !itemOptions.length) return;
-
-		pobItems.forEach((row, index) => {
-			if (!row?.item__name) return;
-
-			const item = itemOptions.find(i => i.value === row.item__name);
-			if (!item) return;
-			// avoid infinite loop
-			if (row.rate === item.rate) return;
-
-			updatePobRow(form, index, {
-				rate: Number(item.rate) || 0,
-			});
-		});
+		syncPobItemRates(form, pobItems, itemOptions);
 	}, [pobItems, itemOptions]);
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
@@ -250,56 +238,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	const FALLBACK_LAT_LONG = "0,0";
 
 	useEffect(() => {
-		if (!isEditing) return;
-		if (!attending) return;
-
-		// Do not override existing ERP value
-		if (form.getValues("kly_lat_long")) return;
-
-		const setFallback = () => {
-			form.setValue("kly_lat_long", FALLBACK_LAT_LONG, {
-				shouldDirty: true,
-				shouldValidate: false,
-			});
-		};
-
-		if (!navigator.geolocation) {
-			toast.warning("Location not supported. Using fallback location.");
-			setFallback();
-			return;
-		}
-
-		navigator.geolocation.getCurrentPosition(
-			(pos) => {
-				const latLong = `${pos.coords.latitude},${pos.coords.longitude}`;
-
-				form.setValue("kly_lat_long", latLong, {
-					shouldDirty: true,
-					shouldValidate: false,
-				});
-			},
-			(error) => {
-				console.error("Location error:", error);
-
-				// ✅ USER FRIENDLY MESSAGES
-				if (error.code === error.PERMISSION_DENIED) {
-					toast.error("Location permission denied. Using fallback location.");
-				} else if (error.code === error.POSITION_UNAVAILABLE) {
-					toast.error("Location unavailable. Using fallback location.");
-				} else if (error.code === error.TIMEOUT) {
-					toast.warning(
-						"Unable to fetch location automatically. Using fallback location."
-					);
-				}
-
-				setFallback();
-			},
-			{
-				enableHighAccuracy: false,
-				timeout: 20000,
-				maximumAge: 60000,
-			}
-		);
+		resolveLatLong(form, attending, isEditing, toast);
 	}, [attending, isEditing]);
 
 
@@ -482,76 +421,24 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
    ✅ FIX – guarded writes only
 --------------------------------------------- */
 	useEffect(() => {
-		if (!startDate) return;
-		if (selectedTag === TAG_IDS.MEETING || selectedTag === TAG_IDS.BIRTHDAY) return;
-		if (endDateTouchedRef.current) return;
-
-		const now = new Date();
-
-		const normalizedStart = set(startDate, {
-			hours: now.getHours(),
-			minutes: now.getMinutes(),
-			seconds: 0,
-		});
-
-		if (startDate.getTime() !== normalizedStart.getTime()) {
-			form.setValue("startDate", normalizedStart, { shouldDirty: false });
-			return;
-		}
-
-		if (!form.getValues("endDate")) return;
-
-		const currentEnd = form.getValues("endDate");
-
-		// Auto-fix ONLY if endDate is missing or invalid
-		if (!currentEnd || currentEnd < startDate) {
-			const normalizedEnd = set(startDate, {
-				hours: 23,
-				minutes: 59,
-				seconds: 59,
-			});
-
-			form.setValue("endDate", normalizedEnd, {
-				shouldDirty: false,
-				shouldValidate: false,
-			});
-		}
-
+		normalizeNonMeetingDates(
+			form,
+			startDate,
+			selectedTag,
+			endDateTouchedRef.current
+		);
 	}, [startDate, selectedTag]);
 	/* ---------------------------------------------
    MEETING TIME LOGIC (MERGED)
 --------------------------------------------- */
 	useEffect(() => {
 		if (selectedTag !== TAG_IDS.MEETING) return;
-		if (!startDate) return;
-		// ❌ DO NOT override manual edits
-		if (endDateTouchedRef.current) return;
-		// 🟢 ALL DAY LOGIC
-		if (allDay) {
-			const now = new Date();
-
-			const start = set(startDate, {
-				hours: now.getHours(),
-				minutes: now.getMinutes(),
-				seconds: 0,
-			});
-
-			const end = set(startDate, {
-				hours: 23,
-				minutes: 59,
-				seconds: 59,
-			});
-
-			form.setValue("startDate", start, { shouldDirty: true });
-			form.setValue("endDate", end, { shouldDirty: true });
-			return;
-		}
-
-		// 🟢 NORMAL MEETING (NOT ALL DAY)
-		const newEnd = addMinutes(startDate, 60);
-
-		form.setValue("endDate", newEnd, { shouldDirty: true });
-
+		normalizeMeetingTimes(
+			form,
+			startDate,
+			allDay,
+			endDateTouchedRef.current
+		);
 	}, [selectedTag, startDate, allDay]);
 	const buildDoctorVisitTitle = (doctorId, values) => {
 		const doc = doctorOptions.find(d => d.value === doctorId);
@@ -672,7 +559,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 			const calendarEvent = {
 				erpName: savedEvent.name,
-				title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
+				title: buildDoctorVisitTitle(doctorId, values), description: values.description,
+				 startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, 
+				 tags: values.tags, owner: LOGGED_IN_USER.id,
 				participants: buildCalendarParticipants(
 					{ ...values, doctor: doctorId },
 					employeeOptions,
@@ -690,13 +579,15 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			erpName: event?.erpName,
 		});
 
-		console.log("ERP DOC Before", erpDoc,event?.erpDoc)
+		console.log("ERP DOC Before", erpDoc, event?.erpDoc)
 		const savedEvent = await saveEvent(erpDoc);
-		console.log("ERP DOC After", erpDoc,event?.erpDoc)
 		const calendarEvent = {
 			...(event ?? {}),
 			erpName: savedEvent.name,
-			title: values.title, description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id, hqTerritory: values.hqTerritory || "",
+			title: values.title, description: values.description, 
+			startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, 
+			tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id,
+			 hqTerritory: values.hqTerritory || "",
 			participants: buildCalendarParticipants(
 				values,
 				employeeOptions,
@@ -709,9 +600,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	};
 	const onInvalid = (errors) => {
 		showFirstFormErrorAsToast(errors);
-	  };
-	  
-	  
+	};
+
+
 	const onSubmit = async (values) => {
 		/* ========= NORMALIZATION ========= */
 		if (values.tags === TAG_IDS.BIRTHDAY) {
@@ -740,9 +631,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			default:
 				await handleDefaultEvent(values);
 		}
-		finalize("Leave applied successfully");
 	};
-	console.log("FORM ERRORS", form.formState.errors);
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
@@ -757,7 +646,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				<Form {...form} >
 					<form
 						id="event-form"
-						onSubmit={form.handleSubmit(onSubmit,onInvalid)}
+						onSubmit={form.handleSubmit(onSubmit, onInvalid)}
 						className="grid gap-4"
 					>
 						{/* ================= TAGS ================= */}
@@ -1068,12 +957,12 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 									name="attending"
 									render={({ field }) => (
 										<InlineCheckboxField
-										label="Visited"
-										checked={field.value === "Yes"}
-										onChange={(checked) =>
-										  field.onChange(checked ? "Yes" : "No")
-										}
-									  />
+											label="Visited"
+											checked={field.value === "Yes"}
+											onChange={(checked) =>
+												field.onChange(checked ? "Yes" : "No")
+											}
+										/>
 									)}
 								/>
 
@@ -1175,11 +1064,11 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 												)}
 											/>
 											<div >
-													<label className="text-sm font-medium text-muted-foreground">
-														Amount
-													</label>
-													<Input value={row.amount} disabled />
-												</div>
+												<label className="text-sm font-medium text-muted-foreground">
+													Amount
+												</label>
+												<Input value={row.amount} disabled />
+											</div>
 											{/* <div className="flex gap-2">
 												<div >
 													<label className="text-sm font-medium text-muted-foreground">

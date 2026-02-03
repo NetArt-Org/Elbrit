@@ -29,6 +29,7 @@ export function EventDetailsDialog({
 		tagConfig.ui?.allowDelete?.(event) ?? true;
 	const canEdit =
 		tagConfig.ui?.allowEdit?.(event) ?? true;
+		console.log("EVENT",event)
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>

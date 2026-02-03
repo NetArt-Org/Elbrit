@@ -23,8 +23,6 @@ export function mapErpGraphqlEventToCalendar(node) {
     attending: p.attending,
     kly_lat_long: p.kly_lat_long,
   })) ?? [];
-
-
   /* ---------------------------------------------
      DERIVE EMPLOYEES & DOCTORS
   --------------------------------------------- */
@@ -57,7 +55,7 @@ export function mapErpGraphqlEventToCalendar(node) {
     erpName: node.name,
     title: node.subject || "",
     description: node.description ?? "",
-
+    allDay: Boolean(node.all_day),
     startDate: startDate ? startDate.toISOString() : null,
     endDate: endDate ? endDate.toISOString() : null,
 
@@ -95,7 +93,20 @@ export function mapErpGraphqlEventToCalendar(node) {
     // 🔁 Always keep original participants
     participants,
   };
-
+  if (
+    tag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+    Array.isArray(node.fsl_doctor_item)
+  ) {
+    event.fsl_doctor_item = node.fsl_doctor_item.map(row => ({
+      item__name: row.item__name,
+      qty: Number(row.qty) || 0,
+      rate: Number(row.rate) || 0,
+      amount: Number(row.amount) || 0,
+    }));
+  
+    event.pob_given = event.fsl_doctor_item.length ? "Yes" : "No";
+  }
+  
   /* ---------------------------------------------
      VALIDATE AGAINST SCHEMA
   --------------------------------------------- */

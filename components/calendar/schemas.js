@@ -160,15 +160,17 @@ export const eventSchema = z
     }
 
     /* ---------------------------------------------
-       PREVENT POB FOR NON-DOCTOR VISIT TAGS
-    --------------------------------------------- */
-    if (data.tags !== TAG_IDS.DOCTOR_VISIT_PLAN) {
-      if (data.pob_given || data.fsl_doctor_item?.length) {
-        ctx.addIssue({
-          path: ["pob_given"],
-          message: "POB is only applicable for Doctor Visit Plan",
-          code: z.ZodIssueCode.custom,
-        });
-      }
+    DOCTOR VISIT PLAN: POB RULE
+ --------------------------------------------- */
+    if (
+      data.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+      data.pob_given === "Yes" &&
+      (!data.fsl_doctor_item || data.fsl_doctor_item.length === 0)
+    ) {
+      ctx.addIssue({
+        path: ["fsl_doctor_item"],
+        message: "At least one POB item is required",
+        code: z.ZodIssueCode.custom,
+      });
     }
   });

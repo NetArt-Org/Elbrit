@@ -1,12 +1,12 @@
 "use client";;
-import { createContext, useContext, useState,useEffect,useRef } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { useLocalStorage } from "@/components/calendar/hooks";
 import { fetchEventsByRange } from "@/services/event.service";
 import { resolveCalendarRange } from "@/lib/calendar/range";
 import { EMPLOYEES_QUERY } from "@/services/events.query";
 import { mapEmployeesToCalendarUsers } from "@/services/employee-to-calendar-user";
 import { graphqlRequest } from "@/lib/graphql-client";
-
+import { enrichEventsWithParticipants } from "@/lib/calendar/enrich-events";
 
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",
@@ -40,6 +40,9 @@ export function CalendarProvider({
 	const [filteredEvents, setFilteredEvents] = useState(events || []);
 	const [users, setUsers] = useState([]);
 	const [usersLoading, setUsersLoading] = useState(true);
+	const [employeeOptions, setEmployeeOptions] = useState([]);
+	const [doctorOptions, setDoctorOptions] = useState([]);
+	const [hqTerritoryOptions, setHqTerritoryOptions] = useState([]);
 
 	const [eventListDate, setEventListDate] = useState(null);
 	const [activeDate, setActiveDate] = useState(null);
@@ -51,7 +54,7 @@ export function CalendarProvider({
 			...newPartialSettings,
 		});
 	};
-
+	  
 	const setBadgeVariant = (variant) => {
 		setBadgeVariantState(variant);
 		updateSettings({ badgeVariant: variant });
@@ -99,7 +102,7 @@ export function CalendarProvider({
 		} else {
 			const filtered = allEvents.filter((event) => event.owner?.id === userId);
 			setFilteredEvents(filtered);
-		}	  
+		}
 	};
 
 	const handleSelectDate = (date) => {
@@ -109,49 +112,49 @@ export function CalendarProvider({
 
 	const addEvent = (event) => {
 		const normalized = {
-		  ...event,
-		  startDate: new Date(event.startDate).toISOString(),
-		  endDate: new Date(event.endDate).toISOString(),
+			...event,
+			startDate: new Date(event.startDate).toISOString(),
+			endDate: new Date(event.endDate).toISOString(),
 		};
-	  
+
 		setAllEvents((prev) => [...prev, normalized]);
 		setFilteredEvents((prev) => [...prev, normalized]);
-	  };
-	  
-	  const updateEvent = (updatedEvent) => {
-		if (!updatedEvent.erpName) {
-		  console.warn("Attempted to update event without erpName", updatedEvent);
-		  return;
-		}
-	  
-		const normalized = {
-		  ...updatedEvent,
-		  startDate: new Date(updatedEvent.startDate).toISOString(),
-		  endDate: new Date(updatedEvent.endDate).toISOString(),
-		};
-	  
-		setAllEvents((prev) =>
-		  prev.map((e) =>
-			e.erpName === normalized.erpName ? normalized : e
-		  )
-		);
-	  
-		setFilteredEvents((prev) =>
-		  prev.map((e) =>
-			e.erpName === normalized.erpName ? normalized : e
-		  )
-		);
-	  };
-	  
+	};
 
-	  const removeEvent = (erpName) => {
+	const updateEvent = (updatedEvent) => {
+		if (!updatedEvent.erpName) {
+			console.warn("Attempted to update event without erpName", updatedEvent);
+			return;
+		}
+
+		const normalized = {
+			...updatedEvent,
+			startDate: new Date(updatedEvent.startDate).toISOString(),
+			endDate: new Date(updatedEvent.endDate).toISOString(),
+		};
+
+		setAllEvents((prev) =>
+			prev.map((e) =>
+				e.erpName === normalized.erpName ? normalized : e
+			)
+		);
+
+		setFilteredEvents((prev) =>
+			prev.map((e) =>
+				e.erpName === normalized.erpName ? normalized : e
+			)
+		);
+	};
+
+
+	const removeEvent = (erpName) => {
 		if (!erpName) return;
-	  
+
 		setAllEvents(prev => prev.filter(e => e.erpName !== erpName));
 		setFilteredEvents(prev => prev.filter(e => e.erpName !== erpName));
-	  };
-	  
-	  
+	};
+
+
 	const clearFilter = () => {
 		setFilteredEvents(allEvents);
 		setSelectedColors([]);
@@ -159,64 +162,82 @@ export function CalendarProvider({
 	};
 	useEffect(() => {
 		let cancelled = false;
-	  
+
 		async function hydrateFromGraphql() {
-		  const { start, end } = resolveCalendarRange(currentView, selectedDate);
-	  
-		  try {
-			const events = await fetchEventsByRange(
-			  start,
-			  end,
-			  currentView
-			);
-			if (!cancelled) {
-			  setAllEvents(events);
-			  setFilteredEvents(events);
+			const { start, end } = resolveCalendarRange(currentView, selectedDate);
+
+			try {
+				const events = await fetchEventsByRange(
+					start,
+					end,
+					currentView
+				);
+				if (!cancelled) {
+					const enriched = enrichEventsWithParticipants(
+						events,
+						employeeOptions,
+						doctorOptions
+					);
+
+					setAllEvents(enriched);
+					setFilteredEvents(enriched);
+				}
+			} catch (err) {
+				console.error("Failed to fetch events", err);
 			}
-		  } catch (err) {
-			console.error("Failed to fetch events", err);
-		  }
 		}
-	  
+
 		hydrateFromGraphql();
-	  
+
 		return () => {
-		  cancelled = true;
+			cancelled = true;
 		};
-	  }, [currentView, selectedDate]);
+	}, [currentView, selectedDate]);
+	useEffect(() => {
+		if (!allEvents.length) return;
+		if (!employeeOptions.length && !doctorOptions.length) return;
 	  
-	  useEffect(() => {
+		const enriched = enrichEventsWithParticipants(
+		  allEvents,
+		  employeeOptions,
+		  doctorOptions
+		);
+	  
+		setAllEvents(enriched);
+		setFilteredEvents(enriched);
+	  }, [employeeOptions, doctorOptions]);
+	useEffect(() => {
 		let cancelled = false;
-	  
+
 		async function hydrateEmployees() {
-		  try {
-			const data = await graphqlRequest(EMPLOYEES_QUERY, {
-			  first: 1000,
-			});
-	  
-			const employees =
-			  data?.Employees?.edges?.map(e => e.node) ?? [];
-	  
-			const mappedUsers = mapEmployeesToCalendarUsers(employees);
-	  
-			if (!cancelled) {
-			  setUsers(mappedUsers);
-			  setUsersLoading(false);
+			try {
+				const data = await graphqlRequest(EMPLOYEES_QUERY, {
+					first: 1000,
+				});
+
+				const employees =
+					data?.Employees?.edges?.map(e => e.node) ?? [];
+
+				const mappedUsers = mapEmployeesToCalendarUsers(employees);
+
+				if (!cancelled) {
+					setUsers(mappedUsers);
+					setUsersLoading(false);
+				}
+
+			} catch (err) {
+				console.error("Failed to fetch employees", err);
+				setUsersLoading(false);
 			}
-	  
-		  } catch (err) {
-			console.error("Failed to fetch employees", err);
-			setUsersLoading(false);
-		  }
 		}
-	  
+
 		hydrateEmployees();
 		return () => {
-		  cancelled = true;
+			cancelled = true;
 		};
-	  }, []);
-	  
-	  
+	}, []);
+
+
 	const value = {
 		selectedDate,
 		setSelectedDate: handleSelectDate,
@@ -247,6 +268,12 @@ export function CalendarProvider({
 		isEventListOpen,
 		activeDate, setActiveDate, mobileLayer,
 		setMobileLayer,
+		employeeOptions,
+		doctorOptions,
+		hqTerritoryOptions,
+		setEmployeeOptions,
+		setDoctorOptions,
+		setHqTerritoryOptions,
 	};
 
 	return (
