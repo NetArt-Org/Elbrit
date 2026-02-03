@@ -39,7 +39,7 @@ export function mapFormToErpEvent(values, options = {}) {
           if (values.attending === "Yes" || values.attending === "No") {
             participant.attending = values.attending;
           }
-          
+
 
           if (values.kly_lat_long) {
             participant.kly_lat_long = values.kly_lat_long;
@@ -49,20 +49,32 @@ export function mapFormToErpEvent(values, options = {}) {
         participants.push(participant);
       });
     }
-
-    /* ---------- Doctors (UNTOUCHED) ---------- */
+    /* ---------- Doctors ---------- */
     if (values.doctor) {
       const doctors = Array.isArray(values.doctor)
         ? values.doctor
         : [values.doctor];
 
       doctors.forEach((doctor) => {
+        const isObject = typeof doctor === "object" && doctor !== null;
+
         const participant = {
           reference_doctype: "Lead",
-          reference_docname:
-            typeof doctor === "object" ? doctor.value : doctor,
+          reference_docname: isObject ? doctor.value : doctor,
         };
 
+        // ✅ PUSH DOCTOR LOCATION ON CREATE
+        // if (!isUpdate && isObject && doctor.kly_lat_long) {
+        //   participant.kly_lat_long = doctor.kly_lat_long;
+        // }
+        if (
+          isObject &&
+          doctor.kly_lat_long &&
+          (!isUpdate || !participant.kly_lat_long)
+        ) {
+          participant.kly_lat_long = doctor.kly_lat_long;
+        }
+        
         participants.push(participant);
       });
     }
@@ -87,21 +99,21 @@ export function mapFormToErpEvent(values, options = {}) {
     fsl_territory: values.hqTerritory || "",
   };
   // ✅ POB DETAILS (Doctor Visit Plan – Edit only)
-if (
-  isDoctorVisitPlan &&
-  isUpdate &&
-  values.pob_given === "Yes" &&
-  Array.isArray(values.fsl_doctor_item)
-) {
-  doc.fsl_doctor_item = values.fsl_doctor_item.map((row) => ({
-    item: {
-      name: row.item__name, // 👈 REQUIRED BY ERP
-    },
-    qty: Number(row.qty) || 0,
-    rate: Number(row.rate) || 0,
-    amount: Number(row.amount) || 0,
-  }));
-}
+  if (
+    isDoctorVisitPlan &&
+    isUpdate &&
+    values.pob_given === "Yes" &&
+    Array.isArray(values.fsl_doctor_item)
+  ) {
+    doc.fsl_doctor_item = values.fsl_doctor_item.map((row) => ({
+      item: {
+        name: row.item__name, // 👈 REQUIRED BY ERP
+      },
+      qty: Number(row.qty) || 0,
+      rate: Number(row.rate) || 0,
+      amount: Number(row.amount) || 0,
+    }));
+  }
 
   /* ------------------------------------
      🎂 Birthday repeat logic (ERP)
