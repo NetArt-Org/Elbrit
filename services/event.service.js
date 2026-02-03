@@ -6,6 +6,7 @@ import { getCachedEvents, setCachedEvents } from "@/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@/lib/calendar/cache-key";
 import { clearEventCache } from "@/lib/calendar/event-cache";
 import { format } from "date-fns";
+import { getCached, clearCached } from "@/lib/participants-cache";
 import {
   getCachedLeaveBalance,
   setCachedLeaveBalance,
@@ -116,20 +117,37 @@ export async function saveLeaveApplication(doc) {
   return data.saveDoc.doc;
 }
 export async function fetchAllLeaveApplications() {
-  const data = await graphqlRequest(LEAVE_QUERY, {
-    first: 500, // adjust if needed
+  return getCached("LEAVE_APPLICATIONS", async () => {
+    const data = await graphqlRequest(LEAVE_QUERY, {
+      first: 500,
+    });
+
+    return data.LeaveApplications.edges
+      .map(edge => mapErpLeaveToCalendar(edge.node))
+      .filter(Boolean);
   });
-  return data.LeaveApplications.edges
-    .map(edge => mapErpLeaveToCalendar(edge.node))
-    .filter(Boolean);
+  // const data = await graphqlRequest(LEAVE_QUERY, {
+  //   first: 500, // adjust if needed
+  // });
+  // return data.LeaveApplications.edges
+  //   .map(edge => mapErpLeaveToCalendar(edge.node))
+  //   .filter(Boolean);
 }
 export async function fetchAllTodoList() {
-  const data = await graphqlRequest(TODO_LIST_QUERY, {
-    first: 500, // adjust if needed
-  });
-  return data.ToDoes.edges
-    .map(edge => mapErpTodoToCalendar(edge.node))
-    .filter(Boolean);
+   return getCached("TODO_LIST", async () => {
+       const data = await graphqlRequest(TODO_LIST_QUERY, {
+         first: 500,
+       });
+       return data.ToDoes.edges
+         .map(edge => mapErpTodoToCalendar(edge.node))
+         .filter(Boolean);
+     });
+  // const data = await graphqlRequest(TODO_LIST_QUERY, {
+  //   first: 500, // adjust if needed
+  // });
+  // return data.ToDoes.edges
+  //   .map(edge => mapErpTodoToCalendar(edge.node))
+  //   .filter(Boolean);
 }
 
 export async function fetchEventsByRange(startDate, endDate, view) {
@@ -169,7 +187,7 @@ export async function fetchEventsByRange(startDate, endDate, view) {
     const pageEvents = connection.edges
       .map(edge => mapErpGraphqlEventToCalendar(edge.node))
       .filter(Boolean);
-    
+
     events.push(...pageEvents);
 
     if (!connection.pageInfo?.hasNextPage) break;

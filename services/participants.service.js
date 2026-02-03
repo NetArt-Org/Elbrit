@@ -3,6 +3,7 @@ import {
   EMPLOYEES_QUERY,DOCTOR_QUERY,HQ_TERRITORIES_QUERY,
   ITEMS_QUERY
 } from "@/services/events.query";
+import { getCached } from "@/lib/participants-cache";
 
 const MAX_ROWS = 1000; // safe upper bound
 
@@ -23,30 +24,34 @@ export async function fetchEmployees() {
 }
 
 export async function fetchItems() {
-  const data = await graphqlRequest(ITEMS_QUERY, {
-    first: MAX_ROWS,
-    filters: [
-      {
-        fieldname: "whg_last_pts",
-        operator: "GT",
-        value: "0",
-      },
-    ],
-  });
-  const unique = new Map();
+  return getCached("POB_ITEMS", async () => {
+    const data = await graphqlRequest(ITEMS_QUERY, {
+      first: MAX_ROWS,
+      filters: [
+        {
+          fieldname: "whg_last_pts",
+          operator: "GT",
+          value: "0",
+        },
+      ],
+    });
 
-  data?.Items?.edges.forEach(({ node }) => {
-    if (!unique.has(node.item_name)) {
-      unique.set(node.item_name, {
-        value: node.item_name,
-        label: node.item_name,
-        rate: Number(node.whg_last_pts),
-      });
-    }
+    const unique = new Map();
+
+    data?.Items?.edges.forEach(({ node }) => {
+      if (!unique.has(node.item_name)) {
+        unique.set(node.item_name, {
+          value: node.item_name,
+          label: node.item_name,
+          rate: Number(node.whg_last_pts),
+        });
+      }
+    });
+
+    return Array.from(unique.values());
   });
-  
-  return Array.from(unique.values());
 }
+
 export async function fetchDoctors() {
   const data = await graphqlRequest(DOCTOR_QUERY, {
     first: MAX_ROWS,

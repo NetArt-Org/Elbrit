@@ -1078,12 +1078,12 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 								/>
 
 								{/* Latitude & Longitude */}
-								{form.watch("attending") && (
+								{/* {form.watch("attending") && (
 									<div className="text-sm text-muted-foreground flex flex-col gap-1">
 										<div className="font-medium">Latitude & Longitude:</div>{" "}
 										<div>{form.watch("kly_lat_long") || "Fetching location..."}</div>
 									</div>
-								)}
+								)} */}
 							</div>
 						)}
 						{/* ================= POB QUESTION ================= */}
@@ -1133,7 +1133,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 											className="flex gap-3 items-end"
 										>
 											{/* Item */}
-											<div className="w-[50%]">
+											<div className="flex-1 min-w-[200px]">
 												<FormField
 													control={form.control}
 													name={`fsl_doctor_item.${index}.item__name`}
@@ -1174,7 +1174,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 													</RHFFieldWrapper>
 												)}
 											/>
-											<div className="flex gap-3">
+											<div className="flex gap-2">
 												{/* Rate (read-only) */}
 												<div >
 													<label className="text-sm font-medium text-muted-foreground">
@@ -1195,6 +1195,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 											<Button
 												type="button"
 												variant="ghost"
+												size="icon"
 												className="mb-1"
 												onClick={() => {
 													const items = [...form.getValues("fsl_doctor_item")];
