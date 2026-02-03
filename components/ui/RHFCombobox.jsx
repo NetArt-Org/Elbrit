@@ -121,12 +121,12 @@ export function RHFCombobox({
         </PopoverTrigger>
 
         <PopoverContent
-          className="w-[--radix-popover-trigger-width] p-0"
+          className="w-[--radix-popover-trigger-width] p-0 "
           align="start"
         >
-          <Command>
+          <Command className="h-[180px] overflow-hidden">
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandList className="max-h-60 overflow-y-auto">
+            <CommandList className=" overflow-y-auto">
               <CommandEmpty>No results found.</CommandEmpty>
 
               <CommandGroup>

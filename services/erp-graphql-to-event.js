@@ -16,13 +16,22 @@ export function mapErpGraphqlEventToCalendar(node) {
   /* ---------------------------------------------
      PARTICIPANTS (SOURCE OF TRUTH)
   --------------------------------------------- */
-  const participants =
-  node.event_participants?.map((p) => ({
-    type: p.reference_doctype__name,
-    id: String(p.reference_docname__name), // 🔒 force scalar
+
+  const event_participants =
+    node.event_participants?.map((p) => ({
+      reference_doctype: p.reference_doctype__name,
+      reference_docname: String(p.reference_docname__name),
+      attending: p.attending,
+      kly_lat_long: p.kly_lat_long,
+    })) ?? [];
+
+  const participants = event_participants.map((p) => ({
+    type: p.reference_doctype,
+    id: p.reference_docname,
     attending: p.attending,
     kly_lat_long: p.kly_lat_long,
-  })) ?? [];
+  }));
+
   /* ---------------------------------------------
      DERIVE EMPLOYEES & DOCTORS
   --------------------------------------------- */
@@ -79,10 +88,10 @@ export function mapErpGraphqlEventToCalendar(node) {
 
     owner: node.owner
       ? {
-          id: node.owner.name,
-          name: node.owner.full_name || node.owner.name,
-          email: node.owner.email,
-        }
+        id: node.owner.name,
+        name: node.owner.full_name || node.owner.name,
+        email: node.owner.email,
+      }
       : undefined,
 
     isMultiDay:
@@ -90,7 +99,10 @@ export function mapErpGraphqlEventToCalendar(node) {
       endDate &&
       startDate.toDateString() !== endDate.toDateString(),
 
-    // 🔁 Always keep original participants
+    // 🔒 ERP truth
+    event_participants,
+
+    // 👇 UI derived
     participants,
   };
   if (
@@ -103,10 +115,10 @@ export function mapErpGraphqlEventToCalendar(node) {
       rate: Number(row.rate) || 0,
       amount: Number(row.amount) || 0,
     }));
-  
+
     event.pob_given = event.fsl_doctor_item.length ? "Yes" : "No";
   }
-  
+
   /* ---------------------------------------------
      VALIDATE AGAINST SCHEMA
   --------------------------------------------- */

@@ -18,7 +18,6 @@ import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxFiel
 import { useCalendar } from "@/components/calendar/contexts/calendar-context";
 import { useDisclosure } from "@/components/calendar/hooks";
 import { eventSchema } from "@/components/calendar/schemas";
-import { buildCalendarParticipants } from "@/lib/utils";
 import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@/lib/participants";
 import { TimePicker } from "@/components/ui/TimePicker";
@@ -29,8 +28,9 @@ import { uploadLeaveMedicalCertificate } from "@/services/file.service";
 import { fetchItems } from "@/services/participants.service";
 import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
+import { resolveDisplayValueFromEvent } from "@/lib/calendar/resolveDisplay";
 
-export function AddEditEventDialog({ children, event, defaultTag, }) {
+export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { addEvent, updateEvent, employeeOptions,
 		doctorOptions,
@@ -110,12 +110,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 	}, [pobItems, itemOptions]);
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
-	const visibleTags = useMemo(() => {
-		if (isEditing && tagConfig.ui?.lockTagOnEdit) {
-			return TAGS.filter(t => t.id === selectedTag);
-		}
-		return TAGS;
-	}, [isEditing, selectedTag, tagConfig]);
+	const shouldShowTags =
+  !isEditing || tagConfig.ui?.lockTagOnEdit !== true;
+
 	const isMulti = tagConfig?.employee?.multiselect === true;
 	const isFieldVisible = (field) => {
 		if (tagConfig.show) return tagConfig.show.includes(field);
@@ -150,6 +147,18 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		}
 	};
 
+	useEffect(() => {
+		if (!isOpen) return;
+		if (!isEditing) return;
+		if (!forceValues) return;
+
+		Object.entries(forceValues).forEach(([key, value]) => {
+			form.setValue(key, value, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
+		});
+	}, [isOpen, isEditing, forceValues]);
 
 	const leaveDays = useMemo(() => {
 		if (selectedTag !== TAG_IDS.LEAVE) return 0;
@@ -459,6 +468,18 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		toast.success(message);
 		onClose();
 	};
+	function normalizePobItemsForUI(items = []) {
+		return items.map(row => ({
+		  item__name:
+			typeof row.item__name === "string"
+			  ? row.item__name
+			  : row.item?.name ?? "",
+		  qty: Number(row.qty),
+		  rate: Number(row.rate),
+		  amount: Number(row.amount),
+		}));
+	  }
+	  
 
 	const upsertCalendarEvent = (calendarEvent) => {
 		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
@@ -560,15 +581,32 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			const calendarEvent = {
 				erpName: savedEvent.name,
 				title: buildDoctorVisitTitle(doctorId, values), description: values.description,
-				 startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, 
-				 tags: values.tags, owner: LOGGED_IN_USER.id,
-				participants: buildCalendarParticipants(
-					{ ...values, doctor: doctorId },
-					employeeOptions,
-					doctorOptions
-				),
-			};
+				startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor,
+				tags: values.tags, owner: LOGGED_IN_USER.id,
+				// 🔒 ERP truth
+				event_participants: erpDoc.event_participants,
 
+				// 👇 derived UI
+				participants: erpDoc.event_participants.map(p => ({
+					type: p.reference_doctype,
+					id: p.reference_docname,
+				})),
+			};
+			if (
+				values.pob_given === "Yes" &&
+				Array.isArray(values.fsl_doctor_item)
+			) {
+				calendarEvent.fsl_doctor_item = normalizePobItemsForUI(
+					values.fsl_doctor_item
+				  );
+				  
+				calendarEvent.pob_given = "Yes";
+			} else {
+				calendarEvent.fsl_doctor_item = [];
+				calendarEvent.pob_given = "No";
+			}
+
+			console.log("CALENDAR EVENT ", calendarEvent)
 			addEvent(calendarEvent);
 		}
 
@@ -579,22 +617,40 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			erpName: event?.erpName,
 		});
 
-		console.log("ERP DOC Before", erpDoc, event?.erpDoc)
+		console.log("ERP DOC Before", erpDoc,)
 		const savedEvent = await saveEvent(erpDoc);
 		const calendarEvent = {
 			...(event ?? {}),
 			erpName: savedEvent.name,
-			title: values.title, description: values.description, 
-			startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, 
+			title: values.title, description: values.description,
+			startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor,
 			tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id,
-			 hqTerritory: values.hqTerritory || "",
-			participants: buildCalendarParticipants(
-				values,
-				employeeOptions,
-				doctorOptions
-			),
-		};
+			hqTerritory: values.hqTerritory || "",
+			// 🔒 ERP truth
+			event_participants: erpDoc.event_participants,
 
+			// 👇 derived UI
+			participants: erpDoc.event_participants.map(p => ({
+				type: p.reference_doctype,
+				id: p.reference_docname,
+			})),
+		};
+		if (
+			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			values.pob_given === "Yes" &&
+			Array.isArray(values.fsl_doctor_item)
+		) {
+			calendarEvent.fsl_doctor_item = normalizePobItemsForUI(
+				values.fsl_doctor_item
+			  );
+			  
+			calendarEvent.pob_given = "Yes";
+		} else if (values.tags === TAG_IDS.DOCTOR_VISIT_PLAN) {
+			calendarEvent.fsl_doctor_item = [];
+			calendarEvent.pob_given = "No";
+		}
+
+		console.log("CALENDAR EVENT", calendarEvent)
 		upsertCalendarEvent(calendarEvent);
 		finalize("Event saved");
 	};
@@ -632,7 +688,23 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				await handleDefaultEvent(values);
 		}
 	};
+	const editReadOnlyKeys = useMemo(() => {
+		if (!isEditing) return [];
+		return tagConfig.editReadOnly?.fields?.map(f => f.key) ?? [];
+	}, [isEditing, tagConfig]);
 
+	const isEditReadOnlyField = (key) =>
+		isEditing && editReadOnlyKeys.includes(key);
+	const enrichedEvent = useMemo(() => {
+		if (!event) return null;
+	  
+		return {
+		  ...event,
+		  _employeeOptions: employeeOptions,
+		  _doctorOptions: doctorOptions,
+		};
+	  }, [event, employeeOptions, doctorOptions]);
+	  
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -650,29 +722,45 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 						className="grid gap-4"
 					>
 						{/* ================= TAGS ================= */}
-						<FormField
-							control={form.control}
-							name="tags"
-							render={({ field }) => (
-								<div className="flex flex-wrap gap-2">
-									{visibleTags.map((tag) => (
-										<button
-											key={tag.id}
-											type="button"
-											disabled={isEditing && tagConfig.ui?.lockTagOnEdit}
-											onClick={() => field.onChange(tag.id)}
-											className={`px-4 py-1 rounded-full ${field.value === tag.id
-												? "bg-black text-white"
-												: "bg-muted"
-												} ${isEditing ? "cursor-default" : ""}`}
-										>
-											{tag.label}
-										</button>
-									))}
-
-								</div>
-							)}
-						/>
+						{shouldShowTags && (
+							<FormField
+								control={form.control}
+								name="tags"
+								render={({ field }) => (
+									<div className="flex flex-wrap gap-2">
+										{TAGS.map((tag) => (
+											<button
+												key={tag.id}
+												type="button"
+												disabled={isEditing && tagConfig.ui?.lockTagOnEdit}
+												onClick={() => field.onChange(tag.id)}
+												className={`px-4 py-1 rounded-full ${field.value === tag.id
+													? "bg-black text-white"
+													: "bg-muted"
+													} ${isEditing ? "cursor-default" : ""}`}
+											>
+												{tag.label}
+											</button>
+										))}
+									</div>
+								)}
+							/>
+						)}
+						{isEditing && tagConfig.editReadOnly?.fields?.length > 0 && (
+							<div className="space-y-4">
+								{tagConfig.editReadOnly.fields.map((field) => (
+									<div key={field.key}>
+										<p className="text-sm font-medium">{field.label}</p>
+										<p className="text-sm text-muted-foreground">
+											{resolveDisplayValueFromEvent({
+												event: enrichedEvent,
+												field,
+											})}
+										</p>
+									</div>
+								))}
+							</div>
+						)}
 
 						{/* ================= LEAVE TYPE ================= */}
 						{selectedTag === TAG_IDS.LEAVE && (
@@ -733,18 +821,22 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 						)}
 
 						{/* ================= DOCTOR ================= */}
-						{!tagConfig.hide?.includes("doctor") && (
-							<FormField
-								control={form.control}
-								name="doctor"
-								render={({ field }) => (
-									<RHFFieldWrapper label="Doctor">
-										<RHFComboboxField {...field} options={doctorOptions} multiple={isDoctorMulti} placeholder="Select doctor" selectionLabel="doctor"
-										/>
-									</RHFFieldWrapper>
-								)}
-							/>
-						)}
+						{!tagConfig.hide?.includes("doctor") &&
+							!isEditReadOnlyField("doctor") && (
+								<FormField
+									control={form.control}
+									name="doctor"
+									render={({ field }) => (
+										<RHFFieldWrapper label="Doctor">
+											<RHFComboboxField
+												{...field}
+												options={doctorOptions}
+												multiple={isDoctorMulti}
+											/>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
 
 						{/* ================= MEETING ================= */}
 						{selectedTag === TAG_IDS.MEETING ? (
@@ -815,10 +907,16 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 									: "grid-cols-1"
 									}`}
 							>
-								{isFieldVisible("startDate") && (
-									<RHFDateTimeField control={form.control} form={form} name="startDate" label={getFieldLabel("startDate", "Start Date")} hideTime={tagConfig.dateOnly} allowAllDates={selectedTag === TAG_IDS.BIRTHDAY}
-									/>
-								)}
+								{isFieldVisible("startDate") &&
+									!isEditReadOnlyField("startDate") && (
+										<RHFDateTimeField
+											control={form.control}
+											form={form}
+											name="startDate"
+											label={getFieldLabel("startDate", "Start Date")}
+											hideTime={tagConfig.dateOnly}
+										/>
+									)}
 
 								{isFieldVisible("endDate") && (
 									<RHFDateTimeField control={form.control} form={form} name="endDate" label={getFieldLabel("endDate", "End Date")} hideTime={tagConfig.dateOnly}
@@ -945,35 +1043,6 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 									</RHFFieldWrapper>
 								)}
 							/>
-						)}
-						{/* ================= DOCTOR VISIT (EDIT ONLY) ================= */}
-						{isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
-							<div className="space-y-3 ">
-								<h4 className="font-medium">Visit Status</h4>
-
-								{/* Visited */}
-								<FormField
-									control={form.control}
-									name="attending"
-									render={({ field }) => (
-										<InlineCheckboxField
-											label="Visited"
-											checked={field.value === "Yes"}
-											onChange={(checked) =>
-												field.onChange(checked ? "Yes" : "No")
-											}
-										/>
-									)}
-								/>
-
-								{/* Latitude & Longitude */}
-								{/* {form.watch("attending") && (
-									<div className="text-sm text-muted-foreground flex flex-col gap-1">
-										<div className="font-medium">Latitude & Longitude:</div>{" "}
-										<div>{form.watch("kly_lat_long") || "Fetching location..."}</div>
-									</div>
-								)} */}
-							</div>
 						)}
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&

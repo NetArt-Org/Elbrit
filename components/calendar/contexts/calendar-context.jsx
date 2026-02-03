@@ -54,7 +54,7 @@ export function CalendarProvider({
 			...newPartialSettings,
 		});
 	};
-	  
+
 	const setBadgeVariant = (variant) => {
 		setBadgeVariantState(variant);
 		updateSettings({ badgeVariant: variant });
@@ -173,14 +173,9 @@ export function CalendarProvider({
 					currentView
 				);
 				if (!cancelled) {
-					const enriched = enrichEventsWithParticipants(
-						events,
-						employeeOptions,
-						doctorOptions
-					);
+					setAllEvents(events);
+					setFilteredEvents(events);
 
-					setAllEvents(enriched);
-					setFilteredEvents(enriched);
 				}
 			} catch (err) {
 				console.error("Failed to fetch events", err);
@@ -194,8 +189,8 @@ export function CalendarProvider({
 		};
 	}, [currentView, selectedDate]);
 	useEffect(() => {
-		if (!allEvents.length) return;
 		if (!employeeOptions.length && !doctorOptions.length) return;
+		if (!allEvents.length) return;
 	  
 		const enriched = enrichEventsWithParticipants(
 		  allEvents,
@@ -206,6 +201,7 @@ export function CalendarProvider({
 		setAllEvents(enriched);
 		setFilteredEvents(enriched);
 	  }, [employeeOptions, doctorOptions]);
+	  
 	useEffect(() => {
 		let cancelled = false;
 

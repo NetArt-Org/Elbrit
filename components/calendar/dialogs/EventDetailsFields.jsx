@@ -1,6 +1,5 @@
 import { Calendar, Clock, Text, User } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns";
-import { formatTime } from "@/components/calendar/helpers";
+import { resolveDisplayValueFromEvent } from "@/lib/calendar/resolveDisplay";
 
 const ICONS = {
   owner: User,
@@ -16,33 +15,12 @@ export function EventDetailsFields({ event, config, use24HourFormat }) {
     <div className="space-y-4">
       {config.details.fields.map((field) => {
         const Icon = ICONS[field.type] ?? Text;
-        let value = event[field.key];
-
+        const value = resolveDisplayValueFromEvent({
+          event,
+          field,
+          use24HourFormat,
+        });
         if (!value) return null;
-
-        if (field.type === "owner") {
-          value = event.owner?.name;
-        }
-
-        if (field.type === "date") {
-          const d = typeof value === "string" ? parseISO(value) : new Date(value);
-          if (!isValid(d)) return null;
-
-          value = format(d, "EEEE dd MMMM");
-        }
-
-        if (field.type === "datetime") {
-          const d = typeof value === "string" ? parseISO(value) : new Date(value);
-          if (!isValid(d)) return null;
-
-          value = (
-            <>
-              {format(d, "EEEE dd MMMM")}
-              <span className="mx-1">at</span>
-              {formatTime(d, use24HourFormat)}
-            </>
-          );
-        }
 
         return (
           <div key={field.key} className="flex items-start gap-2">

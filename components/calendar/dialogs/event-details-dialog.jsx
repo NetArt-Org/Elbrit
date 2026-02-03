@@ -20,7 +20,7 @@ export function EventDetailsDialog({
 	children
 }) {
 	const [open, setOpen] = useState(false);
-	const { use24HourFormat, removeEvent } = useCalendar();
+	const { use24HourFormat, removeEvent, employeeOptions, doctorOptions } = useCalendar();
 	const deleteLockRef = useRef(false);
 	const tagConfig =
 		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
@@ -29,7 +29,12 @@ export function EventDetailsDialog({
 		tagConfig.ui?.allowDelete?.(event) ?? true;
 	const canEdit =
 		tagConfig.ui?.allowEdit?.(event) ?? true;
-		console.log("EVENT",event)
+		const editAction = tagConfig.ui?.primaryEditAction;
+		const eventWithOptions = {
+			...event,
+			_employeeOptions: employeeOptions,
+			_doctorOptions: doctorOptions,
+		  };
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
@@ -41,7 +46,7 @@ export function EventDetailsDialog({
 				<ScrollArea className="max-h-[80vh]">
 					<div className="p-4">
 						<EventDetailsFields
-							event={event}
+							event={eventWithOptions}
 							config={tagConfig}
 							use24HourFormat={use24HourFormat}
 						/>
@@ -49,11 +54,15 @@ export function EventDetailsDialog({
 				</ScrollArea>
 				<div className="flex justify-end gap-2">
 					{canEdit && (
-						<AddEditEventDialog event={event}>
-							<Button variant="outline">Edit</Button>
+						<AddEditEventDialog
+							event={event}
+							forceValues={editAction?.setOnEdit}
+						>
+							<Button variant="outline">
+								{editAction?.label ?? "Edit"}
+							</Button>
 						</AddEditEventDialog>
 					)}
-
 					{canDelete && (
 						<Button
 							variant="destructive"
