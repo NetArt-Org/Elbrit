@@ -1174,23 +1174,26 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 													</RHFFieldWrapper>
 												)}
 											/>
-											<div className="flex gap-2">
-												{/* Rate (read-only) */}
+											<div >
+													<label className="text-sm font-medium text-muted-foreground">
+														Amount
+													</label>
+													<Input value={row.amount} disabled />
+												</div>
+											{/* <div className="flex gap-2">
 												<div >
 													<label className="text-sm font-medium text-muted-foreground">
 														Rate
 													</label>
 													<Input value={row.rate} disabled />
 												</div>
-
-												{/* Amount (read-only) */}
 												<div >
 													<label className="text-sm font-medium text-muted-foreground">
 														Amount
 													</label>
 													<Input value={row.amount} disabled />
 												</div>
-											</div>
+											</div> */}
 											{/* Remove */}
 											<Button
 												type="button"
