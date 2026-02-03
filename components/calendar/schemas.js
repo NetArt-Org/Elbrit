@@ -35,7 +35,7 @@ export const eventSchema = z.object({
 	leavePeriod: z.enum(["Full", "Half"]).optional(),
 	medicalAttachment: z.any().optional(),
 	halfDayDate: z.date().optional(),
-	approvedBy: z.date().optional(),
+	approvedBy: z.string().optional(),
 	todoStatus: z.enum(["Open", "Closed", "Cancelled"]).optional(),
 	priority: z.enum(["High", "Medium", "Low"]).optional(),
 	pob_given: z.enum(["Yes", "No"]).optional(),

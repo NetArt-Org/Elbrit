@@ -112,10 +112,10 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 
 			const item = itemOptions.find(i => i.value === row.item__name);
 			if (!item) return;
-
+            console.log("ITEM USEEFFECt",item,row.rate,item.rate,row)
 			// avoid infinite loop
 			if (row.rate === item.rate) return;
-
+            
 			updatePobRow(form, index, {
 				rate: Number(item.rate) || 0,
 			});
@@ -725,6 +725,8 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 		}
 		finalize("Leave applied successfully");
 	};
+	console.log("FORM ERRORS", form.formState.errors);
+
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -1112,7 +1114,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 											className="flex gap-3 items-end"
 										>
 											{/* Item */}
-											<div className="w-[280px]">
+											<div className="w-[50%]">
 												<FormField
 													control={form.control}
 													name={`fsl_doctor_item.${index}.item__name`}
@@ -1130,10 +1132,8 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 														</RHFFieldWrapper>
 													)}
 												/>
-											</div>
-
+</div>
 											{/* Qty */}
-											<div className="w-[90px]">
 												<FormField
 													control={form.control}
 													name={`fsl_doctor_item.${index}.qty`}
@@ -1152,10 +1152,9 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 														</RHFFieldWrapper>
 													)}
 												/>
-											</div>
-
+<div className="flex gap-3">
 											{/* Rate (read-only) */}
-											<div className="w-[110px] space-y-1">
+											<div >
 												<label className="text-sm font-medium text-muted-foreground">
 													Rate
 												</label>
@@ -1163,13 +1162,13 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 											</div>
 
 											{/* Amount (read-only) */}
-											<div className="w-[120px] space-y-1">
+											<div >
 												<label className="text-sm font-medium text-muted-foreground">
 													Amount
 												</label>
 												<Input value={row.amount} disabled />
 											</div>
-
+</div>
 											{/* Remove */}
 											<Button
 												type="button"

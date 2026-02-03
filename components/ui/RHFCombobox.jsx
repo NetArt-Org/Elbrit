@@ -35,12 +35,12 @@ export function RHFCombobox({
   const getKey = v => (isObject(v) ? v.value : v);
 
   const selectedValues = multiple
-    ? Array.isArray(value) ? value : []
-    : value ? [value] : [];
+  ? Array.isArray(value) ? value : []
+  : value ? [value] : [];
 
-  const selectedOptions = selectedValues
-    .map(v => options.find(o => o.value === getKey(v)))
-    .filter(Boolean);
+const selectedOptions = selectedValues
+  .map(v => options.find(o => o.value === v))
+  .filter(Boolean);
 
   const hasSelection = selectedOptions.length > 0;
 
@@ -49,30 +49,28 @@ export function RHFCombobox({
   --------------------------------------- */
   const handleSelect = (opt) => {
     if (!multiple) {
-      onChange(opt);
+      onChange(opt.value);
       setOpen(false);
       return;
     }
-
-    const exists = selectedValues.some(v => getKey(v) === opt.value);
-
-    if (exists) {
-      onChange(selectedValues.filter(v => getKey(v) !== opt.value));
+  
+    if (selectedValues.includes(opt.value)) {
+      onChange(selectedValues.filter(v => v !== opt.value));
     } else {
-      onChange([...selectedValues, opt]);
+      onChange([...selectedValues, opt.value]);
     }
   };
+  
 
   const handleRemove = (optValue) => {
     if (!multiple) {
       onChange(undefined);
-      return;
+    } else {
+      onChange(selectedValues.filter(v => v !== optValue));
     }
-    onChange(selectedValues.filter(v => getKey(v) !== optValue));
   };
 
-  const isSelected = (opt) =>
-    selectedValues.some(v => getKey(v) === opt.value);
+  const isSelected = (opt) => selectedValues.includes(opt.value);
 
   /* ---------------------------------------
      UI
