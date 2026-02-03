@@ -36,9 +36,10 @@ export function mapFormToErpEvent(values, options = {}) {
 
         // ✅ ONLY ON EDIT + DOCTOR VISIT PLAN
         if (isDoctorVisitPlan && isUpdate) {
-          if (typeof values.attending === "boolean") {
-            participant.attending = values.attending ? 1 : 0;
+          if (values.attending === "Yes" || values.attending === "No") {
+            participant.attending = values.attending;
           }
+          
 
           if (values.kly_lat_long) {
             participant.kly_lat_long = values.kly_lat_long;
@@ -93,7 +94,9 @@ if (
   Array.isArray(values.fsl_doctor_item)
 ) {
   doc.fsl_doctor_item = values.fsl_doctor_item.map((row) => ({
-    item__name: row.item__name,
+    item: {
+      name: row.item__name, // 👈 REQUIRED BY ERP
+    },
     qty: Number(row.qty) || 0,
     rate: Number(row.rate) || 0,
     amount: Number(row.amount) || 0,

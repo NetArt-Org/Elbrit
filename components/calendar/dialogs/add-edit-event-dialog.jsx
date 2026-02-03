@@ -83,7 +83,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			leavePeriod: "Full",
 			halfDayDate: event?.halfDayDate ?? "",
 			approvedBy: event?.approvedBy ?? "",
-			attending: employeeParticipant?.attending === 1,
+			attending: employeeParticipant?.attending ?? "No",
 			kly_lat_long: employeeParticipant?.kly_lat_long ?? "",
 			pob_given: event?.pob_given ?? "No",
 			fsl_doctor_item: event?.fsl_doctor_item ?? [],
@@ -668,10 +668,10 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				{}
 			);
 			console.log("ERP DOC DR VISIT PLAN", erpDoc)
-			// const savedEvent = await saveEvent(erpDoc);
+			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = {
-				// erpName: savedEvent.name,
+				erpName: savedEvent.name,
 				title: buildDoctorVisitTitle(doctorId, values), description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: LOGGED_IN_USER.id,
 				participants: buildCalendarParticipants(
 					{ ...values, doctor: doctorId },
@@ -680,21 +680,22 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 				),
 			};
 
-			// addEvent(calendarEvent);
+			addEvent(calendarEvent);
 		}
 
-		// finalize(`Created ${values.doctor.length} Doctor Visit events`);
+		finalize(`Created ${values.doctor.length} Doctor Visit events`);
 	};
 	const handleDefaultEvent = async (values) => {
 		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
 		});
 
-		// const savedEvent = await saveEvent(erpDoc);
-		console.log("ERP DOC ", erpDoc)
+		console.log("ERP DOC Before", erpDoc,event?.erpDoc)
+		const savedEvent = await saveEvent(erpDoc);
+		console.log("ERP DOC After", erpDoc,event?.erpDoc)
 		const calendarEvent = {
 			...(event ?? {}),
-			// erpName: savedEvent.name,
+			erpName: savedEvent.name,
 			title: values.title, description: values.description, startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor, tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id, hqTerritory: values.hqTerritory || "",
 			participants: buildCalendarParticipants(
 				values,
@@ -703,8 +704,8 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 			),
 		};
 
-		// upsertCalendarEvent(calendarEvent);
-		// finalize("Event saved");
+		upsertCalendarEvent(calendarEvent);
+		finalize("Event saved");
 	};
 	const onInvalid = (errors) => {
 		showFirstFormErrorAsToast(errors);
@@ -1067,10 +1068,12 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 									name="attending"
 									render={({ field }) => (
 										<InlineCheckboxField
-											label="Visited"
-											checked={field.value}
-											onChange={field.onChange}
-										/>
+										label="Visited"
+										checked={field.value === "Yes"}
+										onChange={(checked) =>
+										  field.onChange(checked ? "Yes" : "No")
+										}
+									  />
 									)}
 								/>
 
@@ -1085,7 +1088,7 @@ export function AddEditEventDialog({ children, event, defaultTag, }) {
 						)}
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&
-							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && attending && (
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && attending === "Yes" && (
 								<FormField
 									control={form.control}
 									name="pob_given"
