@@ -25,7 +25,7 @@ import {
 	subWeeks,
 	subYears,
 } from "date-fns";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
 const FORMAT_STRING = "MMM d, yyyy";
 

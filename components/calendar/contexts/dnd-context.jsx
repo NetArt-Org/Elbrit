@@ -1,8 +1,8 @@
 "use client";;
 import React, { createContext, useCallback, useContext, useRef, useState, useMemo } from "react";
 import { toast } from "sonner";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { DndConfirmationDialog } from "@/components/calendar/dialogs/dnd-confirmation-dialog";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { DndConfirmationDialog } from "@calendar/components/calendar/dialogs/dnd-confirmation-dialog";
 
 const DragDropContext = createContext(undefined);
 

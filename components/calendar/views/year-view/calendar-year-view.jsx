@@ -8,16 +8,16 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@calendar/lib/utils";
 import {
   SwipeFadeVariants,
   transition,
-} from "@/components/calendar/animations";
+} from "@calendar/components/calendar/animations";
 import { startTransition } from "react";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { EventListDialog } from "@/components/calendar/dialogs/events-list-dialog";
-import { getCalendarCells, navigateDate } from "@/components/calendar/helpers";
-import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { EventListDialog } from "@calendar/components/calendar/dialogs/events-list-dialog";
+import { getCalendarCells, navigateDate } from "@calendar/components/calendar/helpers";
+import { EventBullet } from "@calendar/components/calendar/views/month-view/event-bullet";
 import { CalendarVerticalSwipeLayer } from "../../mobile/CalendarVerticalSwipeLayer";
 
 const MONTHS = [

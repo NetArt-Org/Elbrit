@@ -1,21 +1,21 @@
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@calendar/components/ui/button";
+import { Calendar } from "@calendar/components/ui/calendar";
 import {
 	FormControl,
 	FormItem,
 	FormLabel,
 	FormMessage,
-} from "@/components/ui/form";
+} from "@calendar/components/ui/form";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea, } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/ui/popover";
+import { ScrollArea, } from "@calendar/components/ui/scroll-area";
+import { cn } from "@calendar/lib/utils";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { useState, useEffect } from "react";
 
 export function DateTimePicker({

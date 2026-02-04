@@ -1,21 +1,21 @@
 import {addDays, format, isSameDay, parseISO, startOfWeek} from "date-fns";
 import {AnimatePresence,motion} from "framer-motion";
-import {ScrollArea} from "@/components/ui/scroll-area";
+import {ScrollArea} from "@calendar/components/ui/scroll-area";
 import {
     fadeIn,
     staggerContainer,SwipeFadeVariants,
     transition,
-} from "@/components/calendar/animations";
+} from "@calendar/components/calendar/animations";
 import { startTransition } from "react";
-import {useCalendar} from "@/components/calendar/contexts/calendar-context";
-import {AddEditEventDialog} from "@/components/calendar/dialogs/add-edit-event-dialog";
-import {DroppableArea} from "@/components/calendar/dnd/droppable-area";
-import {groupEvents,navigateDate} from "@/components/calendar/helpers";
-import {CalendarTimeline} from "@/components/calendar/views/week-and-day-view/calendar-time-line";
-import {RenderGroupedEvents} from "@/components/calendar/views/week-and-day-view/render-grouped-events";
+import {useCalendar} from "@calendar/components/calendar/contexts/calendar-context";
+import {AddEditEventDialog} from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
+import {DroppableArea} from "@calendar/components/calendar/dnd/droppable-area";
+import {groupEvents,navigateDate} from "@calendar/components/calendar/helpers";
+import {CalendarTimeline} from "@calendar/components/calendar/views/week-and-day-view/calendar-time-line";
+import {RenderGroupedEvents} from "@calendar/components/calendar/views/week-and-day-view/render-grouped-events";
 import {
     WeekViewMultiDayEventsRow
-} from "@/components/calendar/views/week-and-day-view/week-view-multi-day-events-row";
+} from "@calendar/components/calendar/views/week-and-day-view/week-view-multi-day-events-row";
 
 export function CalendarWeekView({
     singleDayEvents,

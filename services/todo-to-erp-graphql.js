@@ -1,5 +1,5 @@
 import { format,startOfDay, endOfDay  } from "date-fns";
-import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
+import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 
 export function mapFormToErpTodo(values, resolvers) {
   const employeeId = Array.isArray(values.employees)

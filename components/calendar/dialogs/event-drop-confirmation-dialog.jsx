@@ -10,10 +10,10 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {formatTime, getColorClass} from "@/components/calendar/helpers";
-import {cn} from "@/lib/utils";
-import {useCalendar} from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/ui/alert-dialog";
+import {formatTime, getColorClass} from "@calendar/components/calendar/helpers";
+import {cn} from "@calendar/lib/utils";
+import {useCalendar} from "@calendar/components/calendar/contexts/calendar-context";
 
 export function EventDropConfirmationDialog({
     open,

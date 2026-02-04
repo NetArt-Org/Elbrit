@@ -2,8 +2,8 @@
 import { enUS } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker as ReactDayPicker } from "react-day-picker";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { buttonVariants } from "@calendar/components/ui/button";
+import { cn } from "@calendar/lib/utils";
 
 function DayPicker({
     className,

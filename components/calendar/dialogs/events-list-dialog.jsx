@@ -4,13 +4,13 @@ import {
   ModalContent,
   ModalHeader,
   ModalTitle,
-} from "@/components/ui/responsive-modal";
-import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { formatTime } from "@/components/calendar/helpers";
-import { dayCellVariants } from "@/components/calendar/views/month-view/day-cell";
-import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
-import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
+} from "@calendar/components/ui/responsive-modal";
+import { cn } from "@calendar/lib/utils";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { formatTime } from "@calendar/components/calendar/helpers";
+import { dayCellVariants } from "@calendar/components/calendar/views/month-view/day-cell";
+import { EventBullet } from "@calendar/components/calendar/views/month-view/event-bullet";
+import { EventDetailsDialog } from "@calendar/components/calendar/dialogs/event-details-dialog";
 import MobileAddEventBar from "../mobile/MobileAddEventBar";
 
 export function EventListDialog({ maxVisibleEvents = 10 }) {

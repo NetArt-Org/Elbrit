@@ -1,18 +1,18 @@
-import { graphqlRequest } from "@/lib/graphql-client";
+import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { serializeEventDoc } from "./event-to-erp-graphql";
-import { EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, TODO_LIST_QUERY } from "@/services/events.query";
-import { mapErpGraphqlEventToCalendar } from "@/services/erp-graphql-to-event";
-import { getCachedEvents, setCachedEvents } from "@/lib/calendar/event-cache";
-import { buildRangeCacheKey } from "@/lib/calendar/cache-key";
-import { clearEventCache } from "@/lib/calendar/event-cache";
+import { EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, TODO_LIST_QUERY } from "@calendar/services/events.query";
+import { mapErpGraphqlEventToCalendar } from "@calendar/services/erp-graphql-to-event";
+import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
+import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
+import { clearEventCache } from "@calendar/lib/calendar/event-cache";
 import { format } from "date-fns";
-import { getCached, clearCached } from "@/lib/participants-cache";
+import { getCached, clearCached } from "@calendar/lib/participants-cache";
 import {
   getCachedLeaveBalance,
   setCachedLeaveBalance,
   getLeaveCacheKey,
   clearLeaveCache,
-} from "@/lib/leave/leave-cache";
+} from "@calendar/lib/leave/leave-cache";
 import { mapErpLeaveToCalendar } from "./leave-to-erp";
 import { mapErpTodoToCalendar } from "./todo-to-erp-graphql";
 const PAGE_SIZE = 50;

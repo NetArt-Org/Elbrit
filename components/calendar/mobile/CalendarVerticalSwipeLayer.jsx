@@ -2,7 +2,7 @@
 
 import { motion, useMotionValue, animate } from "framer-motion";
 import { useRef } from "react";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
 const DRAG_THRESHOLD = 60;
 

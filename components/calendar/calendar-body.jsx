@@ -2,18 +2,18 @@
 
 import React, { useMemo } from "react";
 import { isSameDay, parseISO } from "date-fns";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { useMediaQuery } from "./hooks";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { useMediaQuery } from "@calendar/components/calendar/hooks";
 
-import { CalendarMonthView } from "@/components/calendar/views/month-view/calendar-month-view";
-import { CalendarWeekView } from "@/components/calendar/views/week-and-day-view/calendar-week-view";
-import { CalendarDayView } from "@/components/calendar/views/week-and-day-view/calendar-day-view";
+import { CalendarMonthView } from "@calendar/components/calendar/views/month-view/calendar-month-view";
+import { CalendarWeekView } from "@calendar/components/calendar/views/week-and-day-view/calendar-week-view";
+import { CalendarDayView } from "@calendar/components/calendar/views/week-and-day-view/calendar-day-view";
 
-import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
-import { AgendaEventsMobile } from "./views/agenda-view/AgendaEventsMobile";
-import { CalendarMobileWeekAgenda } from "./views/week-and-day-view/calendar-mobile-week-agenda";
+import { AgendaEvents } from "@calendar/components/calendar/views/agenda-view/agenda-events";
+import { CalendarMobileWeekAgenda } from "@calendar/components/calendar/views/week-and-day-view/calendar-mobile-week-agenda";
 
-import MobileAddEventBar from "./mobile/MobileAddEventBar";
+import MobileAddEventBar from "@calendar/components/calendar/mobile/MobileAddEventBar";
+import { AgendaEventsMobile } from "@calendar/components/calendar/views/agenda-view/AgendaEventsMobile";
 
 export function CalendarBody() {
   const { view, events, mobileLayer } = useCalendar();

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { Calendar } from "@/components/calendar/calendar";
-import { CalendarSkeleton } from "@/components/calendar/skeletons/calendar-skeleton";
-import { AuthProvider } from "@/components/auth/auth-context";
+import { Calendar } from "@calendar/components/calendar/calendar";
+import { CalendarSkeleton } from "@calendar/components/calendar/skeletons/calendar-skeleton";
+import { AuthProvider } from "@calendar/components/auth/auth-context";
 
 export default function CalendarPage({
   erpUrl,

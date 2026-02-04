@@ -1,11 +1,11 @@
 import { formatDate } from "date-fns";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 import {
 	buttonHover,
 	transition,
-} from "@/components/calendar/animations";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/calendar/animations";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
 const MotionButton = motion.create(Button);
 

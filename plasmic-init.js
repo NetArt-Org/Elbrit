@@ -1,5 +1,5 @@
 import { initPlasmicLoader } from "@plasmicapp/loader-nextjs";
-import CalendarPage from "./components/CalendarPage";
+import CalendarPage from "@calendar/components/CalendarPage";
 export const PLASMIC = initPlasmicLoader({
   projects: [
     {

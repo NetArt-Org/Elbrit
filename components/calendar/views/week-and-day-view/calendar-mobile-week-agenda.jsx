@@ -6,16 +6,16 @@ import { startOfWeek, addDays } from "date-fns";
 import {
   SwipeFadeVariants,
   transition,
-} from "@/components/calendar/animations";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/calendar/animations";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import {
   calculateMonthEventPositions,
   navigateDate,
-} from "@/components/calendar/helpers";
-import { DayCell } from "@/components/calendar/views/month-view/day-cell";
-import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+} from "@calendar/components/calendar/helpers";
+import { DayCell } from "@calendar/components/calendar/views/month-view/day-cell";
+import { AgendaEvents } from "@calendar/components/calendar/views/agenda-view/agenda-events";
 import { useMediaQuery } from "../../hooks";
-import { CalendarVerticalSwipeLayer } from "@/components/calendar/mobile/CalendarVerticalSwipeLayer";
+import { CalendarVerticalSwipeLayer } from "@calendar/components/calendar/mobile/CalendarVerticalSwipeLayer";
 const SWIPE_THRESHOLD = 80;
 
 export function CalendarMobileWeekAgenda({

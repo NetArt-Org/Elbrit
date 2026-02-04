@@ -3,33 +3,33 @@ import { addMinutes, differenceInCalendarDays, set } from "date-fns";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
-import { TAG_IDS, TAGS } from "@/components/calendar/mocks";
-import { mapFormToErpEvent } from "@/services/event-to-erp-graphql";
-import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@/services/event.service";
+import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { TAG_IDS, TAGS } from "@calendar/components/calendar/mocks";
+import { mapFormToErpEvent } from "@calendar/services/event-to-erp-graphql";
+import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@calendar/services/event.service";
 import { useWatch } from "react-hook-form";
-import { LeaveTypeCards } from "@/components/calendar/leave/LeaveTypeCards";
-import { TodoWysiwyg } from "@/components/ui/TodoWysiwyg";
-import { Form, FormControl, FormField, } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@/components/ui/responsive-modal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
-import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, } from "@/components/calendar/form-fields";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { useDisclosure } from "@/components/calendar/hooks";
-import { eventSchema } from "@/components/calendar/schemas";
-import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
-import { loadParticipantOptionsByTag } from "@/lib/participants";
-import { TimePicker } from "@/components/ui/TimePicker";
-import { mapFormToErpTodo, mapErpTodoToCalendar } from "@/services/todo-to-erp-graphql";
-import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@/services/leave-to-erp";
-import { useEmployeeResolvers } from "@/lib/employeeResolver";
-import { uploadLeaveMedicalCertificate } from "@/services/file.service";
-import { fetchItems } from "@/services/participants.service";
-import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@/lib/helper";
-import { Button } from "@/components/ui/button";
-import { resolveDisplayValueFromEvent } from "@/lib/calendar/resolveDisplay";
-import { useAuth } from "@/components/auth/auth-context";
+import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
+import { TodoWysiwyg } from "@calendar/components/ui/TodoWysiwyg";
+import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
+import { Input } from "@calendar/components/ui/input";
+import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@calendar/components/ui/responsive-modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@calendar/components/ui/select";
+import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, } from "@calendar/components/calendar/form-fields";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { useDisclosure } from "@calendar/components/calendar/hooks";
+import { eventSchema } from "@calendar/components/calendar/schemas";
+import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
+import { loadParticipantOptionsByTag } from "@calendar/lib/participants";
+import { TimePicker } from "@calendar/components/ui/TimePicker";
+import { mapFormToErpTodo, mapErpTodoToCalendar } from "@calendar/services/todo-to-erp-graphql";
+import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/services/leave-to-erp";
+import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
+import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
+import { fetchItems } from "@calendar/services/participants.service";
+import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
+import { Button } from "@calendar/components/ui/button";
+import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
+import { useAuth } from "@calendar/components/auth/auth-context";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
 	console.log("LOGGED_IN_USER",LOGGED_IN_USER)
@@ -1142,21 +1142,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 												</label>
 												<Input value={row.amount} disabled />
 											</div>
-											{/* <div className="flex gap-2">
-												<div >
-													<label className="text-sm font-medium text-muted-foreground">
-														Rate
-													</label>
-													<Input value={row.rate} disabled />
-												</div>
-												<div >
-													<label className="text-sm font-medium text-muted-foreground">
-														Amount
-													</label>
-													<Input value={row.amount} disabled />
-												</div>
-											</div> */}
-											{/* Remove */}
 											<Button
 												type="button"
 												variant="ghost"

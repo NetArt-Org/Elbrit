@@ -1,4 +1,4 @@
-import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
+import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { differenceInCalendarDays, startOfDay, endOfDay,format } from "date-fns";
 function toERPDate(date = new Date()) {
   return format(startOfDay(date), "yyyy-MM-dd");

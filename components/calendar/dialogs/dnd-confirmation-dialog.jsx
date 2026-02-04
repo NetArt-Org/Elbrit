@@ -1,6 +1,6 @@
-import { useDragDrop } from "@/components/calendar/contexts/dnd-context";
-import { EventDropConfirmationDialog } from "./event-drop-confirmation-dialog";
+import { useDragDrop } from "@calendar/components/calendar/contexts/dnd-context";
 import { memo } from "react";
+import { EventDropConfirmationDialog } from "@calendar/components/calendar/dialogs/event-drop-confirmation-dialog";
 
 const DndConfirmationDialog = memo(() => {
 	const {

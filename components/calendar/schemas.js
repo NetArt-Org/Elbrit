@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { differenceInCalendarDays } from "date-fns";
-import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
-import { TAG_IDS } from "@/components/calendar/mocks";
+import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
+import { TAG_IDS } from "@calendar/components/calendar/mocks";
 
 /* =====================================================
    POB ITEM SCHEMA

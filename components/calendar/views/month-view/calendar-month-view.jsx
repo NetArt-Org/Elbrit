@@ -6,17 +6,17 @@ import {
   staggerContainer,
   SwipeFadeVariants,
   transition,
-} from "@/components/calendar/animations";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/calendar/animations";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import {
   calculateMonthEventPositions,
   getCalendarCells,
   navigateDate,
-} from "@/components/calendar/helpers";
-import { DayCell } from "@/components/calendar/views/month-view/day-cell";
+} from "@calendar/components/calendar/helpers";
+import { DayCell } from "@calendar/components/calendar/views/month-view/day-cell";
 import { EventListDialog } from "../../dialogs/events-list-dialog";
-import { useMediaQuery } from "@/components/calendar/hooks";
-import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+import { useMediaQuery } from "@calendar/components/calendar/hooks";
+import { AgendaEvents } from "@calendar/components/calendar/views/agenda-view/agenda-events";
 import { CalendarVerticalSwipeLayer } from "../../mobile/CalendarVerticalSwipeLayer";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

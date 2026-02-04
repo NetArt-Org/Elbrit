@@ -1,14 +1,14 @@
 // components/ui/TimePicker.jsx
 import { format, setHours, setMinutes } from "date-fns";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+} from "@calendar/components/ui/popover";
+import { ScrollArea } from "@calendar/components/ui/scroll-area";
+import { cn } from "@calendar/lib/utils";
 
 export function TimePicker({
   value,

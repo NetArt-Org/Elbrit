@@ -1,5 +1,5 @@
 import React from "react";
-import { useDragDrop } from "@/components/calendar/contexts/dnd-context";
+import { useDragDrop } from "@calendar/components/calendar/contexts/dnd-context";
 
 export function DroppableArea({
     date,

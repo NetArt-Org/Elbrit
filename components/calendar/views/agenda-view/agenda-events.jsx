@@ -11,9 +11,9 @@ import {
 } from "date-fns";
 import { useMemo, useRef } from "react";
 import { startTransition } from "react";
-import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { useMediaQuery } from "@/components/calendar/hooks";
+import { cn } from "@calendar/lib/utils";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { useMediaQuery } from "@calendar/components/calendar/hooks";
 import {
   formatTime,
   getBgColor,
@@ -22,9 +22,9 @@ import {
   getFirstLetters,
   toCapitalize,
   navigateDate,
-} from "@/components/calendar/helpers";
-import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
-import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+} from "@calendar/components/calendar/helpers";
+import { EventDetailsDialog } from "@calendar/components/calendar/dialogs/event-details-dialog";
+import { EventBullet } from "@calendar/components/calendar/views/month-view/event-bullet";
 import {
   Command,
   CommandEmpty,
@@ -32,8 +32,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+} from "@calendar/components/ui/command";
+import { Avatar, AvatarFallback } from "@calendar/components/ui/avatar";
 
 const SWIPE_THRESHOLD = 60;
 

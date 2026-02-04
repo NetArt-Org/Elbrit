@@ -1,5 +1,5 @@
-import { CalendarHeaderSkeleton } from "@/components/calendar/skeletons/calendar-header-skeleton";
-import { MonthViewSkeleton } from "@/components/calendar/skeletons/month-view-skeleton";
+import { CalendarHeaderSkeleton } from "@calendar/components/calendar/skeletons/calendar-header-skeleton";
+import { MonthViewSkeleton } from "@calendar/components/calendar/skeletons/month-view-skeleton";
 
 export function CalendarSkeleton() {
 	return (

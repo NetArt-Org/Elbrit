@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@calendar/components/ui/skeleton";
 
 export function CalendarHeaderSkeleton() {
 	return (

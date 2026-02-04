@@ -1,12 +1,12 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AvatarGroup } from "@/components/ui/avatar-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@calendar/components/ui/avatar";
+import { AvatarGroup } from "@calendar/components/ui/avatar-group";
+import { Checkbox } from "@calendar/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/ui/popover";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { useEffect, useState, useMemo } from "react";
 
 export function UserSelect() {

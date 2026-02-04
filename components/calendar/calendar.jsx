@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CalendarBody } from "@/components/calendar/calendar-body";
-import { CalendarProvider } from "@/components/calendar/contexts/calendar-context";
-import { DndProvider } from "@/components/calendar/contexts/dnd-context";
-import { CalendarHeader } from "@/components/calendar/header/calendar-header";
-import { getEvents, getUsers } from "@/components/calendar/requests";
-import { MobileCalendarHeader } from "./mobile/mobile-calendar-header";
-import { useMediaQuery } from "@/components/calendar/hooks";
-import { AgendaSidebar } from "./views/agenda-view/agenda-sidebar";
+import { CalendarBody } from "@calendar/components/calendar/calendar-body";
+import { CalendarProvider } from "@calendar/components/calendar/contexts/calendar-context";
+import { DndProvider } from "@calendar/components/calendar/contexts/dnd-context";
+import { CalendarHeader } from "@calendar/components/calendar/header/calendar-header";
+import { getEvents, getUsers } from "@calendar/components/calendar/requests";
+import { MobileCalendarHeader } from "@calendar/components/calendar/mobile/mobile-calendar-header";
+import { useMediaQuery } from "@calendar/components/calendar/hooks";
+import { AgendaSidebar } from "@calendar/components/calendar/views/agenda-view/agenda-sidebar";
 export function Calendar() {
   const [events, setEvents] = useState([]);
   const [users, setUsers] = useState([]);

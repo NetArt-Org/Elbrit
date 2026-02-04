@@ -10,9 +10,9 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/ui/alert-dialog";
+import { Button } from "@calendar/components/ui/button";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
 export default function DeleteEventDialog({
     erpName

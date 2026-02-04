@@ -1,6 +1,6 @@
 import { areIntervalsOverlapping, parseISO } from "date-fns";
-import { getEventBlockStyle } from "@/components/calendar/helpers";
-import { EventBlock } from "@/components/calendar/views/week-and-day-view/event-block";
+import { getEventBlockStyle } from "@calendar/components/calendar/helpers";
+import { EventBlock } from "@calendar/components/calendar/views/week-and-day-view/event-block";
 
 export function RenderGroupedEvents({
     groupedEvents,

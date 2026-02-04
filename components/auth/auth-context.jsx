@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useEffect } from "react";
-import { LOGGED_IN_USER } from "@/components/auth/calendar-users";
-import { AUTH_CONFIG } from "@/components/auth/calendar-users";
+import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { AUTH_CONFIG } from "@calendar/components/auth/calendar-users";
 
 const AuthContext = createContext(null);
 

@@ -9,7 +9,7 @@ import {
 	startOfWeek,
 } from "date-fns";
 import { useMemo } from "react";
-import { MonthEventBadge } from "@/components/calendar/views/month-view/month-event-badge";
+import { MonthEventBadge } from "@calendar/components/calendar/views/month-view/month-event-badge";
 
 export function WeekViewMultiDayEventsRow({
     selectedDate,

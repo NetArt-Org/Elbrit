@@ -1,5 +1,5 @@
 import { Children, cloneElement } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@calendar/lib/utils";
 
 export const ButtonGroup = ({
     className,

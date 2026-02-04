@@ -1,4 +1,4 @@
-import "@/styles/globals.css";
+import "@calendar/styles/globals.css";
 import { Toaster } from "sonner";
 
 export default function MyApp({ Component, pageProps }) {

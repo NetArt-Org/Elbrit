@@ -2,17 +2,17 @@
 
 import { format, parseISO } from "date-fns";
 import { useMemo, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { cn } from "@calendar/lib/utils";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import {
   formatTime,
   getBgColor,
   getColorClass,
   getFirstLetters,
   toCapitalize,
-} from "@/components/calendar/helpers";
-import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
-import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+} from "@calendar/components/calendar/helpers";
+import { EventDetailsDialog } from "@calendar/components/calendar/dialogs/event-details-dialog";
+import { EventBullet } from "@calendar/components/calendar/views/month-view/event-bullet";
 import {
   Command,
   CommandEmpty,
@@ -20,8 +20,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+} from "@calendar/components/ui/command";
+import { Avatar, AvatarFallback } from "@calendar/components/ui/avatar";
 
 const PULL_THRESHOLD = 70;
 

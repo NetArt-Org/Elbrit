@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useDragDrop } from "@/components/calendar/contexts/dnd-context";
+import { useDragDrop } from "@calendar/components/calendar/contexts/dnd-context";
 
 export function DraggableEvent({
     event,

@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "@calendar/components/ui/avatar";
+import { cn } from "@calendar/lib/utils";
 
 const AvatarGroup = ({
     children,

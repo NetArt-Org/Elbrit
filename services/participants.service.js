@@ -1,9 +1,9 @@
-import { graphqlRequest } from "@/lib/graphql-client";
+import { graphqlRequest } from "@calendar/lib/graphql-client";
 import {
   EMPLOYEES_QUERY,DOCTOR_QUERY,HQ_TERRITORIES_QUERY,
   ITEMS_QUERY
-} from "@/services/events.query";
-import { getCached } from "@/lib/participants-cache";
+} from "@calendar/services/events.query";
+import { getCached } from "@calendar/lib/participants-cache";
 
 const MAX_ROWS = 1000; // safe upper bound
 

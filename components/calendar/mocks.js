@@ -1,6 +1,6 @@
-import { COLORS } from "@/components/calendar/constants";
-import { USE_MOCK_DATA } from "@/components/calendar/config";
-import { CALENDAR_USERS } from "@/components/auth/calendar-users";
+import { COLORS } from "@calendar/components/calendar/constants";
+import { USE_MOCK_DATA } from "@calendar/components/calendar/config";
+import { CALENDAR_USERS } from "@calendar/components/auth/calendar-users";
 
 /* =========================================================
    USERS

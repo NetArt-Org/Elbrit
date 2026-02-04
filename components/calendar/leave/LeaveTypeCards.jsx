@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 
 export function LeaveTypeCards({ balance, value, onChange, loading }) {
     if (loading) {

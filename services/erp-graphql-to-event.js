@@ -1,7 +1,7 @@
-import { eventSchema } from "@/components/calendar/schemas";
-import { COLOR_HEX_MAP } from "@/components/calendar/constants";
-import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
-import { TAG_IDS } from "@/components/calendar/mocks";
+import { eventSchema } from "@calendar/components/calendar/schemas";
+import { COLOR_HEX_MAP } from "@calendar/components/calendar/constants";
+import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
+import { TAG_IDS } from "@calendar/components/calendar/mocks";
 /**
  * ERP GraphQL → Calendar Event
  * Employees & Doctors are derived ONLY from participants

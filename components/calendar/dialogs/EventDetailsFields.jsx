@@ -1,5 +1,5 @@
 import { Calendar, Clock, Text, User } from "lucide-react";
-import { resolveDisplayValueFromEvent } from "@/lib/calendar/resolveDisplay";
+import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 
 const ICONS = {
   owner: User,

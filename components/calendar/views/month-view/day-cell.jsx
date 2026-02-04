@@ -5,15 +5,15 @@ import { motion } from "framer-motion";
 import { useMemo, useCallback } from "react";
 import { isBefore } from "date-fns";
 import { useCalendar } from "../../contexts/calendar-context";
-import { cn } from "@/lib/utils";
-import { transition } from "@/components/calendar/animations";
-import { DroppableArea } from "@/components/calendar/dnd/droppable-area";
-import { getMonthCellEvents } from "@/components/calendar/helpers";
-import { useMediaQuery } from "@/components/calendar/hooks";
-import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
-import { MonthEventBadge } from "@/components/calendar/views/month-view/month-event-badge";
+import { cn } from "@calendar/lib/utils";
+import { transition } from "@calendar/components/calendar/animations";
+import { DroppableArea } from "@calendar/components/calendar/dnd/droppable-area";
+import { getMonthCellEvents } from "@calendar/components/calendar/helpers";
+import { useMediaQuery } from "@calendar/components/calendar/hooks";
+import { EventBullet } from "@calendar/components/calendar/views/month-view/event-bullet";
+import { MonthEventBadge } from "@calendar/components/calendar/views/month-view/month-event-badge";
 import { AddEditEventDialog } from "../../dialogs/add-edit-event-dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 import { Plus } from "lucide-react";
 
 export const dayCellVariants = cva("text-white", {

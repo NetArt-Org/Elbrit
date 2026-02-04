@@ -1,16 +1,16 @@
 import { getYear, isSameDay, isSameMonth, parseISO, isWithinInterval } from "date-fns";
 import { AnimatePresence,motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "@calendar/lib/utils";
 import {
 	staggerContainer,
 	SwipeFadeVariants,
 	transition,
-} from "@/components/calendar/animations";
+} from "@calendar/components/calendar/animations";
 import { startTransition } from "react";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { EventListDialog } from "@/components/calendar/dialogs/events-list-dialog";
-import { getCalendarCells,navigateDate,getColorClass } from "@/components/calendar/helpers";
-import { EventBullet } from "@/components/calendar/views/month-view/event-bullet";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { EventListDialog } from "@calendar/components/calendar/dialogs/events-list-dialog";
+import { getCalendarCells,navigateDate,getColorClass } from "@calendar/components/calendar/helpers";
+import { EventBullet } from "@calendar/components/calendar/views/month-view/event-bullet";
 
 const MONTHS = [
 	"January",

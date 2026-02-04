@@ -3,20 +3,20 @@
 import { useState } from "react";
 import { Menu, CheckSquare, House, Rows2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { slideFromLeft, transition } from "@/components/calendar/animations";
-import { Button } from "@/components/ui/button";
+import { slideFromLeft, transition } from "@calendar/components/calendar/animations";
+import { Button } from "@calendar/components/ui/button";
 import { format } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { CalendarSidebar } from "./calendar-sidebar";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { cn } from "@/lib/utils";
-import { tabs } from "@/components/calendar/header/view-tabs";
-import { DateNavigator } from "@/components/calendar/header/date-navigator";
+} from "@calendar/components/ui/dropdown-menu";
+import { CalendarSidebar } from "@calendar/components/calendar/mobile/calendar-sidebar";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { cn } from "@calendar/lib/utils";
+import { tabs } from "@calendar/components/calendar/header/view-tabs";
+import { DateNavigator } from "@calendar/components/calendar/header/date-navigator";
 
 const MOBILE_LAYER_MAP = {
   month: "month-expanded",

@@ -1,20 +1,20 @@
 "use client";;
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { TAG_FORM_CONFIG } from "@/lib/calendar/form-config";
+import { Button } from "@calendar/components/ui/button";
+import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
-import { deleteEventFromErp } from "@/services/event.service";
-import { EventDetailsFields } from "./EventDetailsFields";
+} from "@calendar/components/ui/dialog";
+import { ScrollArea } from "@calendar/components/ui/scroll-area";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
+import { deleteEventFromErp } from "@calendar/services/event.service";
+import { EventDetailsFields } from "@calendar/components/calendar/dialogs/EventDetailsFields";
 export function EventDetailsDialog({
 	event,
 	children

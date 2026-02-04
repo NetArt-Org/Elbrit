@@ -1,21 +1,21 @@
 "use client";;
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 import {
 	slideFromLeft,
 	slideFromRight,
 	transition,
-} from "@/components/calendar/animations";
+} from "@calendar/components/calendar/animations";
 import { startOfDay,isBefore } from "date-fns";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
-import { DateNavigator } from "@/components/calendar/header/date-navigator";
-import { TodayButton } from "@/components/calendar/header/today-button";
-import FilterEvents from "@/components/calendar/header/filter";
-import { UserSelect } from "@/components/calendar/header/user-select";
-import { Settings } from "@/components/calendar/settings/settings";
-import Views from "./view-tabs";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
+import { DateNavigator } from "@calendar/components/calendar/header/date-navigator";
+import { TodayButton } from "@calendar/components/calendar/header/today-button";
+import FilterEvents from "@calendar/components/calendar/header/filter";
+import { UserSelect } from "@calendar/components/calendar/header/user-select";
+import { Settings } from "@calendar/components/calendar/settings/settings";
+import Views from "@calendar/components/calendar/header/view-tabs";
 
 export function CalendarHeader() {
 	const { view, events,activeDate, selectedDate  } = useCalendar();

@@ -1,12 +1,12 @@
 "use client";;
 import { createContext, useContext, useState, useEffect, useRef } from "react";
-import { useLocalStorage } from "@/components/calendar/hooks";
-import { fetchEventsByRange } from "@/services/event.service";
-import { resolveCalendarRange } from "@/lib/calendar/range";
-import { EMPLOYEES_QUERY } from "@/services/events.query";
-import { mapEmployeesToCalendarUsers } from "@/services/employee-to-calendar-user";
-import { graphqlRequest } from "@/lib/graphql-client";
-import { enrichEventsWithParticipants } from "@/lib/calendar/enrich-events";
+import { useLocalStorage } from "@calendar/components/calendar/hooks";
+import { fetchEventsByRange } from "@calendar/services/event.service";
+import { resolveCalendarRange } from "@calendar/lib/calendar/range";
+import { EMPLOYEES_QUERY } from "@calendar/services/events.query";
+import { mapEmployeesToCalendarUsers } from "@calendar/services/employee-to-calendar-user";
+import { graphqlRequest } from "@calendar/lib/graphql-client";
+import { enrichEventsWithParticipants } from "@calendar/lib/calendar/enrich-events";
 
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",

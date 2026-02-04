@@ -5,7 +5,7 @@ import {
 	parseISO,
 	startOfDay,
 } from "date-fns";
-import { MonthEventBadge } from "@/components/calendar/views/month-view/month-event-badge";
+import { MonthEventBadge } from "@calendar/components/calendar/views/month-view/month-event-badge";
 
 export function DayViewMultiDayEventsRow({
     selectedDate,

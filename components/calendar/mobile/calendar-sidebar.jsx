@@ -1,16 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { cn } from "@/lib/utils";
+} from "@calendar/components/ui/sheet";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { cn } from "@calendar/lib/utils";
 import { tabs } from "../header/view-tabs";
-import { UserSelect } from "@/components/calendar/header/user-select";
+import { UserSelect } from "@calendar/components/calendar/header/user-select";
 const MOBILE_LAYER_MAP = {
   month: "month-expanded",
   week: "week",

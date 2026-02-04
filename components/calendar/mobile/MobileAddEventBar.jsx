@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AddEditEventDialog } from "@/components/calendar/dialogs/add-edit-event-dialog";
-import { Button } from "@/components/ui/button";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
+import { Button } from "@calendar/components/ui/button";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { isBefore, startOfDay } from "date-fns";
-import { TAGS } from "@/components/calendar/mocks";
+import { TAGS } from "@calendar/components/calendar/mocks";
 import { motion, AnimatePresence } from "framer-motion";
 import {Plus,
   Building2, Users, Cake,Calendar, Stethoscope, ListChecks, HelpCircle,

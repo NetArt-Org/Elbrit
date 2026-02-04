@@ -1,7 +1,7 @@
 "use client";
 
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { AgendaEvents } from "@/components/calendar/views/agenda-view/agenda-events";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { AgendaEvents } from "@calendar/components/calendar/views/agenda-view/agenda-events";
 
 export function AgendaSidebar() {
   const {activeDate, view } = useCalendar();

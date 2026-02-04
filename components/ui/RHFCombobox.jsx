@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@calendar/lib/utils";
+import { Button } from "@calendar/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,12 +9,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@calendar/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@calendar/components/ui/popover";
 
 /* =====================================================
    RHF COMBOBOX (ID-BASED, LEGACY SAFE)

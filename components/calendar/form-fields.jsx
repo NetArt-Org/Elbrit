@@ -3,15 +3,15 @@ import {
     FormItem,
     FormLabel,
     FormControl,
-  } from "@/components/ui/form";
-  import { Checkbox } from "@/components/ui/checkbox";
-  import { Button } from "@/components/ui/button";
+  } from "@calendar/components/ui/form";
+  import { Checkbox } from "@calendar/components/ui/checkbox";
+  import { Button } from "@calendar/components/ui/button";
   import {
     ModalFooter,
     ModalClose,
-  } from "@/components/ui/responsive-modal";
-  import { RHFCombobox } from "@/components/ui/RHFCombobox";
-  import { DateTimePicker } from "@/components/ui/date-time-picker";
+  } from "@calendar/components/ui/responsive-modal";
+  import { RHFCombobox } from "@calendar/components/ui/RHFCombobox";
+  import { DateTimePicker } from "@calendar/components/ui/date-time-picker";
   
   /* =====================================================
      BASE WRAPPER (Label + Error)

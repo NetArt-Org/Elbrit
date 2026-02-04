@@ -10,8 +10,8 @@ import {
 import { motion } from "framer-motion";
 import { Resizable } from "re-resizable";
 import { useCallback, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+import { cn } from "@calendar/lib/utils";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
 const PIXELS_PER_HOUR = 96;
 const MINUTES_PER_PIXEL = 60 / PIXELS_PER_HOUR;

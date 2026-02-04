@@ -8,7 +8,7 @@ import {
 	XIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
+import { Button } from "@calendar/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -20,10 +20,10 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { useDragDrop } from "@/components/calendar/contexts/dnd-context";
+} from "@calendar/components/ui/dropdown-menu";
+import { Switch } from "@calendar/components/ui/switch";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { useDragDrop } from "@calendar/components/calendar/contexts/dnd-context";
 
 export function Settings() {
 	const {

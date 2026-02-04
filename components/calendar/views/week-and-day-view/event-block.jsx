@@ -1,11 +1,11 @@
 import { cva } from "class-variance-authority";
 import { differenceInMinutes, parseISO } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
-import { EventDetailsDialog } from "@/components/calendar/dialogs/event-details-dialog";
-import { DraggableEvent } from "@/components/calendar/dnd/draggable-event";
-import { ResizableEvent } from "@/components/calendar/dnd/resizable-event";
-import { formatTime } from "@/components/calendar/helpers";
+import { cn } from "@calendar/lib/utils";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { EventDetailsDialog } from "@calendar/components/calendar/dialogs/event-details-dialog";
+import { DraggableEvent } from "@calendar/components/calendar/dnd/draggable-event";
+import { ResizableEvent } from "@calendar/components/calendar/dnd/resizable-event";
+import { formatTime } from "@calendar/components/calendar/helpers";
 
 const calendarWeekEventCardVariants = cva(
     "flex select-none flex-col gap-0.5 truncate whitespace-nowrap rounded-md border px-2 py-1.5 text-xs focus-visible:outline-offset-2",

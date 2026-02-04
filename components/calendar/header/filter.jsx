@@ -4,10 +4,10 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Toggle } from "@/components/ui/toggle";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/ui/dropdown-menu";
+import { Separator } from "@calendar/components/ui/separator";
+import { Toggle } from "@calendar/components/ui/toggle";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
 export default function FilterEvents() {
 	const { selectedColors, filterEventsBySelectedColors, clearFilter } =

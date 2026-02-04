@@ -2,20 +2,20 @@ import { formatDate } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@calendar/components/ui/badge";
+import { cn } from "@calendar/lib/utils";
+import { Button } from "@calendar/components/ui/button";
 import {
     buttonHover,
     transition,
-} from "@/components/calendar/animations";
-import { useCalendar } from "@/components/calendar/contexts/calendar-context";
+} from "@calendar/components/calendar/animations";
+import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { startTransition } from "react";
 import {
     getEventsCount,
     navigateDate,
     rangeText,
-} from "@/components/calendar/helpers";
+} from "@calendar/components/calendar/helpers";
 
 const MotionButton = motion.create(Button);
 const MotionBadge = motion.create(Badge);
