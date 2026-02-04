@@ -1,8 +1,6 @@
 "use client";
 
-const GRAPHQL_ENDPOINT = process.env.NEXT_PUBLIC_ERP_URL;
-
-export async function uploadLeaveMedicalCertificate(values, leaveName) {
+export async function uploadLeaveMedicalCertificate(values, leaveName,erpUrl,authToken) {
   if (!values?.medicalAttachment || !leaveName) return;
 
   const formData = new FormData();
@@ -51,10 +49,10 @@ export async function uploadLeaveMedicalCertificate(values, leaveName) {
 
   formData.append("0", values.medicalAttachment);
 
-  const res = await fetch(GRAPHQL_ENDPOINT, {
+  const res = await fetch(erpUrl, {
     method: "POST",
     headers: {
-      Authorization: `token ${process.env.NEXT_PUBLIC_FRAPPE_TOKEN}`,
+      Authorization: `token ${authToken}`,
     },
     body: formData,
   });

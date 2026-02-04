@@ -1,5 +1,4 @@
 import { initPlasmicLoader } from "@plasmicapp/loader-nextjs";
-import SchedulerClient from "./components/SchedulerClient";
 import CalendarPage from "./components/CalendarPage";
 export const PLASMIC = initPlasmicLoader({
   projects: [
@@ -23,20 +22,25 @@ export const PLASMIC = initPlasmicLoader({
 // http://localhost:3000/plasmic-host).  See
 // https://docs.plasmic.app/learn/app-hosting/#set-a-plasmic-project-to-use-your-app-host
 
-// PLASMIC.registerComponent(...);
-
-// PLASMIC.registerComponent(SchedulerClient, {
-//   name: "SchedulerClient",
-//   props: {
-//   },
-// });
-
-PLASMIC.registerComponent(SchedulerClient, {
-  name: "SchedulerClient",
-  props: {},
-});
-
 PLASMIC.registerComponent(CalendarPage, {
   name: "CalendarPage",
-  props: {},
+  props: {
+    erpUrl: {
+      type: "string",
+      helpText: "ERP GraphQL endpoint",
+    },
+    authToken: {
+      type: "string",
+      helpText: "User auth token",
+    },
+    homeUrl: {
+      type: "string",
+      defaultValue: "/",
+      helpText: "Redirect if not logged in",
+    },
+    me: {
+      type: "object",
+      helpText: "Result of GraphQL `me` query",
+    },
+  },
 });

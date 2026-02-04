@@ -29,9 +29,12 @@ import { fetchItems } from "@/services/participants.service";
 import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@/lib/helper";
 import { Button } from "@/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@/lib/calendar/resolveDisplay";
+import { useAuth } from "@/components/auth/auth-context";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
+	console.log("LOGGED_IN_USER",LOGGED_IN_USER)
 	const { isOpen, onClose, onToggle } = useDisclosure();
+	const { erpUrl, authToken } = useAuth();
 	const { addEvent, updateEvent, employeeOptions,
 		doctorOptions,
 		hqTerritoryOptions,
@@ -518,6 +521,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 		if (requiresMedical && values.medicalAttachment) {
 			const uploadResult = await uploadLeaveMedicalCertificate(
+				erpUrl,authToken,
 				values,
 				savedLeave.name
 			);
