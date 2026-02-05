@@ -12,21 +12,22 @@ export function AuthProvider({
   me,
   homeUrl,
 }) {
-  // 🔐 Not logged in → redirect
-  if (!authToken) {
-    if (typeof window !== "undefined") {
+  // 🔁 Redirect if not logged in
+  useEffect(() => {
+    if (!authToken && typeof window !== "undefined") {
       window.location.replace(homeUrl || "/");
     }
-    return null;
-  }
+  }, [authToken, homeUrl]);
 
-  // 🔁 Sync AUTH CONFIG (ONCE)
+  // 🔁 Sync AUTH CONFIG
   useEffect(() => {
+    if (!authToken) return;
+
     AUTH_CONFIG.erpUrl = erpUrl;
     AUTH_CONFIG.authToken = authToken;
   }, [erpUrl, authToken]);
 
-  // 🔁 Sync LOGGED_IN_USER (ONCE)
+  // 🔁 Sync LOGGED_IN_USER
   useEffect(() => {
     if (!me) return;
 
@@ -36,6 +37,9 @@ export function AuthProvider({
     LOGGED_IN_USER.role = me.role || "System User";
     LOGGED_IN_USER.status = me.enabled ? "Active" : "Inactive";
   }, [me]);
+
+  // 🚫 Don’t render children if unauthenticated
+  if (!authToken) return null;
 
   return (
     <AuthContext.Provider value={{ erpUrl, authToken, me }}>
