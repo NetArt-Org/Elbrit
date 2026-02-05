@@ -9,7 +9,6 @@ import { mapFormToErpEvent } from "@calendar/services/event-to-erp-graphql";
 import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@calendar/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
-import { TodoWysiwyg } from "@calendar/components/ui/TodoWysiwyg";
 import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
 import { Input } from "@calendar/components/ui/input";
 import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@calendar/components/ui/responsive-modal";
@@ -30,9 +29,9 @@ import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, res
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useAuth } from "@calendar/components/auth/auth-context";
+import { Textarea } from "@calendar/components/ui/textarea";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
-	console.log("LOGGED_IN_USER",LOGGED_IN_USER)
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { erpUrl, authToken } = useAuth();
 	const { addEvent, updateEvent, employeeOptions,
@@ -78,6 +77,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			hqTerritory: event?.hqTerritory ?? "",
 			employees: event?.employees,
 			doctor: event?.doctor,
+			allocated_to: event?.allocated_to ?? "",
 			leaveType: event?.leaveType ?? "Casual Leave",
 			reportTo: event?.reportTo ?? "",
 			medicalAttachment: event?.medicalAttachment ?? "",
@@ -114,7 +114,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 	const tagConfig = TAG_FORM_CONFIG[selectedTag] ?? TAG_FORM_CONFIG.DEFAULT;
 	const shouldShowTags =
-  !isEditing || tagConfig.ui?.lockTagOnEdit !== true;
+		!isEditing || tagConfig.ui?.lockTagOnEdit !== true;
 
 	const isMulti = tagConfig?.employee?.multiselect === true;
 	const isFieldVisible = (field) => {
@@ -473,16 +473,16 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	};
 	function normalizePobItemsForUI(items = []) {
 		return items.map(row => ({
-		  item__name:
-			typeof row.item__name === "string"
-			  ? row.item__name
-			  : row.item?.name ?? "",
-		  qty: Number(row.qty),
-		  rate: Number(row.rate),
-		  amount: Number(row.amount),
+			item__name:
+				typeof row.item__name === "string"
+					? row.item__name
+					: row.item?.name ?? "",
+			qty: Number(row.qty),
+			rate: Number(row.rate),
+			amount: Number(row.amount),
 		}));
-	  }
-	  
+	}
+
 
 	const upsertCalendarEvent = (calendarEvent) => {
 		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
@@ -521,7 +521,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 		if (requiresMedical && values.medicalAttachment) {
 			const uploadResult = await uploadLeaveMedicalCertificate(
-				erpUrl,authToken,
+				erpUrl, authToken,
 				values,
 				savedLeave.name
 			);
@@ -545,15 +545,17 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	};
 	const handleTodo = async (values) => {
 		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
-		const savedTodo = await saveDocToErp(todoDoc);
-
+		// const savedTodo = await saveDocToErp(todoDoc);
+console.log("VALUES",values)
 		const calendarTodo = mapErpTodoToCalendar(
-			{ ...todoDoc, name: savedTodo.name },
-			employeeResolvers
+			{
+				...todoDoc,
+				// name: savedTodo.name 
+			}
 		);
-
-		upsertCalendarEvent(calendarTodo);
-		finalize("Todo saved");
+		console.log("TODO", todoDoc, calendarTodo)
+		// upsertCalendarEvent(calendarTodo);
+		// finalize("Todo saved");
 	};
 	const handleDoctorVisitPlan = async (values) => {
 
@@ -602,8 +604,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			) {
 				calendarEvent.fsl_doctor_item = normalizePobItemsForUI(
 					values.fsl_doctor_item
-				  );
-				  
+				);
+
 				calendarEvent.pob_given = "Yes";
 			} else {
 				calendarEvent.fsl_doctor_item = [];
@@ -646,8 +648,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		) {
 			calendarEvent.fsl_doctor_item = normalizePobItemsForUI(
 				values.fsl_doctor_item
-			  );
-			  
+			);
+
 			calendarEvent.pob_given = "Yes";
 		} else if (values.tags === TAG_IDS.DOCTOR_VISIT_PLAN) {
 			calendarEvent.fsl_doctor_item = [];
@@ -701,14 +703,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		isEditing && editReadOnlyKeys.includes(key);
 	const enrichedEvent = useMemo(() => {
 		if (!event) return null;
-	  
+
 		return {
-		  ...event,
-		  _employeeOptions: employeeOptions,
-		  _doctorOptions: doctorOptions,
+			...event,
+			_employeeOptions: employeeOptions,
+			_doctorOptions: doctorOptions,
 		};
-	  }, [event, employeeOptions, doctorOptions]);
-	  
+	}, [event, employeeOptions, doctorOptions]);
+
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -812,17 +814,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 						)}
 
 						{/* ================= HQ TERRITORY ================= */}
-						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
-							<FormField
-								control={form.control}
-								name="hqTerritory"
-								render={({ field }) => (
-									<RHFFieldWrapper label="HQ Territory">
-										<RHFComboboxField  {...field} options={hqTerritoryOptions} placeholder="Select HQ Territory" />
-									</RHFFieldWrapper>
-								)}
-							/>
-						)}
+						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
+							!isEditReadOnlyField("hqTerritory") && (
+								<FormField
+									control={form.control}
+									name="hqTerritory"
+									render={({ field }) => (
+										<RHFFieldWrapper label="HQ Territory">
+											<RHFComboboxField  {...field} options={hqTerritoryOptions} placeholder="Select HQ Territory" />
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
 
 						{/* ================= DOCTOR ================= */}
 						{!tagConfig.hide?.includes("doctor") &&
@@ -985,11 +988,23 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 									name="employees"
 
 									render={({ field }) => (
-										<RHFFieldWrapper label={
-											selectedTag === TAG_IDS.TODO_LIST
-												? "Allocated To"
-												: "Employees"
-										}>
+										<RHFFieldWrapper label={"Employees"}>
+											<RHFComboboxField {...field} options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
+											/>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
+						{/* ================= Allocated ================= */}
+						{!tagConfig.hide?.includes("allocated_to") &&
+							(!tagConfig.employee?.autoSelectLoggedIn ||
+								tagConfig.employee?.multiselect) && (
+								<FormField
+									control={form.control}
+									name="allocated_to"
+
+									render={({ field }) => (
+										<RHFFieldWrapper label={"Allocated To"}>
 											<RHFComboboxField {...field} options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
 											/>
 										</RHFFieldWrapper>
@@ -1185,10 +1200,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								name="description"
 								render={({ field }) => (
 									<RHFFieldWrapper label="Description">
-										<TodoWysiwyg
-											value={field.value}
-											onChange={field.onChange}
-										/>
+										<Textarea {...field} />
 									</RHFFieldWrapper>
 								)}
 							/>

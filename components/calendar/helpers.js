@@ -360,6 +360,7 @@ export const getBgColor = color => {
 		blue: "bg-blue-400 dark:bg-blue-600",
 		orange: "bg-orange-400 dark:bg-orange-600",
 		purple: "bg-purple-400 dark:bg-purple-600",
+		teal: "bg-teal-400 dark:bg-teal-600", 
 	};
 	return colorClasses[color] || "";
 };

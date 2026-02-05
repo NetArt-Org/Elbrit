@@ -138,16 +138,11 @@ export async function fetchAllTodoList() {
        const data = await graphqlRequest(TODO_LIST_QUERY, {
          first: 500,
        });
+       console.log("DATA",data,data.ToDoes.edges)
        return data.ToDoes.edges
          .map(edge => mapErpTodoToCalendar(edge.node))
          .filter(Boolean);
      });
-  // const data = await graphqlRequest(TODO_LIST_QUERY, {
-  //   first: 500, // adjust if needed
-  // });
-  // return data.ToDoes.edges
-  //   .map(edge => mapErpTodoToCalendar(edge.node))
-  //   .filter(Boolean);
 }
 
 export async function fetchEventsByRange(startDate, endDate, view) {

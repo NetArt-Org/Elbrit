@@ -1,5 +1,5 @@
 "use client";;
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
 import { useLocalStorage } from "@calendar/components/calendar/hooks";
 import { fetchEventsByRange } from "@calendar/services/event.service";
 import { resolveCalendarRange } from "@calendar/lib/calendar/range";
@@ -54,7 +54,17 @@ export function CalendarProvider({
 			...newPartialSettings,
 		});
 	};
-
+	const employeeEmailToId = useMemo(() => {
+		const map = new Map();
+		for (const u of users) {
+		  if (u.email && u.id) {
+			map.set(u.email, u.id); // email → Employee ID
+		  }
+		}
+		return map;
+	  }, [users]);
+	  
+	  
 	const setBadgeVariant = (variant) => {
 		setBadgeVariantState(variant);
 		updateSettings({ badgeVariant: variant });
@@ -188,19 +198,78 @@ export function CalendarProvider({
 			cancelled = true;
 		};
 	}, [currentView, selectedDate]);
+	
 	useEffect(() => {
-		if (!employeeOptions.length && !doctorOptions.length) return;
 		if (!allEvents.length) return;
 	  
-		const enriched = enrichEventsWithParticipants(
-		  allEvents,
-		  employeeOptions,
-		  doctorOptions
-		);
+		if (
+		  !employeeOptions.length &&
+		  !doctorOptions.length &&
+		  !employeeEmailToId.size
+		) {
+		  return;
+		}
+	  
+		let changed = false;
+	  
+		const enriched = allEvents.map(event => {
+		  let next = event;
+	  
+		  /* ---------------------------------
+			 1️⃣ ERP participants enrichment
+			 (events only)
+		  --------------------------------- */
+		  if (
+			next.event_participants &&
+			(employeeOptions.length || doctorOptions.length)
+		  ) {
+			const [withParticipants] = enrichEventsWithParticipants(
+			  [next],
+			  employeeOptions,
+			  doctorOptions
+			);
+	  
+			if (withParticipants !== next) {
+			  next = withParticipants;
+			  changed = true;
+			}
+		  }
+	  
+		  /* ---------------------------------
+			 2️⃣ TODO allocated_to normalization
+			 email → employeeId
+		  --------------------------------- */
+		  if (
+			next.tags === "Todo List" &&
+			typeof next.allocated_to === "string" && // email from ERP
+			!next.__allocatedToNormalized &&
+			employeeEmailToId.size
+		  ) {
+			const empId = employeeEmailToId.get(next.allocated_to);
+	  
+			if (empId) {
+			  next = {
+				...next,
+				allocated_to: empId, // 🔑 canonical form
+				__allocatedToNormalized: true, // guard
+			  };
+			  changed = true;
+			}
+		  }
+	  
+		  return next;
+		});
+	  
+		if (!changed) return;
 	  
 		setAllEvents(enriched);
 		setFilteredEvents(enriched);
-	  }, [employeeOptions, doctorOptions]);
+	  }, [
+		employeeOptions,
+		doctorOptions,
+		employeeEmailToId,
+	  ]);
+	  
 	  
 	useEffect(() => {
 		let cancelled = false;

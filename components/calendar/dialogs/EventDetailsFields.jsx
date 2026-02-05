@@ -10,7 +10,7 @@ const ICONS = {
 
 export function EventDetailsFields({ event, config, use24HourFormat }) {
   if (!config?.details?.fields) return null;
-
+  console.log("ADD EDIT EVENT",event)
   return (
     <div className="space-y-4">
       {config.details.fields.map((field) => {
@@ -21,7 +21,6 @@ export function EventDetailsFields({ event, config, use24HourFormat }) {
           use24HourFormat,
         });
         if (!value) return null;
-
         return (
           <div key={field.key} className="flex items-start gap-2">
             <Icon className="mt-1 size-4 shrink-0 text-muted-foreground" />

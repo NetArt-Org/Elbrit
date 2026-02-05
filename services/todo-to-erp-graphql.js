@@ -2,9 +2,7 @@ import { format,startOfDay, endOfDay  } from "date-fns";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 
 export function mapFormToErpTodo(values, resolvers) {
-  const employeeId = Array.isArray(values.employees)
-    ? values.employees[0]
-    : values.employees;
+  const employeeId = values.allocated_to
 
   const email = resolvers.getEmployeeEmailById(employeeId);
 
@@ -23,14 +21,7 @@ export function mapFormToErpTodo(values, resolvers) {
     docstatus: 0,
   };
 }
-  export function mapErpTodoToCalendar(todo, resolvers) {
-    const employeeId =
-    resolvers?.getEmployeeIdByEmail
-      ? resolvers.getEmployeeIdByEmail(
-          todo.allocated_to__name || todo.allocated_to
-        )
-      : null;
-  
+  export function mapErpTodoToCalendar(todo) {
     const start = startOfDay(new Date(`${todo.date}T00:00:00`));
     const end = endOfDay(new Date(`${todo.date}T00:00:00`));
   
@@ -45,7 +36,7 @@ export function mapFormToErpTodo(values, resolvers) {
       isTodo: true,
       status: todo.status,
       priority: todo.priority,
-      employees: employeeId ? [employeeId] : [],
+      allocated_to:todo.allocated_to__name || todo.allocated_to,
     };
   }
   
