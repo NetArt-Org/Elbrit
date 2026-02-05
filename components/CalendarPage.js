@@ -11,7 +11,6 @@ export default function CalendarPage({
   me,
   homeUrl,
 }) {
-  console.log("DATA",erpUrl,authToken,me,homeUrl,`token ${authToken}`)
   return (
     <AuthProvider
       erpUrl={erpUrl}

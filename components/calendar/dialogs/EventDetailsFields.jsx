@@ -10,7 +10,6 @@ const ICONS = {
 
 export function EventDetailsFields({ event, config, use24HourFormat }) {
   if (!config?.details?.fields) return null;
-  console.log("ADD EDIT EVENT",event)
   return (
     <div className="space-y-4">
       {config.details.fields.map((field) => {

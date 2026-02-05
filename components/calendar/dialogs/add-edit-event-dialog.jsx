@@ -359,12 +359,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	--------------------------------------------- */
 	useEffect(() => {
 		if (!tagConfig?.forceAllDay) return;
-
-		form.setValue("allDay", true, {
+	  
+		if (form.getValues("allDay") !== true) {
+		  form.setValue("allDay", true, {
 			shouldDirty: false,
 			shouldValidate: false,
-		});
-	}, [selectedTag]);
+		  });
+		}
+	  }, [selectedTag]);
+	  
 	/* --------------------------------------------------
 	   RESET FORM
 	-------------------------------------------------- */
@@ -443,15 +446,17 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	/* ---------------------------------------------
    MEETING TIME LOGIC (MERGED)
 --------------------------------------------- */
-	useEffect(() => {
-		if (selectedTag !== TAG_IDS.MEETING) return;
-		normalizeMeetingTimes(
-			form,
-			startDate,
-			allDay,
-			endDateTouchedRef.current
-		);
-	}, [selectedTag, startDate, allDay]);
+useEffect(() => {
+	if (selectedTag !== TAG_IDS.MEETING) return;
+  
+	normalizeMeetingTimes(
+	  form,
+	  startDate,
+	  allDay,
+	  endDateTouchedRef.current
+	);
+  }, [startDate, allDay]);
+  
 	const buildDoctorVisitTitle = (doctorId, values) => {
 		const doc = doctorOptions.find(d => d.value === doctorId);
 		const empId = Array.isArray(values.employees)
@@ -545,17 +550,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	};
 	const handleTodo = async (values) => {
 		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
-		// const savedTodo = await saveDocToErp(todoDoc);
-console.log("VALUES",values)
+		const savedTodo = await saveDocToErp(todoDoc);
 		const calendarTodo = mapErpTodoToCalendar(
 			{
 				...todoDoc,
-				// name: savedTodo.name 
+				name: savedTodo.name 
 			}
 		);
-		console.log("TODO", todoDoc, calendarTodo)
-		// upsertCalendarEvent(calendarTodo);
-		// finalize("Todo saved");
+		upsertCalendarEvent(calendarTodo);
+		finalize("Todo saved");
 	};
 	const handleDoctorVisitPlan = async (values) => {
 
@@ -568,7 +571,6 @@ console.log("VALUES",values)
 				: doctorOptions.find((o) => o.value === d) ?? d
 		);
 
-		console.log("Normalized doctors:", normalizedDoctors);
 		for (const doctor of normalizedDoctors) {
 			const doctorId =
 				typeof doctor === "object" ? doctor.value : doctor;
@@ -581,7 +583,6 @@ console.log("VALUES",values)
 				},
 				{}
 			);
-			console.log("ERP DOC DR VISIT PLAN", erpDoc)
 			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = {
@@ -612,7 +613,6 @@ console.log("VALUES",values)
 				calendarEvent.pob_given = "No";
 			}
 
-			console.log("CALENDAR EVENT ", calendarEvent)
 			addEvent(calendarEvent);
 		}
 
@@ -623,7 +623,6 @@ console.log("VALUES",values)
 			erpName: event?.erpName,
 		});
 
-		console.log("ERP DOC Before", erpDoc,)
 		const savedEvent = await saveEvent(erpDoc);
 		const calendarEvent = {
 			...(event ?? {}),
@@ -656,7 +655,6 @@ console.log("VALUES",values)
 			calendarEvent.pob_given = "No";
 		}
 
-		console.log("CALENDAR EVENT", calendarEvent)
 		upsertCalendarEvent(calendarEvent);
 		finalize("Event saved");
 	};
@@ -868,7 +866,7 @@ console.log("VALUES",values)
 									)}
 								/>
 
-								{!form.watch("allDay") && (
+								{!allDay && (
 									<div className="grid grid-cols-2 gap-3">
 										<FormField
 											control={form.control}
