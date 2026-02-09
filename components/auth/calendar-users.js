@@ -9,6 +9,7 @@ export const LOGGED_IN_USER = {
   email: null,
   role: null,
   status: null,
+  roleId:null
 };
 /**
  * Global ERP auth configuration
