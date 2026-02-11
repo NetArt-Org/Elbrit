@@ -26,20 +26,22 @@ export function CalendarMonthView({
   singleDayEvents,
   multiDayEvents,
 }) {
-  const { selectedDate, setSelectedDate, activeDate,setActiveDate } = useCalendar();
+  const { selectedDate, setSelectedDate, activeDate,setActiveDate,mobileLayer } = useCalendar();
   const allEvents = [...multiDayEvents, ...singleDayEvents];
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // const [isCollapsed, setIsCollapsed] = useState(false);
+  const isCollapsed = isMobile && mobileLayer === "month-agenda";
+
 
   /* --------------------------------
      Collapse only when activeDate exists
   -------------------------------- */
-  useEffect(() => {
-    if (isMobile && activeDate) {
-      setIsCollapsed(true);
-    }
-  }, [activeDate, isMobile]);
+  // useEffect(() => {
+  //   if (isMobile && activeDate) {
+  //     setIsCollapsed(true);
+  //   }
+  // }, [activeDate, isMobile]);
 
   const cells = useMemo(
     () => getCalendarCells(selectedDate),
@@ -91,7 +93,6 @@ export function CalendarMonthView({
     });
   };
   
-
   return (
     <motion.div
       variants={staggerContainer}
@@ -150,7 +151,7 @@ export function CalendarMonthView({
       </motion.div>
       {!isMobile && <EventListDialog />}
 
-      {isMobile && isCollapsed && (
+      {isMobile && mobileLayer === "month-agenda" && (
         <div className="overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-t">
           <AgendaEvents scope={activeDate ? "day" : "month"} />
         </div>

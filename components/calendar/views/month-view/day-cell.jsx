@@ -49,22 +49,31 @@ export function DayCell({
 }) {
   const { day, currentMonth, date } = cell;
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const { setEventListDate, isEventListOpen, setSelectedDate,activeDate, setActiveDate } = useCalendar();
+  const { setEventListDate, isEventListOpen, setSelectedDate,activeDate, setActiveDate,setMobileLayer ,mobileLayer} = useCalendar();
   const isSelected =
     activeDate &&
     startOfDay(activeDate).getTime() === startOfDay(date).getTime();
-
-  const toggleDateSelection = () => {
-    const isSame =
-      activeDate &&
-      startOfDay(activeDate).getTime() === startOfDay(date).getTime();
-
-    setActiveDate(isSame ? null : date);
-
-    // keep navigation in sync
-    setSelectedDate(date);
-  };
-
+    const toggleDateSelection = () => {
+      const isSame =
+        activeDate &&
+        startOfDay(activeDate).getTime() === startOfDay(date).getTime();
+    
+      const nextDate = isSame ? null : date;
+    
+      setActiveDate(nextDate);
+      setSelectedDate(date);
+    
+      if (!isMobile) return;
+    
+      // ✅ ONLY this case should change layer
+      if (nextDate && mobileLayer === "month-expanded") {
+        setMobileLayer("month-agenda");
+      }
+    
+      // ❌ Do NOT change layer when deselecting
+    };
+    
+    
   // Memoize cellEvents and currentCellMonth for performance
   const { cellEvents, currentCellMonth } = useMemo(() => {
     const cellEvents = getMonthCellEvents(date, events, eventPositions);
@@ -89,7 +98,7 @@ export function DayCell({
       );
     }
     const showBullet = isSameMonth(new Date(event.startDate), currentCellMonth);
-
+  
     return (
       <motion.div
         key={`event-${event.id}-${position}`}
