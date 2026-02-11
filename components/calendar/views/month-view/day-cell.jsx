@@ -100,7 +100,7 @@ export function DayCell({
     const showBullet = isSameMonth(new Date(event.startDate), currentCellMonth);
   
     return (
-      <motion.div
+      <motion.div 
         key={`event-${event.id}-${position}`}
         className="lg:flex-1"
         initial={{ opacity: 0, x: -10 }}
@@ -124,7 +124,7 @@ export function DayCell({
   const cellContent = useMemo(() => (
     <motion.div
       className={cn(
-        "flex h-full lg:min-h-[7rem] flex-col gap-1 border-l border-t transition-colors",
+        "flex h-full flex-col gap-1 border-l border-t transition-colors",
         isSunday(date) && "border-l-0",
         isSelected &&
         "ring-1 ring-inset ring-gray-400 dark:ring-gray-600 bg-gray-50/60 dark:bg-gray-900/40"
@@ -149,7 +149,7 @@ export function DayCell({
         </motion.span>
         <motion.div
           className={cn(
-            "flex h-fit gap-1 px-2 mt-1 lg:h-max-content overflow-hidden lg:flex-col lg:gap-1 lg:px-0",
+            "flex gap-1 px-2 mt-1 lg:h-max-content overflow-hidden lg:flex-col lg:gap-1 lg:px-0",
             !currentMonth && "opacity-50"
           )}>
           {!isPastDate && cellEvents.length === 0 ? (
@@ -222,7 +222,7 @@ export function DayCell({
   ]);
   if (!isMobile || !currentMonth) {
     return (
-      <motion.div
+      <motion.div  className="w-[14%]"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => {
           if (!currentMonth) return;
@@ -240,9 +240,9 @@ export function DayCell({
     );
 
   }
-  if (isMobile && currentMonth) {
+  if (isMobile) {
     return (
-      <motion.div
+      <motion.div className="w-[14%]"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={toggleDateSelection}
       >

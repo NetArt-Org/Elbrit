@@ -102,8 +102,8 @@ export function CalendarMonthView({
       className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
     >
       <motion.div
-        className="overflow-hidden"
-        animate={{ height: isCollapsed ? "70%" : "100%" }}
+        className={`overflow-hidden ${isCollapsed ? 'mobile-height':''}`}
+        animate={{ height: isCollapsed ? "60%" : "100%" }}
       >
         <div className="grid grid-cols-7">
           {WEEK_DAYS.map((day, index) => (
@@ -122,7 +122,7 @@ export function CalendarMonthView({
         </div>
     
         {/* Swipeable month grid */}
-        <CalendarVerticalSwipeLayer style={{height:"100%"}}>
+        <CalendarVerticalSwipeLayer style={{ height: isCollapsed ? "85%" : "100%" }}>
         <AnimatePresence initial={false}>
           <motion.div
             variants={SwipeFadeVariants}
@@ -133,7 +133,8 @@ export function CalendarMonthView({
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.12}
             onDragEnd={handleDragEnd}
-            className="grid grid-cols-7 grid-rows-6 h-full min-h-0"
+             className="flex flex-wrap h-full"
+            // className="grid grid-cols-7 grid-rows-6 h-full min-h-0"
           >
             {/* <CalendarVerticalSwipeLayer> */}
             {cells.map((cell, index) => (
