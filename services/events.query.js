@@ -152,6 +152,9 @@ query LeaveApplications($first: Int) {
         leave_approver_name
         leave_balance
         employee_name
+        employee {
+          name
+        }
         leave_type__name
       }
     }

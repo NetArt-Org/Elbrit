@@ -35,13 +35,19 @@ export function EventDetailsDialog({
 	event,
 	children
 }) {
-	const canJoinVisit =
-		event.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-		!event.participants?.some(
+	const isDoctorVisit = event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
+
+	const isEmployeeParticipant =
+		event.event_participants?.some(
 			(p) =>
-				p.type === "Employee" &&
-				String(p.id) === String(LOGGED_IN_USER.id)
-		);
+				p.reference_doctype === "Employee" &&
+				String(p.reference_docname) === String(LOGGED_IN_USER.id)
+		) ?? false;
+
+	const canJoinVisit = isDoctorVisit && !isEmployeeParticipant;
+
+	const canVisitNow = isDoctorVisit && isEmployeeParticipant;
+
 	const [open, setOpen] = useState(false);
 	const { use24HourFormat, removeEvent, employeeOptions, doctorOptions, addEvent } = useCalendar();
 	const deleteLockRef = useRef(false);
@@ -58,7 +64,6 @@ export function EventDetailsDialog({
 		_employeeOptions: employeeOptions,
 		_doctorOptions: doctorOptions,
 	};
-	// console.log("EVENTS",event)
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
@@ -77,65 +82,76 @@ export function EventDetailsDialog({
 					</div>
 				</ScrollArea>
 				<div className="flex justify-end gap-2">
-					{canJoinVisit && (
-						<Button
-							onClick={async () => {
-								try {
-									const existingParticipants =
-										event.event_participants?.map((p) => ({
-											reference_doctype: p.reference_doctype,
-											reference_docname: p.reference_docname,
-										})) || [];
-
-									await joinDoctorVisit({
-										erpName: event.erpName,
-										existingParticipants,
-										employeeId: LOGGED_IN_USER.id,
-									});
-
-									// Update calendar state (append locally)
-									removeEvent(event.erpName);
-
-									addEvent({
-										...event,
-										participants: [
-											...(event.participants || []),
-											{
-												type: "Employee",
-												id: LOGGED_IN_USER.id,
-											},
-										],
-										event_participants: [
-											...(event.event_participants || []),
-											{
-												reference_doctype: "Employee",
-												reference_docname: LOGGED_IN_USER.id,
-											},
-										],
-									});
-
-									toast.success("You have joined the visit");
-									setOpen(false);
-								} catch (err) {
-									console.error(err);
-									toast.error("Failed to join visit");
-								}
-							}}
-						>
-							Join Visit
-						</Button>
-					)}
-
 					{canEdit && (
-						<AddEditEventDialog
-							event={event}
-							forceValues={editAction?.setOnEdit}
-						>
-							<Button variant="outline">
-								{editAction?.label ?? "Edit"}
-							</Button>
-						</AddEditEventDialog>
+						<>
+							{/* Join Visit */}
+							{canJoinVisit && (
+								<Button variant="outline"
+									onClick={async () => {
+										try {
+											const existingParticipants =
+												event.event_participants?.map((p) => ({
+													reference_doctype: p.reference_doctype,
+													reference_docname: p.reference_docname,
+												})) || [];
+
+											await joinDoctorVisit({
+												erpName: event.erpName,
+												existingParticipants,
+												employeeId: LOGGED_IN_USER.id,
+											});
+
+											removeEvent(event.erpName);
+
+											addEvent({
+												...event,
+												event_participants: [
+													...(event.event_participants || []),
+													{
+														reference_doctype: "Employee",
+														reference_docname: LOGGED_IN_USER.id,
+													},
+												],
+											});
+
+											toast.success("You have joined the visit");
+											setOpen(false);
+										} catch (err) {
+											console.error(err);
+											toast.error("Failed to join visit");
+										}
+									}}
+								>
+									Join Visit
+								</Button>
+							)}
+
+							{/* Visit Now (Primary Edit Action) */}
+							{canVisitNow && (
+								<AddEditEventDialog
+									event={event}
+									forceValues={editAction?.setOnEdit}
+								>
+									<Button variant="success">
+										{editAction?.label ?? "Visit Now"}
+									</Button>
+								</AddEditEventDialog>
+							)}
+
+							{/* Normal Edit (Non-doctor events) */}
+							{!isDoctorVisit && (
+								<AddEditEventDialog
+									event={event}
+									forceValues={editAction?.setOnEdit}
+								>
+									<Button variant="outline">
+										{editAction?.label ?? "Edit"}
+									</Button>
+								</AddEditEventDialog>
+							)}
+						</>
 					)}
+
 					{canDelete && (
 						<Button
 							variant="destructive"

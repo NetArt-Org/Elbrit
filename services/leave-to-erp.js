@@ -18,10 +18,8 @@ export function mapFormToErpLeave(values) {
     doctype: "Leave Application",
     employee: LOGGED_IN_USER.id,
     leave_type: values.leaveType,
-
     from_date: fromDate,
     to_date: toDate,
-
     half_day: isHalf ? 1 : 0,
     half_day_date: isHalf
     ? toERPDate(values.halfDayDate)
@@ -62,6 +60,7 @@ export function mapErpLeaveToCalendar(leave) {
     color: "red",
     allDay: true,
     medicalAttachment:leave.fsl_attach ?? "",
+    employee:leave.employee?.name,
     approvedBy:leave.leave_approver_name ?? ""
   };
 }

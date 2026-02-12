@@ -25,7 +25,15 @@ export function EventDetailsFields({ event, config, use24HourFormat }) {
             <Icon className="mt-1 size-4 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-sm font-medium">{field.label}</p>
-              <p className="text-sm text-muted-foreground">{value}</p>
+              {field.key === "description" ? (
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: value }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">{value}</p>
+              )}
+              {/* <p className="text-sm text-muted-foreground">{value}</p> */}
             </div>
           </div>
         );
