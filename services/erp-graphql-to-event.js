@@ -89,7 +89,7 @@ export function mapErpGraphqlEventToCalendar(node) {
     startDate: startDate ? startDate.toISOString() : null,
     endDate: endDate ? endDate.toISOString() : null,
     attending,
-
+    roleId: node.fsl_role_id?.name ?? undefined,
     tags: tag,
 
     // ✅ REQUIRED BY eventSchema

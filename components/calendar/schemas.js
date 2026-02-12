@@ -69,8 +69,9 @@ export const eventSchema = z
     /* ---------- Doctor Visit ---------- */
     pob_given: z.enum(["Yes", "No"]).optional(),
     fsl_doctor_item: z.array(pobItemSchema).optional(),
+    roleId: z.string().optional(),
 
-    attending: z.enum(["Yes", "No"]).optional(),
+    attending: z.enum(["Yes", "No","Maybe",""]).optional(),
     kly_lat_long: z.string().optional(),
   })
   .superRefine((data, ctx) => {

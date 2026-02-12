@@ -88,9 +88,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			leavePeriod: "Full",
 			halfDayDate: event?.halfDayDate ?? "",
 			approvedBy: event?.approvedBy ?? "",
-			attending: employeeParticipant?.attending ?? "No",
+			attending: employeeParticipant?.attending ?? "",
 			kly_lat_long: employeeParticipant?.kly_lat_long ?? "",
 			pob_given: event?.pob_given ?? "No",
+			roleId: event?.roleId ?? LOGGED_IN_USER.roleId,
 			fsl_doctor_item: event?.fsl_doctor_item ?? [],
 		},
 	});

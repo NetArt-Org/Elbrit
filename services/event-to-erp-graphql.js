@@ -99,6 +99,7 @@ export function mapFormToErpEvent(values, options = {}) {
     attending:values.attending,
     starts_on: format(values.startDate, "yyyy-MM-dd HH:mm:ss"),
     ends_on: format(values.endDate, "yyyy-MM-dd HH:mm:ss"),
+    fsl_role_id: values.roleId,
     event_category: values.tags,
     color:
       COLOR_HEX_MAP[resolvedColor] ??

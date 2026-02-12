@@ -16,6 +16,9 @@ query EventsByRange(
         all_day
         event_category
         attending
+        fsl_role_id {
+          name
+        }
         owner {
           name
           full_name
