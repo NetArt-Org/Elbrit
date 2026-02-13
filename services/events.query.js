@@ -88,6 +88,9 @@ query GetEmployees($first: Int!) {
         employee_name
         company_email
         idx
+        leave_approver {
+          name
+        }
         designation{
         name
         }
@@ -149,6 +152,9 @@ query LeaveApplications($first: Int) {
         posting_date
         status
         fsl_attach
+        leave_approver {
+          name
+        }
         leave_approver_name
         leave_balance
         employee_name

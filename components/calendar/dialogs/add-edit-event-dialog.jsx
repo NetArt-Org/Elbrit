@@ -92,6 +92,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			kly_lat_long: employeeParticipant?.kly_lat_long ?? "",
 			pob_given: event?.pob_given ?? "No",
 			roleId: event?.roleId ?? LOGGED_IN_USER.roleId,
+			leave_approver: event?.leave_approver ?? LOGGED_IN_USER.leave_approver,
 			fsl_doctor_item: event?.fsl_doctor_item ?? [],
 		},
 	});
@@ -532,40 +533,61 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		return true;
 	};
 	const handleLeave = async (values) => {
-		if (requiresMedical && !values.medicalAttachment) {
+		try {
+		  if (requiresMedical && !values.medicalAttachment) {
 			toast.error("Medical certificate required");
 			return;
-		}
-
-		const leaveDoc = mapFormToErpLeave(values);
-		delete leaveDoc.fsl_attach;
-
-		const savedLeave = await saveLeaveApplication(leaveDoc);
-
-		if (requiresMedical && values.medicalAttachment) {
+		  }
+	  
+		  const leaveDoc = mapFormToErpLeave(values);
+		  delete leaveDoc.fsl_attach;
+	  
+		  const savedLeave = await saveLeaveApplication(leaveDoc);
+	  
+		  // 🚨 If backend returned null (GraphQL validation error case)
+		  if (!savedLeave) {
+			toast.error("Failed to apply leave. Please try again.");
+			return;
+		  }
+	  
+		  if (requiresMedical && values.medicalAttachment) {
 			const uploadResult = await uploadLeaveMedicalCertificate(
-				erpUrl, authToken,
-				values,
-				savedLeave.name
+			  erpUrl,
+			  authToken,
+			  values,
+			  savedLeave.name
 			);
-
+	  
 			if (uploadResult?.fileUrl) {
-				await updateLeaveAttachment(
-					savedLeave.name,
-					uploadResult.fileUrl
-				);
+			  await updateLeaveAttachment(
+				savedLeave.name,
+				uploadResult.fileUrl
+			  );
 			}
-		}
-
-		const calendarLeave = mapErpLeaveToCalendar({
+		  }
+	  
+		  const calendarLeave = mapErpLeaveToCalendar({
 			...leaveDoc,
 			name: savedLeave.name,
 			color: "#DC2626",
-		});
-
-		upsertCalendarEvent(calendarLeave);
-		finalize("Leave applied successfully");
-	};
+		  });
+	  
+		  upsertCalendarEvent(calendarLeave);
+		  finalize("Leave applied successfully");
+	  
+		} catch (error) {
+		  console.error("Leave submission error:", error);
+	  
+		  // 🔥 Extract GraphQL error message if available
+		  const message =
+			error?.response?.errors?.[0]?.message ||
+			error?.message ||
+			"Something went wrong while applying leave.";
+	  
+		  toast.error(message);
+		}
+	  };
+	  
 	const handleTodo = async (values) => {
 		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
 		const savedTodo = await saveDocToErp(todoDoc);
