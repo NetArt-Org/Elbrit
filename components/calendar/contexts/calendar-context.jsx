@@ -90,25 +90,16 @@ export function CalendarProvider({
 		setAgendaModeGroupByState(groupBy);
 		updateSettings({ agendaModeGroupBy: groupBy });
 	};
+	const employeeIdToName = useMemo(() => {
+		const map = new Map();
+		users.forEach(user => {
+		  if (user.id) {
+			map.set(user.id, user.name || user.full_name);
+		  }
+		});
+		return map;
+	  }, [users]);	  
 
-	// const filterEventsBySelectedColors = (color) => {
-	// 	const isColorSelected = selectedColors.includes(color);
-	// 	const newColors = isColorSelected
-	// 		? selectedColors.filter((c) => c !== color)
-	// 		: [...selectedColors, color];
-
-	// 	if (newColors.length > 0) {
-	// 		const filtered = allEvents.filter((event) => {
-	// 			const eventColor = event.color || "blue";
-	// 			return newColors.includes(eventColor);
-	// 		});
-	// 		setFilteredEvents(filtered);
-	// 	} else {
-	// 		setFilteredEvents(allEvents);
-	// 	}
-
-	// 	setSelectedColors(newColors);
-	// };
 	const filterEventsBySelectedColors = (color) => {
 		const isColorSelected = selectedColors.includes(color);
 
@@ -118,17 +109,6 @@ export function CalendarProvider({
 
 		setSelectedColors(newColors);
 	};
-
-
-	// const filterEventsBySelectedUser = (userId) => {
-	// 	setSelectedUserId(userId);
-	// 	if (userId === "all") {
-	// 		setFilteredEvents(allEvents);
-	// 	} else {
-	// 		const filtered = allEvents.filter((event) => event.owner?.id === userId);
-	// 		setFilteredEvents(filtered);
-	// 	}
-	// };
 	const filterEventsBySelectedUser = (userId) => {
 		setSelectedUserId(userId);
 	};

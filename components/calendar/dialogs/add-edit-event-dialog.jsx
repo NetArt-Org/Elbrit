@@ -25,7 +25,7 @@ import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/services/lea
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
 import { fetchItems } from "@calendar/services/participants.service";
-import { getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
+import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, showFormErrorsAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useAuth } from "@calendar/components/auth/auth-context";
@@ -251,27 +251,27 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		   Longitude and latitude
 		--------------------------------------------- */
 
-		useEffect(() => {
-			if (!isEditing) return;
-		  
-			// 📍 Doctor Visit Plan: capture endDate ONCE
-			if (
-			  selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			  attending === "Yes" &&
-			  !endDateTouchedRef.current
-			) {
-			  form.setValue("endDate", new Date(), {
+	useEffect(() => {
+		if (!isEditing) return;
+
+		// 📍 Doctor Visit Plan: capture endDate ONCE
+		if (
+			selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			attending === "Yes" &&
+			!endDateTouchedRef.current
+		) {
+			form.setValue("endDate", new Date(), {
 				shouldDirty: true,
 				shouldValidate: true,
-			  });
-		  
-			  endDateTouchedRef.current = true;
-			}
-		  
-			// existing geo logic (unchanged)
-			resolveLatLong(form, attending, isEditing, toast);
-		  }, [attending, isEditing]);
-		
+			});
+
+			endDateTouchedRef.current = true;
+		}
+
+		// existing geo logic (unchanged)
+		resolveLatLong(form, attending, isEditing, toast);
+	}, [attending, isEditing]);
+
 
 	/* ---------------------------------------------
 	   Leave Balance Fetching
@@ -534,60 +534,60 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	};
 	const handleLeave = async (values) => {
 		try {
-		  if (requiresMedical && !values.medicalAttachment) {
-			toast.error("Medical certificate required");
-			return;
-		  }
-	  
-		  const leaveDoc = mapFormToErpLeave(values);
-		  delete leaveDoc.fsl_attach;
-	  
-		  const savedLeave = await saveLeaveApplication(leaveDoc);
-	  
-		  // 🚨 If backend returned null (GraphQL validation error case)
-		  if (!savedLeave) {
-			toast.error("Failed to apply leave. Please try again.");
-			return;
-		  }
-	  
-		  if (requiresMedical && values.medicalAttachment) {
-			const uploadResult = await uploadLeaveMedicalCertificate(
-			  erpUrl,
-			  authToken,
-			  values,
-			  savedLeave.name
-			);
-	  
-			if (uploadResult?.fileUrl) {
-			  await updateLeaveAttachment(
-				savedLeave.name,
-				uploadResult.fileUrl
-			  );
+			if (requiresMedical && !values.medicalAttachment) {
+				toast.error("Medical certificate required");
+				return;
 			}
-		  }
-	  
-		  const calendarLeave = mapErpLeaveToCalendar({
-			...leaveDoc,
-			name: savedLeave.name,
-			color: "#DC2626",
-		  });
-	  
-		  upsertCalendarEvent(calendarLeave);
-		  finalize("Leave applied successfully");
-	  
+
+			const leaveDoc = mapFormToErpLeave(values);
+			delete leaveDoc.fsl_attach;
+
+			const savedLeave = await saveLeaveApplication(leaveDoc);
+
+			// 🚨 If backend returned null (GraphQL validation error case)
+			if (!savedLeave) {
+				toast.error("Failed to apply leave. Please try again.");
+				return;
+			}
+
+			if (requiresMedical && values.medicalAttachment) {
+				const uploadResult = await uploadLeaveMedicalCertificate(
+					erpUrl,
+					authToken,
+					values,
+					savedLeave.name
+				);
+
+				if (uploadResult?.fileUrl) {
+					await updateLeaveAttachment(
+						savedLeave.name,
+						uploadResult.fileUrl
+					);
+				}
+			}
+
+			const calendarLeave = mapErpLeaveToCalendar({
+				...leaveDoc,
+				name: savedLeave.name,
+				color: "#DC2626",
+			});
+
+			upsertCalendarEvent(calendarLeave);
+			finalize("Leave applied successfully");
+
 		} catch (error) {
-		  console.error("Leave submission error:", error);
-	  
-		  // 🔥 Extract GraphQL error message if available
-		  const message =
-			error?.response?.errors?.[0]?.message ||
-			error?.message ||
-			"Something went wrong while applying leave.";
-	  
-		  toast.error(message);
+			console.error("Leave submission error:", error);
+
+			// 🔥 Extract GraphQL error message if available
+			const message =
+				error?.response?.errors?.[0]?.message ||
+				error?.message ||
+				"Something went wrong while applying leave.";
+
+			toast.error(message);
 		}
-	  };
-	  
+	};
+
 	const handleTodo = async (values) => {
 		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
 		const savedTodo = await saveDocToErp(todoDoc);
@@ -624,7 +624,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				{}
 			);
 			const savedEvent = await saveEvent(erpDoc);
-			// console.log("ERP DOC", erpDoc)
 			const calendarEvent = {
 				erpName: savedEvent.name,
 				title: buildDoctorVisitTitle(doctorId, values), description: values.description,
@@ -634,12 +633,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				event_participants: erpDoc.event_participants,
 				attending: values.attending,
 				// 👇 derived UI
-				participants: erpDoc.event_participants.map(p => ({
-					type: p.reference_doctype,
-					id: p.reference_docname,
-				})),
+				participants: buildParticipantsWithDetails(
+					erpDoc.event_participants,
+					{ employeeOptions, doctorOptions }
+				),
 			};
-			// console.log("Calendar Event", calendarEvent)
 			if (
 				values.pob_given === "Yes" &&
 				Array.isArray(values.fsl_doctor_item)
@@ -663,25 +661,28 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
 		});
-		// console.log("ERP DOC", erpDoc)
+		const shouldBeGreen =
+			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			values.attending === "Yes";
 		const savedEvent = await saveEvent(erpDoc);
 		const calendarEvent = {
 			...(event ?? {}),
 			erpName: savedEvent.name,
 			title: values.title, description: values.description,
-			startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor,
+			startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: shouldBeGreen
+			? "green"
+			: tagConfig.fixedColor,
 			tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id,
 			hqTerritory: values.hqTerritory || "",
 			// 🔒 ERP truth
 			event_participants: erpDoc.event_participants,
 			attending: values.attending,
 			// 👇 derived UI
-			participants: erpDoc.event_participants.map(p => ({
-				type: p.reference_doctype,
-				id: p.reference_docname,
-			})),
+			participants: buildParticipantsWithDetails(
+				erpDoc.event_participants,
+				{ employeeOptions, doctorOptions }
+			),
 		};
-		// console.log("Calendar Event", calendarEvent)
 		if (
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
 			values.pob_given === "Yes" &&
@@ -696,7 +697,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			calendarEvent.fsl_doctor_item = [];
 			calendarEvent.pob_given = "No";
 		}
-
 		upsertCalendarEvent(calendarEvent);
 		finalize("Event saved");
 	};

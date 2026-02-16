@@ -16,7 +16,6 @@ export function mapFormToErpEvent(values, options = {}) {
     values.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
 
   const isUpdate = Boolean(erpName);
-  console.log("ERPNAME", erpName)
   function buildParticipants(values) {
     const participants = [];
     /* ---------- Employees ---------- */

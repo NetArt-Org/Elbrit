@@ -17,6 +17,7 @@ import { deleteEventFromErp, saveEvent } from "@calendar/services/event.service"
 import { EventDetailsFields } from "@calendar/components/calendar/dialogs/EventDetailsFields";
 import { TAG_IDS } from "../mocks";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { resolveDoctorVisitState } from "@calendar/lib/doctorVisitState";
 export async function joinDoctorVisit({ erpName, existingParticipants, employeeId }) {
 	return saveEvent({
 		name: erpName,
@@ -36,6 +37,10 @@ export function EventDetailsDialog({
 	children
 }) {
 	const isDoctorVisit = event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
+	const visitState = resolveDoctorVisitState(
+		event,
+		LOGGED_IN_USER.id
+	);
 
 	const isEmployeeParticipant =
 		event.event_participants?.some(
@@ -47,7 +52,6 @@ export function EventDetailsDialog({
 	const canJoinVisit = isDoctorVisit && !isEmployeeParticipant;
 
 	const canVisitNow = isDoctorVisit && isEmployeeParticipant;
-
 	const [open, setOpen] = useState(false);
 	const { use24HourFormat, removeEvent, employeeOptions, doctorOptions, addEvent } = useCalendar();
 	const deleteLockRef = useRef(false);
@@ -100,19 +104,14 @@ export function EventDetailsDialog({
 												existingParticipants,
 												employeeId: LOGGED_IN_USER.id,
 											});
+											const updated = rebuildCalendarEvent(
+												event,
+												updatedErpParticipants,
+												{ employeeOptions, doctorOptions }
+											);
 
 											removeEvent(event.erpName);
-
-											addEvent({
-												...event,
-												event_participants: [
-													...(event.event_participants || []),
-													{
-														reference_doctype: "Employee",
-														reference_docname: LOGGED_IN_USER.id,
-													},
-												],
-											});
+											addEvent(updated);
 
 											toast.success("You have joined the visit");
 											setOpen(false);
@@ -125,7 +124,28 @@ export function EventDetailsDialog({
 									Join Visit
 								</Button>
 							)}
+							{visitState.needsLocation && (
+								<Button
+									variant="secondary"
+									onClick={async () => {
+										try {
+											await submitDoctorVisitLocation({
+												event,
+												loggedInUserId: LOGGED_IN_USER.id,
+												removeEvent,
+												addEvent,
+											});
 
+											toast.success("Location submitted successfully");
+											setOpen(false);
+										} catch (err) {
+											toast.error("Failed to fetch location");
+										}
+									}}
+								>
+									Request Location
+								</Button>
+							)}
 							{/* Visit Now (Primary Edit Action) */}
 							{canVisitNow && (
 								<AddEditEventDialog
@@ -179,4 +199,15 @@ export function EventDetailsDialog({
 			</DialogContent>
 		</Dialog>
 	);
+}
+
+function rebuildCalendarEvent(event, updatedErpParticipants, options) {
+	return {
+		...event,
+		event_participants: updatedErpParticipants,
+		participants: buildParticipantsWithDetails(
+			updatedErpParticipants,
+			options
+		),
+	};
 }
