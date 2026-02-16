@@ -1,5 +1,5 @@
 "use client";;
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@calendar/components/ui/button";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
@@ -18,6 +18,7 @@ import { EventDetailsFields } from "@calendar/components/calendar/dialogs/EventD
 import { TAG_IDS } from "../mocks";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { resolveDoctorVisitState } from "@calendar/lib/doctorVisitState";
+import { buildParticipantsWithDetails } from "@calendar/lib/helper";
 export async function joinDoctorVisit({ erpName, existingParticipants, employeeId }) {
 	return saveEvent({
 		name: erpName,
@@ -41,7 +42,7 @@ export function EventDetailsDialog({
 		event,
 		LOGGED_IN_USER.id
 	);
-
+	console.log("EVENT", event)
 	const isEmployeeParticipant =
 		event.event_participants?.some(
 			(p) =>
@@ -63,11 +64,19 @@ export function EventDetailsDialog({
 	const canEdit =
 		tagConfig.ui?.allowEdit?.(event) ?? true;
 	const editAction = tagConfig.ui?.primaryEditAction;
-	const eventWithOptions = {
+	const enrichedParticipants = useMemo(() => {
+		return buildParticipantsWithDetails(
+		  event.event_participants ?? [],
+		  { employeeOptions, doctorOptions }
+		);
+	  }, [event.event_participants, employeeOptions, doctorOptions]);	  
+	  
+	  const eventWithOptions = {
 		...event,
+		participants: enrichedParticipants,
 		_employeeOptions: employeeOptions,
 		_doctorOptions: doctorOptions,
-	};
+	  };
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
