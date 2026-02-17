@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { COLOR_HEX_MAP } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
-import { TAG_IDS } from "@calendar/components/calendar/mocks";
+import { TAG_IDS } from "@calendar/components/calendar/constants";
 
 /**
  * Maps form values to an ERP Event document

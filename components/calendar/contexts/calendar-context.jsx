@@ -7,8 +7,8 @@ import { ELBRIT_ROLEID, EMPLOYEES_QUERY } from "@calendar/services/events.query"
 import { mapEmployeesToCalendarUsers } from "@calendar/services/employee-to-calendar-user";
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { enrichEventsWithParticipants } from "@calendar/lib/calendar/enrich-events";
-import { resolveVisibleEmployeeIds, resolveVisibleRoleIds } from "@calendar/lib/userVisibility";
-import { TAGS } from "../mocks";
+import { resolveVisibleEmployeeIds, resolveVisibleRoleIds } from "@calendar/lib/employeeHeirachy";
+import { TAGS } from "../constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 
 const DEFAULT_SETTINGS = {
@@ -90,15 +90,6 @@ export function CalendarProvider({
 		setAgendaModeGroupByState(groupBy);
 		updateSettings({ agendaModeGroupBy: groupBy });
 	};
-	const employeeIdToName = useMemo(() => {
-		const map = new Map();
-		users.forEach(user => {
-		  if (user.id) {
-			map.set(user.id, user.name || user.full_name);
-		  }
-		});
-		return map;
-	  }, [users]);	  
 
 	const filterEventsBySelectedColors = (color) => {
 		const isColorSelected = selectedColors.includes(color);
@@ -147,12 +138,6 @@ export function CalendarProvider({
 				e.erpName === normalized.erpName ? normalized : e
 			)
 		);
-
-		// setFilteredEvents((prev) =>
-		// 	prev.map((e) =>
-		// 		e.erpName === normalized.erpName ? normalized : e
-		// 	)
-		// );
 	};
 
 

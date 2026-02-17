@@ -67,16 +67,16 @@ function ParticipantsTable({ participants }) {
       <table className="w-full table-fixed border border-border text-sm">
         <thead className="bg-muted">
           <tr>
-            <th className="w-1/4 border px-3 py-2 text-left">
+            <th className="w-1/4 md:w-1/4 border p-2 md:px-3 md:py-2 text-left">
               Employee
             </th>
 
-            <th className="w-1/6 border px-3 py-2 text-center">
+            <th className="w-1/4 md:w-1/6 border p-2 md:px-3 md:py-2 text-center">
               Visited
             </th>
 
-            <th className="w-7/12 border px-3 py-2 text-left">
-              Location (Lat & Long)
+            <th className="w-1/4 md:w-7/12 border p-2 md:px-3 md:py-2 text-left">
+              Location
             </th>
           </tr>
         </thead>
@@ -85,15 +85,15 @@ function ParticipantsTable({ participants }) {
           {participants?.length ? (
             participants.map((participant, index) => (
               <tr key={index} className="border-t">
-                <td className="w-1/4 border px-3 py-2 break-words">
+                <td className="w-1/4 md:w-1/4 border p-2 md:px-3 md:py-2 break-words">
                   {participant.name || "-"}
                 </td>
 
-                <td className="w-1/6 border px-3 py-2 text-center">
+                <td className="w-1/4 md:w-1/6 border p-2 md:px-3 md:py-2 text-center">
                   {participant.attending || "No"}
                 </td>
 
-                <td className="w-7/12 border px-3 py-2 break-all font-mono text-xs">
+                <td className="w-1/4 md:w-7/12 border p-2 md:px-3 md:py-2 break-all font-mono text-xs">
                   {participant.kly_lat_long || "-"}
                 </td>
               </tr>

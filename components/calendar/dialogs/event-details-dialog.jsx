@@ -15,7 +15,7 @@ import { useCalendar } from "@calendar/components/calendar/contexts/calendar-con
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
 import { deleteEventFromErp, saveEvent } from "@calendar/services/event.service";
 import { EventDetailsFields } from "@calendar/components/calendar/dialogs/EventDetailsFields";
-import { TAG_IDS } from "../mocks";
+import { TAG_IDS } from "@calendar/components/calendar/constants"
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { resolveDoctorVisitState } from "@calendar/lib/doctorVisitState";
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
@@ -42,7 +42,6 @@ export function EventDetailsDialog({
 		event,
 		LOGGED_IN_USER.id
 	);
-	console.log("EVENT", event)
 	const isEmployeeParticipant =
 		event.event_participants?.some(
 			(p) =>
@@ -86,7 +85,7 @@ export function EventDetailsDialog({
 				</DialogHeader>
 
 				<ScrollArea className="max-h-[80vh]">
-					<div className="p-4">
+					<div className="p-2">
 						<EventDetailsFields
 							event={eventWithOptions}
 							config={tagConfig}

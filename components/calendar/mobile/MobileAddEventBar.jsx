@@ -5,7 +5,7 @@ import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-ed
 import { Button } from "@calendar/components/ui/button";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { isBefore, startOfDay } from "date-fns";
-import { TAG_IDS, TAGS } from "@calendar/components/calendar/mocks";
+import { TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { motion, AnimatePresence } from "framer-motion";
 import {Plus,
   Building2, Users, Cake,Calendar, Stethoscope, ListChecks, HelpCircle,
