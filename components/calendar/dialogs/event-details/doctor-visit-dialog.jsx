@@ -1,328 +1,316 @@
-"use client";;
-import { useState, useRef, useMemo } from "react";
+"use client";
+import { useRef, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@calendar/components/ui/button";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@calendar/components/ui/dialog";
 import { ScrollArea } from "@calendar/components/ui/scroll-area";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
-import { deleteEventFromErp, saveEvent } from "@calendar/services/event.service";
-import { TAG_IDS } from "@calendar/components/calendar/constants"
+import { saveEvent } from "@calendar/services/event.service";
+import { TAG_IDS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { resolveDoctorVisitState, submitDoctorVisitLocation } from "@calendar/lib/doctorVisitState";
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
-import { Calendar, Clock, Text, User } from "lucide-react";
-import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
+import { useDeleteEvent } from "../../hooks";
+import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
+import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 
-const ICONS = {
-  owner: User,
-  date: Calendar,
-  datetime: Clock,
-  text: Text,
-};
-export async function joinDoctorVisit({ erpName, existingParticipants, employeeId }) {
-	return saveEvent({
-		name: erpName,
-		event_participants: [
-			...existingParticipants,
-			{
-				reference_doctype: "Employee",
-				reference_docname: employeeId,
-			},
-		],
-	});
+export async function joinDoctorVisit({
+  erpName,
+  existingParticipants,
+  employeeId,
+}) {
+  return saveEvent({
+    name: erpName,
+    event_participants: [
+      ...existingParticipants,
+      {
+        reference_doctype: "Employee",
+        reference_docname: employeeId,
+      },
+    ],
+  });
 }
-
 
 export function EventDoctorVisitDialog({
-	event,open,setOpen,
-	children
+  event,
+  open,
+  setOpen,
 }) {
-	const isDoctorVisit = event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
-	const visitState = resolveDoctorVisitState(
-		event,
-		LOGGED_IN_USER.id
-	);
-	const isEmployeeParticipant =
-		event.event_participants?.some(
-			(p) =>
-				p.reference_doctype === "Employee" &&
-				String(p.reference_docname) === String(LOGGED_IN_USER.id)
-		) ?? false;
+  const {
+    use24HourFormat,
+    removeEvent,
+    employeeOptions,
+    doctorOptions,
+    addEvent,
+  } = useCalendar();
 
-	const canJoinVisit = isDoctorVisit && !isEmployeeParticipant;
+  const { handleDelete } = useDeleteEvent({
+    removeEvent,
+    onClose: () => setOpen(false),
+  });
 
-	const canVisitNow = isDoctorVisit && isEmployeeParticipant;
-	// const [open, setOpen] = useState(false);
-	const { use24HourFormat, removeEvent, employeeOptions, doctorOptions, addEvent } = useCalendar();
-	const deleteLockRef = useRef(false);
-	const tagConfig =
-		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
+  const isDoctorVisit = event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
 
-	const canDelete =
-		tagConfig.ui?.allowDelete?.(event) ?? true;
-	const canEdit =
-		tagConfig.ui?.allowEdit?.(event) ?? true;
-	const editAction = tagConfig.ui?.primaryEditAction;
-	const enrichedParticipants = useMemo(() => {
-		return buildParticipantsWithDetails(
-		  event.event_participants ?? [],
-		  { employeeOptions, doctorOptions }
-		);
-	  }, [event.event_participants, employeeOptions, doctorOptions]);	  
-	  
-	  const eventWithOptions = {
-		...event,
-		participants: enrichedParticipants,
-		_employeeOptions: employeeOptions,
-		_doctorOptions: doctorOptions,
-	  };
-	return (
-		<>
-        <ScrollArea className="max-h-[80vh]">
-					<div className="p-2">
-						<EventDetailsFields
-							event={eventWithOptions}
-							config={tagConfig}
-							use24HourFormat={use24HourFormat}
-						/>
-					</div>
-				</ScrollArea>
-				<div className="flex justify-end gap-2">
-					{canEdit && (
-						<>
-							{/* Join Visit */}
-							{canJoinVisit && (
-								<Button variant="outline"
-									onClick={async () => {
-										try {
-											const existingParticipants =
-												event.event_participants?.map((p) => ({
-													reference_doctype: p.reference_doctype,
-													reference_docname: p.reference_docname,
-												})) || [];
+  const visitState = resolveDoctorVisitState(
+    event,
+    LOGGED_IN_USER.id
+  );
+  const doctorResolvers = useDoctorResolvers(doctorOptions);
+  const employeeResolvers = useEmployeeResolvers(employeeOptions);
+  
+  const isEmployeeParticipant =
+    event.event_participants?.some(
+      (p) =>
+        p.reference_doctype === "Employee" &&
+        String(p.reference_docname) === String(LOGGED_IN_USER.id)
+    ) ?? false;
+console.log("EVENT",event)
+  const canJoinVisit = isDoctorVisit && !isEmployeeParticipant;
+  const canVisitNow = isDoctorVisit && isEmployeeParticipant;
 
-											await joinDoctorVisit({
-												erpName: event.erpName,
-												existingParticipants,
-												employeeId: LOGGED_IN_USER.id,
-											});
-											const updated = rebuildCalendarEvent(
-												event,
-												updatedErpParticipants,
-												{ employeeOptions, doctorOptions }
-											);
+  const tagConfig =
+    TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
 
-											removeEvent(event.erpName);
-											addEvent(updated);
+  const canDelete =
+    tagConfig.ui?.allowDelete?.(event) ?? true;
 
-											toast.success("You have joined the visit");
-											setOpen(false);
-										} catch (err) {
-											console.error(err);
-											toast.error("Failed to join visit");
-										}
-									}}
-								>
-									Join Visit
-								</Button>
-							)}
-							{visitState.needsLocation && (
-								<Button
-									variant="secondary"
-									onClick={async () => {
-										try {
-											await submitDoctorVisitLocation({
-												event,
-												loggedInUserId: LOGGED_IN_USER.id,
-												removeEvent,
-												addEvent,
-											});
+  const canEdit =
+    tagConfig.ui?.allowEdit?.(event) ?? true;
 
-											toast.success("Location submitted successfully");
-											setOpen(false);
-										} catch (err) {
-											toast.error("Failed to fetch location");
-										}
-									}}
-								>
-									Request Location
-								</Button>
-							)}
-							{/* Visit Now (Primary Edit Action) */}
-							{canVisitNow && (
-								<AddEditEventDialog
-									event={event}
-									forceValues={editAction?.setOnEdit}
-								>
-									<Button variant="success">
-										{editAction?.label ?? "Visit Now"}
-									</Button>
-								</AddEditEventDialog>
-							)}
+  const editAction = tagConfig.ui?.primaryEditAction;
 
-							{/* Normal Edit (Non-doctor events) */}
-							{!isDoctorVisit && (
-								<AddEditEventDialog
-									event={event}
-									forceValues={editAction?.setOnEdit}
-								>
-									<Button variant="outline">
-										{editAction?.label ?? "Edit"}
-									</Button>
-								</AddEditEventDialog>
-							)}
-						</>
-					)}
+  /* =====================================================
+     DOCTOR RESOLUTION (FROM doctorOptions ONLY)
+  ===================================================== */
+  const doctorRef = event.event_participants?.find(
+    (p) => p.reference_doctype === "Lead"
+  );
+  
+  const doctorId = doctorRef?.reference_docname;
+  
+  const doctorName =
+    doctorResolvers.getDoctorNameById(doctorId) ?? "";
+  
+  const doctorCity =
+    doctorResolvers.getDoctorFieldById(doctorId, "city") ?? "";
+  
+  const doctorCode =
+    doctorResolvers.getDoctorFieldById(doctorId, "code") ?? "";
+  
 
-					{canDelete && (
-						<Button
-							variant="destructive"
-							onClick={async () => {
-								if (deleteLockRef.current) return;
-								deleteLockRef.current = true;
+  /* =====================================================
+     PARTICIPANTS (ONLY SM, ABM, RBM, BE)
+  ===================================================== */
 
-								try {
-									await deleteEventFromErp(event.erpName);
-									removeEvent(event.erpName);
-									setOpen(false);
-									toast.success("Event deleted successfully.");
-								} catch (e) {
-									toast.error("Error deleting event.");
-								} finally {
-									deleteLockRef.current = false;
-								}
-							}}
-						>
-							Delete
-						</Button>
-					)}
-				</div>
-        </>
-	);
-}
+  const employeeParticipants = useMemo(() => {
+    const allowedPrefixes = ["SM", "ABM", "RBM", "BE"];
+  
+    return (
+      event.event_participants
+        ?.filter((p) => p.reference_doctype === "Employee")
+        .map((p) => {
+          const roleId =
+            employeeResolvers.getEmployeeFieldById(
+              p.reference_docname,
+              "roleId"
+            );
+  
+          if (!roleId) return null;
+  
+          // Extract first segment before "-"
+          const rolePrefix = roleId.split("-")[0];
+  
+          // Remove numbers (ABM1 → ABM)
+          const cleanPrefix = rolePrefix.replace(/[0-9]/g, "");
+  
+          if (!allowedPrefixes.includes(cleanPrefix))
+            return null;
+  
+          return {
+            name:
+              employeeResolvers.getEmployeeNameById(
+                p.reference_docname
+              ) ?? p.reference_docname,
+            role: cleanPrefix,
+          };
+        })
+        .filter(Boolean) ?? []
+    );
+  }, [event.event_participants, employeeResolvers]);
+  
+  /* =====================================================
+     JOIN LOGIC FIXED
+  ===================================================== */
 
-function rebuildCalendarEvent(event, updatedErpParticipants, options) {
-	return {
-		...event,
-		event_participants: updatedErpParticipants,
-		participants: buildParticipantsWithDetails(
-			updatedErpParticipants,
-			options
-		),
-	};
-}
+  const handleJoin = async () => {
+    try {
+      const existingParticipants =
+        event.event_participants?.map((p) => ({
+          reference_doctype: p.reference_doctype,
+          reference_docname: p.reference_docname,
+        })) || [];
 
+      const saved = await joinDoctorVisit({
+        erpName: event.erpName,
+        existingParticipants,
+        employeeId: LOGGED_IN_USER.id,
+      });
 
-export function EventDetailsFields({ event, config, use24HourFormat }) {
-  if (!config?.details?.fields) return null;
-  // const participants =
-  //   event?.participants?.filter(
-  //     (x) => x.type === "Employee"
-  //   ) || [];
+      const updatedParticipants = [
+        ...existingParticipants,
+        {
+          reference_doctype: "Employee",
+          reference_docname: LOGGED_IN_USER.id,
+        },
+      ];
+
+      const updatedEvent = {
+        ...event,
+        event_participants: updatedParticipants,
+        participants: buildParticipantsWithDetails(
+          updatedParticipants,
+          { employeeOptions, doctorOptions }
+        ),
+      };
+
+      removeEvent(event.erpName);
+      addEvent(updatedEvent);
+
+      toast.success("You have joined the visit");
+      setOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to join visit");
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      {config.details.fields.map((field) => {
-        const Icon = ICONS[field.type] ?? Text;
-        const value = resolveDisplayValueFromEvent({
-          event,
-          field,
-          use24HourFormat,
-        });
-        if (!value) return null;
-        return (
-          <div key={field.key} className="flex items-start gap-2">
-            <Icon className="mt-1 size-4 shrink-0 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">{field.label}</p>
+    <>
+      <ScrollArea className="max-h-[80vh]">
+        <div className="p-2 space-y-4">
 
-              {/* 1️⃣ Description */}
-              {field.key === "description" && (
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: value }}
-                />
-              )}
+          {/* 🔷 Doctor Section */}
+          {doctorId && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">
+                Doctor Name
+              </p>
 
-              {/* 2️⃣ Employee Table */}
-              {/* {field.key === "employee" && (
-                <div className="mt-2 overflow-x-auto">
-                  <ParticipantsTable participants={participants} />
-                </div>
-              )} */}
-
-              {/* 3️⃣ Default Value (only if not description or employee) */}
-              {field.key !== "description" &&
-                field.key !== "employee" && (
-                  <p className="text-sm text-muted-foreground">
-                    {value}
-                  </p>
+              <p className="text-base font-medium">
+                {doctorName}
+              </p>
+              <div className="flex gap-4 text-sm">
+                {doctorCode && (
+                  <span className="text-blue-600 font-medium">
+                    {doctorCode}
+                  </span>
                 )}
-            </div>
 
-          </div>
-        );
-      })}
-    </div>
+                {doctorCity && (
+                  <span className="text-muted-foreground">
+                    {doctorCity}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 🔷 Participants Section */}
+          {employeeParticipants.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold">
+                Participants
+              </p>
+
+              <div className="space-y-2">
+                {employeeParticipants.map(
+                  (p, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between text-sm"
+                    >
+                      <span>{p.name}</span>
+                      <span className="text-muted-foreground font-medium">
+                        {p.role}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* 🔻 Footer Buttons */}
+      <div className="flex justify-end gap-2">
+        {canEdit && (
+          <>
+            {canJoinVisit && (
+              <Button
+                variant="outline"
+                onClick={handleJoin}
+              >
+                Join Visit
+              </Button>
+            )}
+
+            {visitState.needsLocation && (
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    await submitDoctorVisitLocation({
+                      event,
+                      loggedInUserId:
+                        LOGGED_IN_USER.id,
+                      removeEvent,
+                      addEvent,
+                    });
+
+                    toast.success(
+                      "Location submitted successfully"
+                    );
+                    setOpen(false);
+                  } catch {
+                    toast.error(
+                      "Failed to fetch location"
+                    );
+                  }
+                }}
+              >
+                Request Location
+              </Button>
+            )}
+
+            {canVisitNow && (
+              <AddEditEventDialog
+                event={event}
+                forceValues={
+                  editAction?.setOnEdit
+                }
+              >
+                <Button variant="success">
+                  {editAction?.label ??
+                    "Visit Now"}
+                </Button>
+              </AddEditEventDialog>
+            )}
+          </>
+        )}
+
+        {canDelete && (
+          <Button
+            variant="destructive"
+            onClick={() =>
+              handleDelete(event.erpName)
+            }
+          >
+            Delete
+          </Button>
+        )}
+      </div>
+    </>
   );
 }
-
-// function ParticipantsTable({ participants }) {
-//   return (
-//     <div className="w-full overflow-hidden">
-//       <table className="w-full table-fixed border border-border text-sm">
-//         <thead className="bg-muted">
-//           <tr>
-//             <th className="w-1/4 md:w-1/4 border p-2 md:px-3 md:py-2 text-left">
-//               Employee
-//             </th>
-
-//             <th className="w-1/4 md:w-1/6 border p-2 md:px-3 md:py-2 text-center">
-//               Visited
-//             </th>
-
-//             <th className="w-1/4 md:w-7/12 border p-2 md:px-3 md:py-2 text-left">
-//               Location
-//             </th>
-//           </tr>
-//         </thead>
-
-//         <tbody>
-//           {participants?.length ? (
-//             participants.map((participant, index) => (
-//               <tr key={index} className="border-t">
-//                 <td className="w-1/4 md:w-1/4 border p-2 md:px-3 md:py-2 break-words">
-//                   {participant.name || "-"}
-//                 </td>
-
-//                 <td className="w-1/4 md:w-1/6 border p-2 md:px-3 md:py-2 text-center">
-//                   {participant.attending || "No"}
-//                 </td>
-
-//                 <td className="w-1/4 md:w-7/12 border p-2 md:px-3 md:py-2 break-all font-mono text-xs">
-//                   {participant.kly_lat_long || "-"}
-//                 </td>
-//               </tr>
-//             ))
-//           ) : (
-//             <tr>
-//               <td
-//                 colSpan={3}
-//                 className="px-3 py-2 text-center text-muted-foreground"
-//               >
-//                 No participants found
-//               </td>
-//             </tr>
-//           )}
-//         </tbody>
-//       </table>
-//     </div>
-//   );
-// }

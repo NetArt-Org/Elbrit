@@ -65,6 +65,8 @@ export async function fetchDoctors() {
       value: node.name,
       label: node.lead_name,
       kly_lat_long: node.fsl_lat_lon,
+      city:node.city,
+      code:node.fsl_ecubix_code
     })) || []
   );
 }

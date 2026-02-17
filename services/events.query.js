@@ -131,6 +131,8 @@ query Doctors($first: Int) {
         name
         lead_name
         fsl_lat_lon
+        city
+        fsl_ecubix_code
       }
     }
   }
