@@ -29,11 +29,10 @@ export function mapFormToErpLeave(values) {
       : totalDays,
     description: values.description ?? "",
     posting_date: toERPDate(),
-    status: "Approved",
+    status: "Open",
     follow_via_email: 1,
     fsl_attach: values.medicalAttachment ?? null,
     leave_approver: values.leave_approver ?? null,
-    docstatus: 1,
   };
 }
 

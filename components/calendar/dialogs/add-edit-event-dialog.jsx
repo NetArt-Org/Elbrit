@@ -519,21 +519,21 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			erpName: event?.erpName,
 		});
 
-		// const savedEvent = await saveEvent(erpDoc);
-		console.log("ERP DEFAULT EVENT", erpDoc)
+		const savedEvent = await saveEvent(erpDoc);
+		// console.log("ERP DEFAULT EVENT", erpDoc)
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,
 			erpDoc,
-			// savedName: savedEvent.name,
+			savedName: savedEvent.name,
 			tagConfig,
 			employeeOptions,
 			doctorOptions,
 			ownerOverride: event ? event.owner : LOGGED_IN_USER.id,
 		});
-		console.log("Calendar DEFAULT EVENT", calendarEvent)
-		// upsertCalendarEvent(calendarEvent);
-		// finalize("Event saved");
+		// console.log("Calendar DEFAULT EVENT", calendarEvent)
+		upsertCalendarEvent(calendarEvent);
+		finalize("Event saved");
 	};
 	const handleDoctorVisitPlan = async (values) => {
 		const normalizedDoctors = (Array.isArray(values.doctor)
@@ -558,22 +558,22 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				{}
 			);
 
-			// const savedEvent = await saveEvent(erpDoc);
+			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = buildCalendarEvent({
 				values,
 				erpDoc,
-				// savedName: savedEvent.name,
+				savedName: savedEvent.name,
 				tagConfig,
 				employeeOptions,
 				doctorOptions,
 				ownerOverride: LOGGED_IN_USER.id,
 			});
 
-			// addEvent(calendarEvent);
+			addEvent(calendarEvent);
 		}
 
-		// finalize(`Created ${values.doctor.length} Doctor Visit events`);
+		finalize(`Created ${values.doctor.length} Doctor Visit events`);
 	};
 
 	const handleLeave = async (values) => {
@@ -971,7 +971,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								control={form.control}
 								name="assignedTo"
 								render={({ field }) => (
-									<RHFFieldWrapper label="Visibled To">
+									<RHFFieldWrapper label="Visible To">
 										<RHFComboboxField {...field} options={employeeOptions} multiple placeholder="Select employees" searchPlaceholder="Search employee"
 										/>
 									</RHFFieldWrapper>
@@ -1152,7 +1152,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								control={form.control}
 								name="description"
 								render={({ field }) => (
-									<RHFFieldWrapper label="Description">
+									<RHFFieldWrapper label={tagConfig.labels?.description ?? "Description"}>
 										<Tiptap
 											content={field.value}
 											onChange={field.onChange}
