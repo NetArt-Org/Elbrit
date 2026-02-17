@@ -15,7 +15,7 @@ export const ICON_MAP = {
   [TAG_IDS.LEAVE]: Calendar,                // Time off / out of office
   [TAG_IDS.HQ_TOUR_PLAN]: Building2,     // Office / headquarters visit
   [TAG_IDS.MEETING]: Users,              // Group discussion
-  [TAG_IDS.BIRTHDAY]: Cake,              // Celebration
+  // [TAG_IDS.BIRTHDAY]: Cake,              // Celebration
   [TAG_IDS.DOCTOR_VISIT_PLAN]: Stethoscope, // Medical appointment
   [TAG_IDS.TODO_LIST]: ListChecks,       // Tasks / checklist
   [TAG_IDS.OTHER]: HelpCircle,           // Uncategorized / miscellaneous

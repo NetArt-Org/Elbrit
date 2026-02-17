@@ -17,7 +17,7 @@ import { deleteEventFromErp, saveEvent } from "@calendar/services/event.service"
 import { EventDetailsFields } from "@calendar/components/calendar/dialogs/EventDetailsFields";
 import { TAG_IDS } from "@calendar/components/calendar/constants"
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
-import { resolveDoctorVisitState } from "@calendar/lib/doctorVisitState";
+import { resolveDoctorVisitState, submitDoctorVisitLocation } from "@calendar/lib/doctorVisitState";
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
 export async function joinDoctorVisit({ erpName, existingParticipants, employeeId }) {
 	return saveEvent({

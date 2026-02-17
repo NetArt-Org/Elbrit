@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
-import { TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
+import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/services/event-to-erp";
 import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@calendar/services/event.service";
 import { useWatch } from "react-hook-form";
@@ -15,7 +15,7 @@ import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@ca
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@calendar/components/ui/select";
 import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, } from "@calendar/components/calendar/form-fields";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
-import { useDisclosure } from "@calendar/components/calendar/hooks";
+import { useDisclosure, useSubmissionRouter } from "@calendar/components/calendar/hooks";
 import { eventSchema } from "@calendar/components/calendar/schemas";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@calendar/lib/participants";
@@ -47,54 +47,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
 	const [itemOptions, setItemOptions] = useState([]);
 	const endDateTouchedRef = useRef(false); // existing
-	const initialDates = useMemo(() => {
-		if (!event) {
-			const now = new Date();
-			return {
-				startDate: now,
-				endDate: addMinutes(now, 60),
-			};
-		}
-		return {
-			startDate: new Date(event.startDate),
-			endDate: new Date(event.endDate),
-		};
-	}, [event]);
-	const employeeParticipant = useMemo(() => {
-		return event?.participants?.find(
-			(p) => p.type === "Employee"
-		);
-	}, [event]);
 
 	const form = useForm({
 		resolver: zodResolver(eventSchema),
 		mode: "onChange",
-		defaultValues: {
-			title: event?.title ?? "",
-			description: event?.description ?? "",
-			startDate: initialDates.startDate,
-			endDate: initialDates.endDate,
-			tags: event?.tags ?? defaultTag ?? "Other",
-			hqTerritory: event?.hqTerritory ?? "",
-			employees: event?.employees,
-			doctor: event?.doctor,
-			allocated_to: event?.allocated_to ?? "",
-			leaveType: event?.leaveType ?? "Casual Leave",
-			reportTo: event?.reportTo ?? "",
-			medicalAttachment: event?.medicalAttachment ?? "",
-			allDay: event?.allDay ?? false,
-			todoStatus: "Open",
-			priority: "Medium",
-			leavePeriod: "Full",
-			halfDayDate: event?.halfDayDate ?? "",
-			approvedBy: event?.approvedBy ?? "",
-			attending: employeeParticipant?.attending ?? "",
-			kly_lat_long: employeeParticipant?.kly_lat_long ?? "",
-			pob_given: event?.pob_given ?? "No",
-			roleId: event?.roleId ?? LOGGED_IN_USER.roleId,
-			leave_approver: event?.leave_approver ?? LOGGED_IN_USER.leave_approver,
-			fsl_doctor_item: event?.fsl_doctor_item ?? [],
-		},
+		defaultValues: buildEventDefaultValues({ event, defaultTag }),
 	});
 
 	const startDate = useWatch({ control: form.control, name: "startDate" });
@@ -511,27 +468,114 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	const upsertCalendarEvent = (calendarEvent) => {
 		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
 	};
-	const handleBirthday = async (values) => {
-		if (!values.endDate) {
-			values.endDate = values.startDate;
-		}
+	const buildCalendarEvent = ({
+		event,
+		values,
+		erpDoc,
+		savedName,
+		tagConfig,
+		employeeOptions,
+		doctorOptions,
+		ownerOverride,
+	}) => {
+		const shouldBeGreen =
+			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			values.attending === "Yes";
 
-		if (values.doctor) {
-			const doctorId = Array.isArray(values.doctor)
-				? values.doctor[0]
-				: values.doctor;
+		const calendarEvent = {
+			...(event ?? {}),
+			erpName: savedName,
+			title: values.title,
+			description: values.description,
+			startDate: erpDoc.starts_on,
+			endDate: erpDoc.ends_on,
+			color: shouldBeGreen ? "green" : tagConfig.fixedColor,
+			tags: values.tags,
+			owner: ownerOverride,
+			hqTerritory: values.hqTerritory || "",
+			event_participants: erpDoc.event_participants,
+			attending: values.attending,
+			participants: buildParticipantsWithDetails(
+				erpDoc.event_participants,
+				{ employeeOptions, doctorOptions }
+			),
+		};
 
-			try {
-				await updateLeadDob(doctorId, values.startDate);
-			} catch (err) {
-				console.error("Failed to update doctor DOB", err);
-				toast.error("Failed to update Doctor DOB");
-				return false;
+		if (values.tags === TAG_IDS.DOCTOR_VISIT_PLAN) {
+			if (values.pob_given === "Yes" && Array.isArray(values.fsl_doctor_item)) {
+				calendarEvent.fsl_doctor_item =
+					normalizePobItemsForUI(values.fsl_doctor_item);
+				calendarEvent.pob_given = "Yes";
+			} else {
+				calendarEvent.fsl_doctor_item = [];
+				calendarEvent.pob_given = "No";
 			}
 		}
 
-		return true;
+		return calendarEvent;
 	};
+	const handleDefaultEvent = async (values) => {
+		const erpDoc = mapFormToErpEvent(values, {
+			erpName: event?.erpName,
+		});
+
+		// const savedEvent = await saveEvent(erpDoc);
+		console.log("ERP DEFAULT EVENT", erpDoc)
+		const calendarEvent = buildCalendarEvent({
+			event,
+			values,
+			erpDoc,
+			// savedName: savedEvent.name,
+			tagConfig,
+			employeeOptions,
+			doctorOptions,
+			ownerOverride: event ? event.owner : LOGGED_IN_USER.id,
+		});
+		console.log("Calendar DEFAULT EVENT", calendarEvent)
+		// upsertCalendarEvent(calendarEvent);
+		// finalize("Event saved");
+	};
+	const handleDoctorVisitPlan = async (values) => {
+		const normalizedDoctors = (Array.isArray(values.doctor)
+			? values.doctor
+			: [values.doctor]
+		).map((d) =>
+			typeof d === "object"
+				? d
+				: doctorOptions.find((o) => o.value === d) ?? d
+		);
+
+		for (const doctor of normalizedDoctors) {
+			const doctorId =
+				typeof doctor === "object" ? doctor.value : doctor;
+
+			const erpDoc = mapFormToErpEvent(
+				{
+					...values,
+					title: buildDoctorVisitTitle(doctorId, values),
+					doctor,
+				},
+				{}
+			);
+
+			// const savedEvent = await saveEvent(erpDoc);
+
+			const calendarEvent = buildCalendarEvent({
+				values,
+				erpDoc,
+				// savedName: savedEvent.name,
+				tagConfig,
+				employeeOptions,
+				doctorOptions,
+				ownerOverride: LOGGED_IN_USER.id,
+			});
+
+			// addEvent(calendarEvent);
+		}
+
+		// finalize(`Created ${values.doctor.length} Doctor Visit events`);
+	};
+
 	const handleLeave = async (values) => {
 		try {
 			if (requiresMedical && !values.medicalAttachment) {
@@ -600,139 +644,23 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		upsertCalendarEvent(calendarTodo);
 		finalize("Todo saved");
 	};
-	const handleDoctorVisitPlan = async (values) => {
-
-		const normalizedDoctors = (Array.isArray(values.doctor)
-			? values.doctor
-			: [values.doctor]
-		).map((d) =>
-			typeof d === "object"
-				? d
-				: doctorOptions.find((o) => o.value === d) ?? d
-		);
-
-		for (const doctor of normalizedDoctors) {
-			const doctorId =
-				typeof doctor === "object" ? doctor.value : doctor;
-
-			const erpDoc = mapFormToErpEvent(
-				{
-					...values,
-					title: buildDoctorVisitTitle(doctorId, values),
-					doctor: doctor,
-				},
-				{}
-			);
-			const savedEvent = await saveEvent(erpDoc);
-			const calendarEvent = {
-				erpName: savedEvent.name,
-				title: buildDoctorVisitTitle(doctorId, values), description: values.description,
-				startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: tagConfig.fixedColor,
-				tags: values.tags, owner: LOGGED_IN_USER.id,
-				// 🔒 ERP truth
-				event_participants: erpDoc.event_participants,
-				attending: values.attending,
-				// 👇 derived UI
-				participants: buildParticipantsWithDetails(
-					erpDoc.event_participants,
-					{ employeeOptions, doctorOptions }
-				),
-			};
-			if (
-				values.pob_given === "Yes" &&
-				Array.isArray(values.fsl_doctor_item)
-			) {
-				calendarEvent.fsl_doctor_item = normalizePobItemsForUI(
-					values.fsl_doctor_item
-				);
-
-				calendarEvent.pob_given = "Yes";
-			} else {
-				calendarEvent.fsl_doctor_item = [];
-				calendarEvent.pob_given = "No";
-			}
-
-			addEvent(calendarEvent);
-		}
-
-		finalize(`Created ${values.doctor.length} Doctor Visit events`);
-	};
-	const handleDefaultEvent = async (values) => {
-		const erpDoc = mapFormToErpEvent(values, {
-			erpName: event?.erpName,
-		});
-		const shouldBeGreen =
-			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			values.attending === "Yes";
-		const savedEvent = await saveEvent(erpDoc);
-		const calendarEvent = {
-			...(event ?? {}),
-			erpName: savedEvent.name,
-			title: values.title, description: values.description,
-			startDate: erpDoc.starts_on, endDate: erpDoc.ends_on, color: shouldBeGreen
-			? "green"
-			: tagConfig.fixedColor,
-			tags: values.tags, owner: event ? event.owner : LOGGED_IN_USER.id,
-			hqTerritory: values.hqTerritory || "",
-			// 🔒 ERP truth
-			event_participants: erpDoc.event_participants,
-			attending: values.attending,
-			// 👇 derived UI
-			participants: buildParticipantsWithDetails(
-				erpDoc.event_participants,
-				{ employeeOptions, doctorOptions }
-			),
-		};
-		if (
-			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			values.pob_given === "Yes" &&
-			Array.isArray(values.fsl_doctor_item)
-		) {
-			calendarEvent.fsl_doctor_item = normalizePobItemsForUI(
-				values.fsl_doctor_item
-			);
-
-			calendarEvent.pob_given = "Yes";
-		} else if (values.tags === TAG_IDS.DOCTOR_VISIT_PLAN) {
-			calendarEvent.fsl_doctor_item = [];
-			calendarEvent.pob_given = "No";
-		}
-		upsertCalendarEvent(calendarEvent);
-		finalize("Event saved");
-	};
 	const onInvalid = (errors) => {
 		showFirstFormErrorAsToast(errors);
 	};
+	const submitHandlers = useSubmissionRouter({
+		isEditing,
+		handleLeave,
+		handleTodo,
+		handleDoctorVisitPlan,
+		handleDefaultEvent,
+	});
 
 	const onSubmit = async (values) => {
-		/* ========= NORMALIZATION ========= */
-		if (values.tags === TAG_IDS.BIRTHDAY) {
-			const ok = await handleBirthday(values);
-			if (!ok) return;
-		}
-
-		/* ========= TAG ROUTING ========= */
-		switch (values.tags) {
-			case TAG_IDS.LEAVE:
-				await handleLeave(values);
-				return;
-
-			case TAG_IDS.TODO_LIST:
-				await handleTodo(values);
-				return;
-
-			case TAG_IDS.DOCTOR_VISIT_PLAN:
-				if (isEditing) {
-					await handleDefaultEvent(values);
-				} else if (Array.isArray(values.doctor) && values.doctor.length) {
-					await handleDoctorVisitPlan(values);
-				}
-				return;
-
-			default:
-				await handleDefaultEvent(values);
-		}
+		const handler =
+			submitHandlers[values.tags] || submitHandlers.default;
+		await handler(values);
 	};
+
 	const editReadOnlyKeys = useMemo(() => {
 		if (!isEditing) return [];
 		return tagConfig.editReadOnly?.fields?.map(f => f.key) ?? [];
