@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import Tiptap from "@calendar/components/ui/TodoWysiwyg";
 import { toast } from "sonner";
 import { Button } from "@calendar/components/ui/button";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
@@ -15,28 +16,7 @@ import { buildParticipantsWithDetails } from "@calendar/lib/helper";
 import { useDeleteEvent } from "../../hooks";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
-
-/* =====================================================
-   JOIN DOCTOR VISIT
-===================================================== */
-
-export async function joinDoctorVisit({
-  erpName,
-  existingParticipants,
-  employeeId,
-}) {
-  return saveEvent({
-    name: erpName,
-    event_participants: [
-      ...existingParticipants,
-      {
-        reference_doctype: "Employee",
-        reference_docname: employeeId,
-      },
-    ],
-  });
-}
-
+import { joinDoctorVisit, leaveDoctorVisit } from "@calendar/lib/helper";
 /* =====================================================
    PURE HELPERS (NO LOGIC CHANGE)
 ===================================================== */
@@ -47,7 +27,6 @@ function resolveDoctorDetails(event, doctorResolvers) {
   );
 
   const doctorId = doctorRef?.id;
-
   if (!doctorId) return null;
 
   return {
@@ -66,22 +45,31 @@ function resolveDoctorDetails(event, doctorResolvers) {
         doctorId,
         "code"
       ) ?? "",
+
+    // ✅ ADD THIS
+    doctorNotes:
+      doctorResolvers.getDoctorFieldById(
+        doctorId,
+        "notes"
+      ) ?? [],
   };
 }
 
+
 function resolveEmployeeParticipants(event, employeeResolvers) {
-  const allowedPrefixes = ["SM", "ABM", "RBM", "BE"];
+  const allowedPrefixes = ["SM", "ABM", "RBM", "BE", "Admin"];
 
   return (
     event.participants
       ?.filter((p) => p.type === "Employee")
       .map((p) => {
+
         const roleId =
           employeeResolvers.getEmployeeFieldById(
             p.id,
             "roleId"
           );
-
+        console.log("roleId for", p.id, roleId);
         if (!roleId) return null;
 
         const rolePrefix = roleId.split("-")[0];
@@ -117,6 +105,8 @@ export function EventDoctorVisitDialog({
     doctorOptions,
     addEvent,
   } = useCalendar();
+  const [showEditor, setShowEditor] = useState(false);
+  const [newNote, setNewNote] = useState("");
 
   const { handleDelete } = useDeleteEvent({
     removeEvent,
@@ -152,6 +142,8 @@ export function EventDoctorVisitDialog({
         isDoctorVisit && !isEmployeeParticipant,
       canVisitNow:
         isDoctorVisit && isEmployeeParticipant,
+      canLeave:
+        isDoctorVisit && isEmployeeParticipant,
       canDelete:
         tagConfig.ui?.allowDelete?.(event) ?? true,
       canEdit:
@@ -163,6 +155,7 @@ export function EventDoctorVisitDialog({
     tagConfig,
     event,
   ]);
+
 
   /* ================= Doctor Info ================= */
 
@@ -225,7 +218,48 @@ export function EventDoctorVisitDialog({
       toast.error("Failed to join visit");
     }
   };
+  const handleLeaveVisit = async () => {
+    try {
+      const existingParticipants =
+        event.event_participants?.map((p) => ({
+          reference_doctype: p.reference_doctype,
+          reference_docname: p.reference_docname,
+        })) || [];
 
+      await leaveDoctorVisit({
+        erpName: event.erpName,
+        existingParticipants,
+        employeeId: LOGGED_IN_USER.id,
+      });
+
+      const updatedParticipants = existingParticipants.filter(
+        (p) =>
+          !(
+            p.reference_doctype === "Employee" &&
+            String(p.reference_docname) === String(LOGGED_IN_USER.id)
+          )
+      );
+
+      const updatedEvent = {
+        ...event,
+        event_participants: updatedParticipants,
+        participants: buildParticipantsWithDetails(
+          updatedParticipants,
+          { employeeOptions, doctorOptions }
+        ),
+      };
+
+      removeEvent(event.erpName);
+      addEvent(updatedEvent);
+
+      toast.success("You have left the visit");
+      setOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to leave visit");
+    }
+  };
+  console.log("EVENT", event)
   /* =====================================================
      RENDER
   ===================================================== */
@@ -293,6 +327,59 @@ export function EventDoctorVisitDialog({
               </div>
             </div>
           )}
+          {/* ================= Notes Section ================= */}
+          {doctorDetails?.doctorNotes?.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <p className="text-sm font-medium">
+                  Notes
+                </p>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEditor(true)}
+                >
+                  + Add
+                </Button>
+              </div>
+
+              {doctorDetails.doctorNotes.map((note, index) => (
+                <div
+                  key={index}
+                  className="rounded-md border p-3 text-sm"
+                  dangerouslySetInnerHTML={{ __html: note }}
+                />
+              ))}
+            </div>
+          )}
+          {showEditor && (
+            <div className="space-y-2 border rounded-md p-3">
+              <Tiptap
+                content={newNote}
+                onChange={setNewNote}
+              />
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowEditor(false);
+                    setNewNote("");
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  onClick={handleSaveNote}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
+
         </div>
       </ScrollArea>
 
@@ -302,10 +389,10 @@ export function EventDoctorVisitDialog({
           <>
             {permissions.canJoin && (
               <Button
-                variant="outline"
+                variant="success"
                 onClick={handleJoin}
               >
-                Join Visit
+                Join
               </Button>
             )}
 
@@ -338,23 +425,32 @@ export function EventDoctorVisitDialog({
             )} */}
 
             {permissions.canVisitNow && (
-              <AddEditEventDialog
-                event={event}
-                forceValues={
-                  tagConfig.ui?.primaryEditAction
-                    ?.setOnEdit
-                }
-              >
-                <Button>
-                  {tagConfig.ui?.primaryEditAction
-                    ?.label ?? "Visit"}
+              <>
+                <Button
+                  variant="destructive"
+                  onClick={handleLeaveVisit}
+                >
+                  Remove
                 </Button>
-              </AddEditEventDialog>
+                <AddEditEventDialog
+                  event={event}
+                  forceValues={
+                    tagConfig.ui?.primaryEditAction
+                      ?.setOnEdit
+                  }
+                >
+                  <Button>
+                    {tagConfig.ui?.primaryEditAction
+                      ?.label ?? "Visit"}
+                  </Button>
+                </AddEditEventDialog>
+
+              </>
             )}
           </>
         )}
 
-        {permissions.canDelete && (
+        {/* {permissions.canDelete && (
           <Button
             variant="destructive"
             onClick={() =>
@@ -363,8 +459,31 @@ export function EventDoctorVisitDialog({
           >
             Delete
           </Button>
-        )}
+        )} */}
       </div>
     </>
   );
 }
+
+const handleSaveNote = async () => {
+  try {
+    if (!newNote) return;
+
+    await addLeadNote(
+      doctorDetails.doctorId,
+      doctorDetails.doctorNotes,
+      newNote
+    );
+
+    toast.success("Note added");
+
+    setShowEditor(false);
+    setNewNote("");
+
+    // Optional: refresh doctorOptions
+    // or manually push into local state
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to save note");
+  }
+};

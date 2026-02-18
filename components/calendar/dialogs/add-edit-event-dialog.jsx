@@ -548,20 +548,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		for (const doctor of normalizedDoctors) {
 			const doctorId =
 				typeof doctor === "object" ? doctor.value : doctor;
+				const computedTitle = buildDoctorVisitTitle(doctorId, values);
 
-			const erpDoc = mapFormToErpEvent(
-				{
-					...values,
-					title: buildDoctorVisitTitle(doctorId, values),
-					doctor,
-				},
-				{}
-			);
+				const enrichedValues = {
+				  ...values,
+				  title: computedTitle,
+				  doctor,
+				};
+				
+				const erpDoc = mapFormToErpEvent(enrichedValues, {});
 
 			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = buildCalendarEvent({
-				values,
+				values: enrichedValues,
 				erpDoc,
 				savedName: savedEvent.name,
 				tagConfig,
@@ -569,7 +569,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				doctorOptions,
 				ownerOverride: LOGGED_IN_USER.id,
 			});
-
 			addEvent(calendarEvent);
 		}
 

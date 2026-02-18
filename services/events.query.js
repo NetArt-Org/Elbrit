@@ -134,6 +134,9 @@ query Doctors($first: Int) {
         city
         fsl_speciality__name
         fsl_ecubix_code
+        notes {
+          note
+        }
       }
     }
   }

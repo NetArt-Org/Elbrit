@@ -60,6 +60,7 @@ mutation UpdateLeaveStatus(
 }
 `;
 
+
 const UPDATE_LEAVE_ATTACHMENT_MUTATION = `
 mutation UpdateLeaveAttachment(
   $name: String!
@@ -129,6 +130,27 @@ export async function updateLeaveStatus(leaveName, newStatus) {
 
   return true;
 }
+export async function addLeadNote(leadName, existingNotes, newNoteHtml) {
+  const updatedDoc = {
+    name: leadName,
+    notes: [
+      ...existingNotes.map(note => ({ note })),
+      { note: newNoteHtml }
+    ]
+  };
+
+  return graphqlRequest(
+    `
+    mutation SaveLead($doc: String!) {
+      saveDoc(doctype: "Lead", doc: $doc) {
+        doc { name }
+      }
+    }
+    `,
+    { doc: JSON.stringify(updatedDoc) }
+  );
+}
+
 
 export async function saveDocToErp(doc) {
   const data = await graphqlRequest(SAVE_EVENT_TODO, {

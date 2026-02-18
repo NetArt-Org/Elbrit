@@ -58,7 +58,6 @@ export async function fetchDoctors() {
   const data = await graphqlRequest(DOCTOR_QUERY, {
     first: MAX_ROWS,
   });
-  console.log("DOCTOR RAW NODE", data?.Leads?.edges?.[0]?.node);
 
   return (
     data?.Leads?.edges.map(({ node }) => ({
@@ -68,7 +67,8 @@ export async function fetchDoctors() {
       kly_lat_long: node.fsl_lat_lon,
       city:node.city,
       code:node.fsl_ecubix_code,
-      fsl_speciality__name:node.fsl_speciality__name
+      fsl_speciality__name:node.fsl_speciality__name,
+      notes: (node.notes ?? []).map(n => n.note),
     })) || []
   );
 }
