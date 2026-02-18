@@ -1,4 +1,5 @@
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { TAG_IDS } from "@calendar/components/calendar/constants";
 import { differenceInCalendarDays, startOfDay, endOfDay, format } from "date-fns";
 function toERPDate(date = new Date()) {
   return format(startOfDay(date), "yyyy-MM-dd");
@@ -9,12 +10,12 @@ export function mapFormToErpLeave(values) {
   const toDate = isHalf
     ? fromDate
     : toERPDate(values.endDate);
-    const totalDays = calculateTotalLeaveDays(
-      values.startDate,
-      values.endDate,
-      isHalf
-    );
-    
+  const totalDays = calculateTotalLeaveDays(
+    values.startDate,
+    values.endDate,
+    isHalf
+  );
+
   return {
     doctype: "Leave Application",
     employee: LOGGED_IN_USER.id,
@@ -44,14 +45,19 @@ export function mapErpLeaveToCalendar(leave) {
   const isHalfDay = leave.half_day === 1 || leave.half_day === true;
 
   const totalDays =
-  leave.total_leave_days ??
-  calculateTotalLeaveDays(start, end, isHalfDay);
-
+    leave.total_leave_days ??
+    calculateTotalLeaveDays(start, end, isHalfDay);
+  // 🎯 Status → Color mapping
+  const statusColorMap = {
+    Approved: "green",
+    Rejected: "red",
+    Open: "orange",
+  };
   return {
-    erpName: `LEAVE-${leave.name}`,
-    id: `LEAVE-${leave.name}`,
-    title: leave.leave_type__name || "Leave",
-    tags: "Leave",
+    erpName: `${leave.name}`,
+    id: `${leave.name}`,
+    title: leave.leave_type__name || TAG_IDS.LEAVE,
+    tags: TAG_IDS.LEAVE,
     leaveType: leave.leave_type__name,
     startDate: start.toISOString(), // ✅ normalized
     endDate: end.toISOString(),     // ✅ normalized
@@ -60,7 +66,7 @@ export function mapErpLeaveToCalendar(leave) {
     total_leave_days: totalDays,
     halfDayDate: leave.half_day_date ?? "",
     description: leave.description,
-    color: "red",
+    color: statusColorMap[leave.status] ?? "red",
     medicalAttachment: leave.fsl_attach ?? "",
     employee: leave.employee?.name,
     approvedBy: leave.leave_approver_name ?? "",

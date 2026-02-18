@@ -708,7 +708,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 												disabled={isEditing && tagConfig.ui?.lockTagOnEdit}
 												onClick={() => field.onChange(tag.id)}
 												className={`px-4 py-1 rounded-full ${field.value === tag.id
-													? "bg-black text-white"
+													? "bg-primary text-white"
 													: "bg-muted"
 													} ${isEditing ? "cursor-default" : ""}`}
 											>

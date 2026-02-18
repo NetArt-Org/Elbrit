@@ -1,5 +1,6 @@
 "use client";
-import { useRef, useMemo } from "react";
+
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@calendar/components/ui/button";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
@@ -9,11 +10,15 @@ import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-ed
 import { saveEvent } from "@calendar/services/event.service";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
-import { resolveDoctorVisitState, submitDoctorVisitLocation } from "@calendar/lib/doctorVisitState";
+// import { resolveDoctorVisitState, submitDoctorVisitLocation } from "@calendar/lib/doctorVisitState";
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
 import { useDeleteEvent } from "../../hooks";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
+
+/* =====================================================
+   JOIN DOCTOR VISIT
+===================================================== */
 
 export async function joinDoctorVisit({
   erpName,
@@ -32,13 +37,81 @@ export async function joinDoctorVisit({
   });
 }
 
+/* =====================================================
+   PURE HELPERS (NO LOGIC CHANGE)
+===================================================== */
+
+function resolveDoctorDetails(event, doctorResolvers) {
+  const doctorRef = event.participants?.find(
+    (p) => p.type === "Lead"
+  );
+
+  const doctorId = doctorRef?.id;
+
+  if (!doctorId) return null;
+
+  return {
+    doctorId,
+    doctorName:
+      doctorResolvers.getDoctorNameById(doctorId) ?? "",
+    doctorCity:
+      doctorResolvers.getDoctorFieldById(doctorId, "city") ?? "",
+    doctorSpeciality:
+      doctorResolvers.getDoctorFieldById(
+        doctorId,
+        "fsl_speciality__name"
+      ) ?? "",
+    doctorCode:
+      doctorResolvers.getDoctorFieldById(
+        doctorId,
+        "code"
+      ) ?? "",
+  };
+}
+
+function resolveEmployeeParticipants(event, employeeResolvers) {
+  const allowedPrefixes = ["SM", "ABM", "RBM", "BE"];
+
+  return (
+    event.participants
+      ?.filter((p) => p.type === "Employee")
+      .map((p) => {
+        const roleId =
+          employeeResolvers.getEmployeeFieldById(
+            p.id,
+            "roleId"
+          );
+
+        if (!roleId) return null;
+
+        const rolePrefix = roleId.split("-")[0];
+        const cleanPrefix = rolePrefix.replace(/[0-9]/g, "");
+
+        if (!allowedPrefixes.includes(cleanPrefix))
+          return null;
+
+        return {
+          name:
+            employeeResolvers.getEmployeeNameById(
+              p.id
+            ) ?? p.id,
+          role: cleanPrefix,
+        };
+      })
+      .filter(Boolean) ?? []
+  );
+}
+
+/* =====================================================
+   COMPONENT
+===================================================== */
+
 export function EventDoctorVisitDialog({
   event,
   open,
   setOpen,
 }) {
   const {
-    use24HourFormat,
     removeEvent,
     employeeOptions,
     doctorOptions,
@@ -50,98 +123,66 @@ export function EventDoctorVisitDialog({
     onClose: () => setOpen(false),
   });
 
-  const isDoctorVisit = event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
-
-  const visitState = resolveDoctorVisitState(
-    event,
-    LOGGED_IN_USER.id
-  );
   const doctorResolvers = useDoctorResolvers(doctorOptions);
   const employeeResolvers = useEmployeeResolvers(employeeOptions);
-  
-  const isEmployeeParticipant =
-    event.event_participants?.some(
-      (p) =>
-        p.reference_doctype === "Employee" &&
-        String(p.reference_docname) === String(LOGGED_IN_USER.id)
-    ) ?? false;
-console.log("EVENT",event)
-  const canJoinVisit = isDoctorVisit && !isEmployeeParticipant;
-  const canVisitNow = isDoctorVisit && isEmployeeParticipant;
 
   const tagConfig =
     TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
 
-  const canDelete =
-    tagConfig.ui?.allowDelete?.(event) ?? true;
+  // const visitState = resolveDoctorVisitState(
+  //   event,
+  //   LOGGED_IN_USER.id
+  // );
 
-  const canEdit =
-    tagConfig.ui?.allowEdit?.(event) ?? true;
+  /* ================= Permissions ================= */
 
-  const editAction = tagConfig.ui?.primaryEditAction;
+  const isDoctorVisit =
+    event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
 
-  /* =====================================================
-     DOCTOR RESOLUTION (FROM doctorOptions ONLY)
-  ===================================================== */
-  const doctorRef = event.event_participants?.find(
-    (p) => p.reference_doctype === "Lead"
+  const isEmployeeParticipant =
+    event.participants?.some(
+      (p) =>
+        p.type === "Employee" &&
+        String(p.id) === String(LOGGED_IN_USER.id)
+    ) ?? false;
+
+  const permissions = useMemo(() => {
+    return {
+      canJoin:
+        isDoctorVisit && !isEmployeeParticipant,
+      canVisitNow:
+        isDoctorVisit && isEmployeeParticipant,
+      canDelete:
+        tagConfig.ui?.allowDelete?.(event) ?? true,
+      canEdit:
+        tagConfig.ui?.allowEdit?.(event) ?? true,
+    };
+  }, [
+    isDoctorVisit,
+    isEmployeeParticipant,
+    tagConfig,
+    event,
+  ]);
+
+  /* ================= Doctor Info ================= */
+
+  const doctorDetails = useMemo(
+    () => resolveDoctorDetails(event, doctorResolvers),
+    [event.participants, doctorResolvers]
   );
-  
-  const doctorId = doctorRef?.reference_docname;
-  
-  const doctorName =
-    doctorResolvers.getDoctorNameById(doctorId) ?? "";
-  
-  const doctorCity =
-    doctorResolvers.getDoctorFieldById(doctorId, "city") ?? "";
-  
-  const doctorCode =
-    doctorResolvers.getDoctorFieldById(doctorId, "code") ?? "";
-  
 
-  /* =====================================================
-     PARTICIPANTS (ONLY SM, ABM, RBM, BE)
-  ===================================================== */
+  /* ================= Participants ================= */
 
-  const employeeParticipants = useMemo(() => {
-    const allowedPrefixes = ["SM", "ABM", "RBM", "BE"];
-  
-    return (
-      event.event_participants
-        ?.filter((p) => p.reference_doctype === "Employee")
-        .map((p) => {
-          const roleId =
-            employeeResolvers.getEmployeeFieldById(
-              p.reference_docname,
-              "roleId"
-            );
-  
-          if (!roleId) return null;
-  
-          // Extract first segment before "-"
-          const rolePrefix = roleId.split("-")[0];
-  
-          // Remove numbers (ABM1 → ABM)
-          const cleanPrefix = rolePrefix.replace(/[0-9]/g, "");
-  
-          if (!allowedPrefixes.includes(cleanPrefix))
-            return null;
-  
-          return {
-            name:
-              employeeResolvers.getEmployeeNameById(
-                p.reference_docname
-              ) ?? p.reference_docname,
-            role: cleanPrefix,
-          };
-        })
-        .filter(Boolean) ?? []
-    );
-  }, [event.event_participants, employeeResolvers]);
-  
-  /* =====================================================
-     JOIN LOGIC FIXED
-  ===================================================== */
+  const employeeParticipants = useMemo(
+    () =>
+      resolveEmployeeParticipants(
+        event,
+        employeeResolvers
+      ),
+    [event.participants, employeeResolvers]
+  );
+
+  /* ================= Join Logic ================= */
 
   const handleJoin = async () => {
     try {
@@ -151,7 +192,7 @@ console.log("EVENT",event)
           reference_docname: p.reference_docname,
         })) || [];
 
-      const saved = await joinDoctorVisit({
+      await joinDoctorVisit({
         erpName: event.erpName,
         existingParticipants,
         employeeId: LOGGED_IN_USER.id,
@@ -185,41 +226,51 @@ console.log("EVENT",event)
     }
   };
 
+  /* =====================================================
+     RENDER
+  ===================================================== */
+
   return (
     <>
       <ScrollArea className="max-h-[80vh]">
         <div className="p-2 space-y-4">
 
-          {/* 🔷 Doctor Section */}
-          {doctorId && (
+          {/* Doctor Section */}
+          {doctorDetails?.doctorId && (
             <div className="space-y-2">
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-medium">
                 Doctor Name
               </p>
 
-              <p className="text-base font-medium">
-                {doctorName}
+              <p className="text-sm text-muted-foreground">
+                {doctorDetails.doctorName}
+                {doctorDetails.doctorSpeciality && (
+                  <span className="block py-1 text-sm font-medium">
+                    {doctorDetails.doctorSpeciality}
+                  </span>
+                )}
               </p>
+
               <div className="flex gap-4 text-sm">
-                {doctorCode && (
+                {doctorDetails.doctorCode && (
                   <span className="text-blue-600 font-medium">
-                    {doctorCode}
+                    {doctorDetails.doctorCode}
                   </span>
                 )}
 
-                {doctorCity && (
+                {doctorDetails.doctorCity && (
                   <span className="text-muted-foreground">
-                    {doctorCity}
+                    {doctorDetails.doctorCity}
                   </span>
                 )}
               </div>
             </div>
           )}
 
-          {/* 🔷 Participants Section */}
+          {/* Participants */}
           {employeeParticipants.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-medium">
                 Participants
               </p>
 
@@ -228,10 +279,12 @@ console.log("EVENT",event)
                   (p, index) => (
                     <div
                       key={index}
-                      className="flex justify-between text-sm"
+                      className="flex justify-start gap-6 text-sm"
                     >
-                      <span>{p.name}</span>
-                      <span className="text-muted-foreground font-medium">
+                      <span className="text-muted-foreground">
+                        {p.name}
+                      </span>
+                      <span className="text-muted-foreground">
                         {p.role}
                       </span>
                     </div>
@@ -243,11 +296,11 @@ console.log("EVENT",event)
         </div>
       </ScrollArea>
 
-      {/* 🔻 Footer Buttons */}
+      {/* Footer */}
       <div className="flex justify-end gap-2">
-        {canEdit && (
+        {permissions.canEdit && (
           <>
-            {canJoinVisit && (
+            {permissions.canJoin && (
               <Button
                 variant="outline"
                 onClick={handleJoin}
@@ -256,7 +309,7 @@ console.log("EVENT",event)
               </Button>
             )}
 
-            {visitState.needsLocation && (
+            {/* {visitState.needsLocation && (
               <Button
                 variant="secondary"
                 onClick={async () => {
@@ -282,25 +335,26 @@ console.log("EVENT",event)
               >
                 Request Location
               </Button>
-            )}
+            )} */}
 
-            {canVisitNow && (
+            {permissions.canVisitNow && (
               <AddEditEventDialog
                 event={event}
                 forceValues={
-                  editAction?.setOnEdit
+                  tagConfig.ui?.primaryEditAction
+                    ?.setOnEdit
                 }
               >
-                <Button variant="success">
-                  {editAction?.label ??
-                    "Visit Now"}
+                <Button>
+                  {tagConfig.ui?.primaryEditAction
+                    ?.label ?? "Visit"}
                 </Button>
               </AddEditEventDialog>
             )}
           </>
         )}
 
-        {canDelete && (
+        {permissions.canDelete && (
           <Button
             variant="destructive"
             onClick={() =>

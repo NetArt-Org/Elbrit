@@ -6,20 +6,20 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { ScrollArea } from "@calendar/components/ui/scroll-area";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
-import { TAG_IDS } from "@calendar/components/calendar/constants"
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useDeleteEvent } from "../../hooks";
 import { ICONS } from "../event-details-dialog";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
-import { fetchEmployeeLeaveBalance } from "@calendar/services/event.service";
+import { fetchEmployeeLeaveBalance, updateLeaveStatus } from "@calendar/services/event.service";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { resolveLeavePermissions } from "@calendar/lib/leavePermissions";
+import { toast } from "sonner";
 
 export function EventLeaveDialog({
 	event, setOpen,
 }) {
-	console.log("CURRENT EVENT", event)
-	const { use24HourFormat, removeEvent, employeeOptions, doctorOptions, } = useCalendar();
+	const { use24HourFormat, removeEvent, employeeOptions, doctorOptions, updateEvent } = useCalendar();
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
 	const { handleDelete } = useDeleteEvent({
 		removeEvent,
@@ -27,29 +27,23 @@ export function EventLeaveDialog({
 	});
 	const [leaveBalance, setLeaveBalance] = useState(null);
 
-useEffect(() => {
-  let alive = true;
+	useEffect(() => {
+		let alive = true;
 
-  fetchEmployeeLeaveBalance(LOGGED_IN_USER.id)
-    .then((data) => {
-      if (!alive) return;
-      setLeaveBalance(data);
-    })
-    .catch(() => setLeaveBalance(null));
+		fetchEmployeeLeaveBalance(LOGGED_IN_USER.id)
+			.then((data) => {
+				if (!alive) return;
+				setLeaveBalance(data);
+			})
+			.catch(() => setLeaveBalance(null));
 
-  return () => {
-    alive = false;
-  };
-}, []);
+		return () => {
+			alive = false;
+		};
+	}, []);
 
-	const isDoctorVisit = event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
 	const tagConfig =
 		TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
-
-	const canDelete =
-		tagConfig.ui?.allowDelete?.(event) ?? true;
-	const canEdit =
-		tagConfig.ui?.allowEdit?.(event) ?? true;
 	const editAction = tagConfig.ui?.primaryEditAction;
 	const enrichedParticipants = useMemo(() => {
 		return buildParticipantsWithDetails(
@@ -82,8 +76,32 @@ useEffect(() => {
 	const status = event.status;
 	const leaveType = event.leaveType;
 
-const available =
-  leaveBalance?.[leaveType]?.available ?? null;
+	const available =
+		leaveBalance?.[leaveType]?.available ?? null;
+	const permissions = useMemo(() => {
+		return resolveLeavePermissions({ event });
+	}, [event]);
+	const handleStatusChange = async (newStatus) => {
+		try {
+			await updateLeaveStatus(event.erpName, newStatus);
+
+			// 🔄 Update local calendar state immediately
+			const updatedCalendarLeave = {
+				...event,
+				status: newStatus,
+			};
+
+			updateEvent(updatedCalendarLeave);
+
+			toast.success(`Leave Application ${newStatus}`);
+
+			setOpen(false);
+
+		} catch (err) {
+			console.error("Failed to update status", err);
+			toast.error("Failed to update leave status");
+		}
+	};
 
 	return (
 		<>
@@ -97,10 +115,10 @@ const available =
 							</p>
 
 							{available !== null && (
-          <p className="text-sm text-muted-foreground">
-            {String(available).padStart(2, "0")} Days Available
-          </p>
-        )}
+								<p className="text-sm text-muted-foreground">
+									{String(available).padStart(2, "0")} Days Available
+								</p>
+							)}
 						</div>
 
 						<div>
@@ -117,31 +135,46 @@ const available =
 				</div>
 			</ScrollArea>
 			<div className="flex justify-end gap-2">
-				{canEdit && (
+
+				{/* OWNER */}
+				{permissions.canEditDelete && (
 					<>
-						{/* Normal Edit (Non-doctor events) */}
-						{!isDoctorVisit && (
-							<AddEditEventDialog
-								event={event}
-								forceValues={editAction?.setOnEdit}
-							>
-								<Button variant="outline">
-									{editAction?.label ?? "Edit"}
-								</Button>
-							</AddEditEventDialog>
-						)}
+						<AddEditEventDialog
+							event={event}
+							forceValues={editAction?.setOnEdit}
+						>
+							<Button variant="outline">
+								{editAction?.label ?? "Edit"}
+							</Button>
+						</AddEditEventDialog>
+
+						<Button
+							variant="destructive"
+							onClick={() => handleDelete(event.erpName)}
+						>
+							Delete
+						</Button>
 					</>
 				)}
 
-				{canDelete && (
-					<Button
-						variant="destructive"
-						onClick={() => handleDelete(event.erpName)}
-					>
-						Delete
-					</Button>
+				{/* MANAGER */}
+				{permissions.canApproveReject && (
+					<>
+						<Button onClick={() => handleStatusChange("Approved")}>
+							Approve
+						</Button>
+
+						<Button
+							variant="destructive"
+							onClick={() => handleStatusChange("Rejected")}
+						>
+							Reject
+						</Button>
+
+					</>
 				)}
 			</div>
+
 		</>
 	);
 }

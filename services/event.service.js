@@ -44,6 +44,22 @@ mutation SaveEvent($doc: String!) {
   }
 }
 `;
+const UPDATE_LEAVE_STATUS_MUTATION = `
+mutation UpdateLeaveStatus(
+  $name: String!
+  $value: DOCFIELD_VALUE_TYPE!
+) {
+  setValue(
+    doctype: "Leave Application"
+    name: $name
+    fieldname: "status"
+    value: $value
+  ) {
+    name
+  }
+}
+`;
+
 const UPDATE_LEAVE_ATTACHMENT_MUTATION = `
 mutation UpdateLeaveAttachment(
   $name: String!
@@ -91,6 +107,29 @@ export async function saveEvent(doc) {
 
   return data.saveDoc.doc;
 }
+export async function updateLeaveStatus(leaveName, newStatus) {
+  if (!leaveName || !newStatus) {
+    throw new Error("Invalid leave update payload");
+  }
+
+  const data = await graphqlRequest(
+    UPDATE_LEAVE_STATUS_MUTATION,
+    {
+      name: leaveName,
+      value: newStatus,
+    }
+  );
+
+  if (!data?.setValue?.name) {
+    throw new Error("Failed to update leave status");
+  }
+
+  // Clear all relevant caches
+  clearLeaveCache();
+
+  return true;
+}
+
 export async function saveDocToErp(doc) {
   const data = await graphqlRequest(SAVE_EVENT_TODO, {
     doc: JSON.stringify(doc),
