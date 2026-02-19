@@ -70,13 +70,16 @@ export async function fetchDoctors() {
       code: node.fsl_ecubix_code,
       fsl_speciality__name: node.fsl_speciality__name,
       email:node.email_id,
+      fsl_category1__name:node.fsl_category1__name,
+       fsl_category2__name:node.fsl_category2__name,
+       fsl_category3__name:node.fsl_category3__name,
+      territory__name:node.territory__name,
       notes: (node.notes ?? [])
         .map(n => ({
           note: n.note,
           creation: n.creation,
         }))
         .sort((a, b) => new Date(b.creation) - new Date(a.creation)),
-
     })) || []
   );
 }

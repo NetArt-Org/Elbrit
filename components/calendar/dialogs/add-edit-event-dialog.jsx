@@ -15,6 +15,7 @@ import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@ca
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@calendar/components/ui/select";
 import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, } from "@calendar/components/calendar/form-fields";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { RHFDoctorCardSelector } from "@calendar/components/RHFDoctorCardSelector";
 import { useDisclosure, useSubmissionRouter } from "@calendar/components/calendar/hooks";
 import { eventSchema } from "@calendar/components/calendar/schemas";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
@@ -816,23 +817,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								/>
 							)}
 
-						{/* ================= DOCTOR ================= */}
-						{!tagConfig.hide?.includes("doctor") &&
-							!isEditReadOnlyField("doctor") && (
-								<FormField
-									control={form.control}
-									name="doctor"
-									render={({ field }) => (
-										<RHFFieldWrapper label="Doctor">
-											<RHFComboboxField
-												{...field}
-												options={doctorOptions}
-												multiple={isDoctorMulti}
-											/>
-										</RHFFieldWrapper>
-									)}
-								/>
-							)}
 
 						{/* ================= MEETING ================= */}
 						{selectedTag === TAG_IDS.MEETING ? (
@@ -952,6 +936,30 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								)}
 							</div>
 						)}
+						{/* ================= DOCTOR ================= */}
+						{!tagConfig.hide?.includes("doctor") &&
+							!isEditReadOnlyField("doctor") && (
+								<FormField
+									control={form.control}
+									name="doctor"
+									render={({ field }) => (
+										<RHFFieldWrapper label="Doctor">
+											{selectedTag == TAG_IDS.DOCTOR_VISIT_PLAN ? <RHFDoctorCardSelector
+												value={field.value}
+												onChange={field.onChange}
+												options={doctorOptions}
+												multiple={isDoctorMulti}
+											/> :
+											<RHFComboboxField
+												{...field}
+												options={doctorOptions}
+												multiple={isDoctorMulti}
+											/>}
+
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
 
 						{/* ================= EMPLOYEES ================= */}
 						{!tagConfig.hide?.includes("employees") &&
@@ -1051,7 +1059,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 							/>
 						)}
 						{/* ================= LOCATION ================= */}
-						{selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
+						{isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
 							<div>
 								<p className="text-sm font-medium">
 									Location
