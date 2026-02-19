@@ -25,11 +25,10 @@ import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/services/lea
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
 import { fetchItems } from "@calendar/services/participants.service";
-import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast,  syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
+import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useAuth } from "@calendar/components/auth/auth-context";
-import { Textarea } from "@calendar/components/ui/textarea";
 import Tiptap from "@calendar/components/ui/TodoWysiwyg";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
@@ -46,6 +45,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	const [leaveLoading, setLeaveLoading] = useState(false);
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
 	const [itemOptions, setItemOptions] = useState([]);
+	const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+
 	const endDateTouchedRef = useRef(false); // existing
 
 	const form = useForm({
@@ -82,6 +83,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		if (tagConfig.hide) return !tagConfig.hide.includes(field);
 		return true;
 	};
+	const currentLocation = form.watch("kly_lat_long");
+
+	const shouldShowRequestLocation =
+		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+		attending === "Yes" &&
+		!currentLocation &&
+		!isResolvingLocation;
+
 
 	const getFieldLabel = (field, fallback) => {
 		return tagConfig.labels?.[field] ?? fallback;
@@ -228,6 +237,17 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		// existing geo logic (unchanged)
 		resolveLatLong(form, attending, isEditing, toast);
 	}, [attending, isEditing]);
+
+	const handleRequestLocation = async () => {
+		try {
+			setIsResolvingLocation(true);
+
+			await resolveLatLong(form, attending, isEditing, toast);
+
+		} finally {
+			setIsResolvingLocation(false);
+		}
+	};
 
 
 	/* ---------------------------------------------
@@ -548,15 +568,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		for (const doctor of normalizedDoctors) {
 			const doctorId =
 				typeof doctor === "object" ? doctor.value : doctor;
-				const computedTitle = buildDoctorVisitTitle(doctorId, values);
+			const computedTitle = buildDoctorVisitTitle(doctorId, values);
 
-				const enrichedValues = {
-				  ...values,
-				  title: computedTitle,
-				  doctor,
-				};
-				
-				const erpDoc = mapFormToErpEvent(enrichedValues, {});
+			const enrichedValues = {
+				...values,
+				title: computedTitle,
+				doctor,
+			};
+
+			const erpDoc = mapFormToErpEvent(enrichedValues, {});
 
 			const savedEvent = await saveEvent(erpDoc);
 
@@ -676,6 +696,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			_doctorOptions: doctorOptions,
 		};
 	}, [event, employeeOptions, doctorOptions]);
+	const shouldHideDateGrid =
+		isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN;
+
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
@@ -870,8 +893,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 									</div>
 								)}
 							</>
-						) : (
-							/* ================= NON-MEETING ================= */
+						) : !shouldHideDateGrid && (
 							<div
 								className={`grid gap-3 ${(isFieldVisible("startDate") &&
 									isFieldVisible("endDate")) ||
@@ -1028,6 +1050,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								)}
 							/>
 						)}
+						{/* ================= LOCATION ================= */}
+						{selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
+							<div>
+								<p className="text-sm font-medium">
+									Location
+								</p>
+								<p className="text-sm text-muted-foreground">
+									{form.watch("kly_lat_long") || "Location not captured"}
+								</p>
+							</div>
+						)}
+
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && attending === "Yes" && (
@@ -1167,6 +1201,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 					<FormFooter
 						isEditing={isEditing}
 						disabled={form.formState.isSubmitting}
+						showCaptureLocation={shouldShowRequestLocation}
+						onCaptureLocation={handleRequestLocation}
+						isResolvingLocation={isResolvingLocation}
 					/>
 				</div>
 			</ModalContent>

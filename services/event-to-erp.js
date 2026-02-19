@@ -142,13 +142,16 @@ export function mapFormToErpEvent(values, options = {}) {
     Array.isArray(values.fsl_doctor_item)
   ) {
     doc.fsl_doctor_item = values.fsl_doctor_item.map((row) => ({
-      item: {
-        name: row.item__name, // 👈 REQUIRED BY ERP
-      },
+      item:
+        typeof row.item__name === "object"
+          ? row.item__name.value
+          : row.item__name,
+    
       qty: Number(row.qty) || 0,
       rate: Number(row.rate) || 0,
       amount: Number(row.amount) || 0,
     }));
+    
   }
 
   /* ------------------------------------

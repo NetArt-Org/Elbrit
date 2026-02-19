@@ -19,6 +19,7 @@ import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { joinDoctorVisit, leaveDoctorVisit } from "@calendar/lib/helper";
 import { clearParticipantCache } from "@calendar/lib/participants-cache";
 import { fetchDoctors } from "@calendar/services/participants.service";
+import { CircleCheck } from "lucide-react"
 /* =====================================================
    PURE HELPERS (NO LOGIC CHANGE)
 ===================================================== */
@@ -284,10 +285,29 @@ export function EventDoctorVisitDialog({
       toast.error("Failed to leave visit");
     }
   };
-  console.log("EVENT", event)
+
   /* =====================================================
      RENDER
   ===================================================== */
+
+  const currentEmployeeParticipant = event.participants?.find(
+    (p) =>
+      p.type === "Employee" &&
+      String(p.id) === String(LOGGED_IN_USER.id)
+  );
+
+  const hasLocation =
+    !!currentEmployeeParticipant?.kly_lat_long;
+
+  const isAttending =
+    currentEmployeeParticipant?.attending?.toLowerCase() === "yes";
+  const isVisitCompleted = isAttending && hasLocation;
+  const hasPobItems =
+    Array.isArray(event.fsl_doctor_item) &&
+    event.fsl_doctor_item.length > 0;
+
+  const shouldShowPob =
+    hasPobItems || isVisitCompleted;
 
   return (
     <>
@@ -327,31 +347,37 @@ export function EventDoctorVisitDialog({
           )}
 
           {/* Participants */}
-          {employeeParticipants.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">
-                Participants
-              </p>
+          {employeeParticipants.map((p, index) => {
+            const isCurrentUser =
+              String(p.name) ===
+              employeeResolvers.getEmployeeNameById(
+                LOGGED_IN_USER.id
+              );
 
-              <div className="space-y-2">
-                {employeeParticipants.map(
-                  (p, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-start gap-6 text-sm"
-                    >
-                      <span className="text-muted-foreground">
-                        {p.name}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {p.role}
-                      </span>
-                    </div>
-                  )
-                )}
+            return (
+              <div
+                key={index}
+                className="flex justify-start gap-6 text-sm items-center"
+              >
+                <span className="text-muted-foreground">
+                  {p.name}
+                </span>
+
+                <span className="text-muted-foreground">
+                  {p.role}
+                </span>
+
+                {isCurrentUser &&
+                  isAttending &&
+                  hasLocation && (
+                    <span className="text-green-600 font-medium">
+                      <CircleCheck />
+                    </span>
+                  )}
               </div>
-            </div>
-          )}
+            );
+          })}
+
           {/* ================= Notes Section ================= */}
           {doctorDetails?.doctorNotes?.length > 0 && (
             <div className="space-y-3">
@@ -420,13 +446,66 @@ export function EventDoctorVisitDialog({
               </div>
             </div>
           )}
+          {/* ================= POB ================= */}
+          {shouldShowPob && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">
+                POB
+              </p>
+
+              {/* Yes / No */}
+              <p className="text-sm text-muted-foreground">
+                {hasPobItems ? "Yes" : "No"}
+              </p>
+
+              {/* Table only if items exist */}
+              {hasPobItems && (
+                <div className="border rounded-md text-sm mt-2">
+                  <div className="grid grid-cols-3 gap-4 border-b p-2 font-medium">
+                    <span>Item</span>
+                    <span>Qty</span>
+                    <span>Amount</span>
+                  </div>
+
+                  {event.fsl_doctor_item.map((row, index) => (
+                    <div
+                      key={index}
+                      className="grid grid-cols-3 gap-4 p-2 border-b last:border-0"
+                    >
+                      <span>{row.item__name}</span>
+                      <span>{row.qty}</span>
+                      <span>{(row.amount).toFixed(2)}</span>
+                    </div>
+                  ))}
+
+                  {/* Total */}
+                  <div className="grid grid-cols-3 gap-4 p-2 font-semibold bg-muted/40">
+                    <span>Total</span>
+                    <span>
+                      {event.fsl_doctor_item.reduce(
+                        (sum, i) => sum + Number(i.qty),
+                        0
+                      )}
+                    </span>
+                    <span>
+                      {event.fsl_doctor_item.reduce(
+                        (sum, i) => sum + Number(i.amount),
+                        0
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
 
         </div>
       </ScrollArea>
 
       {/* Footer */}
       <div className="flex justify-end gap-2">
-        {permissions.canEdit && (
+        {permissions.canEdit && !isVisitCompleted && (
           <>
             {permissions.canJoin && (
               <Button
