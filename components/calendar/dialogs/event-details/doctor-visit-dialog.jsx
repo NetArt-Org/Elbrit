@@ -8,7 +8,7 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { ScrollArea } from "@calendar/components/ui/scroll-area";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
-import { saveEvent } from "@calendar/services/event.service";
+import { addLeadNote, saveEvent } from "@calendar/services/event.service";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 // import { resolveDoctorVisitState, submitDoctorVisitLocation } from "@calendar/lib/doctorVisitState";
@@ -17,6 +17,8 @@ import { useDeleteEvent } from "../../hooks";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { joinDoctorVisit, leaveDoctorVisit } from "@calendar/lib/helper";
+import { clearParticipantCache } from "@calendar/lib/participants-cache";
+import { fetchDoctors } from "@calendar/services/participants.service";
 /* =====================================================
    PURE HELPERS (NO LOGIC CHANGE)
 ===================================================== */
@@ -103,7 +105,7 @@ export function EventDoctorVisitDialog({
     removeEvent,
     employeeOptions,
     doctorOptions,
-    addEvent,
+    addEvent, setDoctorOptions
   } = useCalendar();
   const [showEditor, setShowEditor] = useState(false);
   const [newNote, setNewNote] = useState("");
@@ -174,7 +176,30 @@ export function EventDoctorVisitDialog({
       ),
     [event.participants, employeeResolvers]
   );
+  const handleSaveNote = async () => {
+    try {
+      await addLeadNote(
+        doctorDetails.doctorId,
+        newNote
+      );
 
+      toast.success("Note added");
+
+      // 🔥 Invalidate cache
+      clearParticipantCache("DOCTOR");
+
+      // 🔄 Refetch doctors
+      const doctors = await fetchDoctors();
+      setDoctorOptions(doctors);
+
+      setShowEditor(false);
+      setNewNote("");
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save note");
+    }
+  };
   /* ================= Join Logic ================= */
 
   const handleJoin = async () => {
@@ -344,13 +369,29 @@ export function EventDoctorVisitDialog({
                 </Button>
               </div>
 
-              {doctorDetails.doctorNotes.map((note, index) => (
-                <div
-                  key={index}
-                  className="rounded-md border p-3 text-sm"
-                  dangerouslySetInnerHTML={{ __html: note }}
-                />
-              ))}
+              {doctorDetails.doctorNotes.map((noteObj, index) => {
+                const formattedDate = noteObj.creation
+                  ? new Date(noteObj.creation).toLocaleDateString("en-GB")
+                  : "";
+
+                return (
+                  <div
+                    key={index}
+                    className="rounded-md border p-3 text-sm space-y-2"
+                  >
+                    {formattedDate && (
+                      <div className="text-xs text-muted-foreground">
+                        {formattedDate}
+                      </div>
+                    )}
+                    <div
+                      dangerouslySetInnerHTML={{ __html: noteObj.note }}
+                    />
+
+                  </div>
+                );
+              })}
+
             </div>
           )}
           {showEditor && (
@@ -465,25 +506,5 @@ export function EventDoctorVisitDialog({
   );
 }
 
-const handleSaveNote = async () => {
-  try {
-    if (!newNote) return;
 
-    await addLeadNote(
-      doctorDetails.doctorId,
-      doctorDetails.doctorNotes,
-      newNote
-    );
 
-    toast.success("Note added");
-
-    setShowEditor(false);
-    setNewNote("");
-
-    // Optional: refresh doctorOptions
-    // or manually push into local state
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to save note");
-  }
-};

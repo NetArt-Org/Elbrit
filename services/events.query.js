@@ -30,6 +30,10 @@ query EventsByRange(
           kly_lat_long
           reference_docname__name
           attending
+          email
+          kly_role_id {
+            name
+          }
         }
           fsl_doctor_item {
           amount
@@ -134,8 +138,10 @@ query Doctors($first: Int) {
         city
         fsl_speciality__name
         fsl_ecubix_code
+        email_id
         notes {
           note
+          creation
         }
       }
     }

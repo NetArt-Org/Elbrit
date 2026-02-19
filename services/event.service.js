@@ -130,16 +130,40 @@ export async function updateLeaveStatus(leaveName, newStatus) {
 
   return true;
 }
-export async function addLeadNote(leadName, existingNotes, newNoteHtml) {
+export async function addLeadNote(leadName, newNoteHtml) {
+  if (!leadName || !newNoteHtml) {
+    throw new Error("Invalid note payload");
+  }
+
+  // 1️⃣ Fetch current lead with notes
+  const leadRes = await graphqlRequest(
+    `
+    query GetLead($name: String!) {
+      Lead(name: $name) {
+        name
+        notes {
+          note
+        }
+      }
+    }
+    `,
+    { name: leadName }
+  );
+
+  const existingNotes =
+    leadRes?.Lead?.notes?.map(n => ({ note: n.note })) ?? [];
+
+  // 2️⃣ Append new note
   const updatedDoc = {
     name: leadName,
     notes: [
-      ...existingNotes.map(note => ({ note })),
+      ...existingNotes,
       { note: newNoteHtml }
     ]
   };
 
-  return graphqlRequest(
+  // 3️⃣ Save Lead
+  const saveRes = await graphqlRequest(
     `
     mutation SaveLead($doc: String!) {
       saveDoc(doctype: "Lead", doc: $doc) {
@@ -149,8 +173,13 @@ export async function addLeadNote(leadName, existingNotes, newNoteHtml) {
     `,
     { doc: JSON.stringify(updatedDoc) }
   );
-}
 
+  if (!saveRes?.saveDoc?.doc?.name) {
+    throw new Error("Failed to save lead note");
+  }
+
+  return true;
+}
 
 export async function saveDocToErp(doc) {
   const data = await graphqlRequest(SAVE_EVENT_TODO, {
