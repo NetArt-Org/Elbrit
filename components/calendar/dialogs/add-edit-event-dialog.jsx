@@ -88,7 +88,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 	const shouldShowRequestLocation =
 		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-		attending === "Yes" &&
 		!currentLocation &&
 		!isResolvingLocation;
 
@@ -180,6 +179,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			});
 		}
 	}, [selectedTag]);
+
 	/* ---------------------------------------------
 	  Fetch POB ITEMS
 	--------------------------------------------- */
@@ -243,7 +243,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		try {
 			setIsResolvingLocation(true);
 
-			await resolveLatLong(form, attending, isEditing, toast);
+		    resolveLatLong(form, attending, isEditing, toast);
 
 		} finally {
 			setIsResolvingLocation(false);
@@ -541,7 +541,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		});
 
 		const savedEvent = await saveEvent(erpDoc);
-		// console.log("ERP DEFAULT EVENT", erpDoc)
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,
@@ -552,7 +551,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			doctorOptions,
 			ownerOverride: event ? event.owner : LOGGED_IN_USER.id,
 		});
-		// console.log("Calendar DEFAULT EVENT", calendarEvent)
 		upsertCalendarEvent(calendarEvent);
 		finalize("Event saved");
 	};
@@ -591,8 +589,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				ownerOverride: LOGGED_IN_USER.id,
 			});
 			addEvent(calendarEvent);
+			
 		}
-
 		finalize(`Created ${values.doctor.length} Doctor Visit events`);
 	};
 
@@ -1072,7 +1070,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&
-							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && attending === "Yes" && (
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
 								<FormField
 									control={form.control}
 									name="pob_given"

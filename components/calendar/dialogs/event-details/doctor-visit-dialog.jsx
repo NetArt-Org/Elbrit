@@ -19,7 +19,8 @@ import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { joinDoctorVisit, leaveDoctorVisit } from "@calendar/lib/helper";
 import { clearParticipantCache } from "@calendar/lib/participants-cache";
 import { fetchDoctors } from "@calendar/services/participants.service";
-import { CircleCheck } from "lucide-react"
+import { CircleCheck, Copy } from "lucide-react"
+import { useCallback } from "react";
 /* =====================================================
    PURE HELPERS (NO LOGIC CHANGE)
 ===================================================== */
@@ -59,40 +60,6 @@ function resolveDoctorDetails(event, doctorResolvers) {
 }
 
 
-function resolveEmployeeParticipants(event, employeeResolvers) {
-  const allowedPrefixes = ["SM", "ABM", "RBM", "BE", "Admin"];
-
-  return (
-    event.participants
-      ?.filter((p) => p.type === "Employee")
-      .map((p) => {
-
-        const roleId =
-          employeeResolvers.getEmployeeFieldById(
-            p.id,
-            "roleId"
-          );
-        console.log("roleId for", p.id, roleId);
-        if (!roleId) return null;
-
-        const rolePrefix = roleId.split("-")[0];
-        const cleanPrefix = rolePrefix.replace(/[0-9]/g, "");
-
-        if (!allowedPrefixes.includes(cleanPrefix))
-          return null;
-
-        return {
-          name:
-            employeeResolvers.getEmployeeNameById(
-              p.id
-            ) ?? p.id,
-          role: cleanPrefix,
-        };
-      })
-      .filter(Boolean) ?? []
-  );
-}
-
 /* =====================================================
    COMPONENT
 ===================================================== */
@@ -115,10 +82,50 @@ export function EventDoctorVisitDialog({
     removeEvent,
     onClose: () => setOpen(false),
   });
+  const handleCancelNote = useCallback(() => {
+    setShowEditor(false);
+    setNewNote("");
+  }, []);
 
   const doctorResolvers = useDoctorResolvers(doctorOptions);
   const employeeResolvers = useEmployeeResolvers(employeeOptions);
+  const employeeMap = useMemo(() => {
+    const map = new Map();
+    employeeOptions.forEach(emp => {
+      map.set(String(emp.value), emp);
+    });
+    return map;
+  }, [employeeOptions]);
 
+  function resolveEmployeeParticipants(event, employeeMap) {
+    const allowedPrefixes = ["SM", "ABM", "RBM", "BE", "Admin"];
+
+    return (
+      event.participants
+        ?.filter(p => p.type === "Employee")
+        .map(p => {
+          const emp = employeeMap.get(String(p.id));
+          if (!emp?.roleId) return null;
+
+          const rolePrefix = emp.roleId.split("-")[0];
+          const cleanPrefix = rolePrefix.replace(/[0-9]/g, "");
+
+          if (!allowedPrefixes.includes(cleanPrefix))
+            return null;
+
+          return {
+            name: emp.label ?? p.id,
+            role: cleanPrefix,
+          };
+        })
+        .filter(Boolean) ?? []
+    );
+  }
+
+  const employeeParticipants = useMemo(
+    () => resolveEmployeeParticipants(event, employeeMap),
+    [event.participants, employeeMap]
+  );
   const tagConfig =
     TAG_FORM_CONFIG[event.tags] ?? TAG_FORM_CONFIG.DEFAULT;
 
@@ -131,14 +138,14 @@ export function EventDoctorVisitDialog({
 
   const isDoctorVisit =
     event.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
-
-  const isEmployeeParticipant =
-    event.participants?.some(
-      (p) =>
+  const currentEmployeeParticipant = useMemo(() => {
+    return event.participants?.find(
+      p =>
         p.type === "Employee" &&
         String(p.id) === String(LOGGED_IN_USER.id)
-    ) ?? false;
-
+    );
+  }, [event.participants]);
+  const isEmployeeParticipant = !!currentEmployeeParticipant;
   const permissions = useMemo(() => {
     return {
       canJoin:
@@ -156,7 +163,9 @@ export function EventDoctorVisitDialog({
     isDoctorVisit,
     isEmployeeParticipant,
     tagConfig,
-    event,
+    event.erpName,
+    event.tags,
+    event.participants,
   ]);
 
 
@@ -169,14 +178,6 @@ export function EventDoctorVisitDialog({
 
   /* ================= Participants ================= */
 
-  const employeeParticipants = useMemo(
-    () =>
-      resolveEmployeeParticipants(
-        event,
-        employeeResolvers
-      ),
-    [event.participants, employeeResolvers]
-  );
   const handleSaveNote = async () => {
     try {
       await addLeadNote(
@@ -285,16 +286,9 @@ export function EventDoctorVisitDialog({
       toast.error("Failed to leave visit");
     }
   };
-
   /* =====================================================
-     RENDER
-  ===================================================== */
-
-  const currentEmployeeParticipant = event.participants?.find(
-    (p) =>
-      p.type === "Employee" &&
-      String(p.id) === String(LOGGED_IN_USER.id)
-  );
+   RENDER
+===================================================== */
 
   const hasLocation =
     !!currentEmployeeParticipant?.kly_lat_long;
@@ -305,47 +299,73 @@ export function EventDoctorVisitDialog({
   const hasPobItems =
     Array.isArray(event.fsl_doctor_item) &&
     event.fsl_doctor_item.length > 0;
-
+  const hasParticipants = event.participants?.some(
+    (p) => p.type === "Employee"
+  ) ?? false;
   const shouldShowPob =
     hasPobItems || isVisitCompleted;
+  const pobTotals = useMemo(() => {
+    if (!hasPobItems) return { qty: 0, amount: 0 };
+
+    return event.fsl_doctor_item.reduce(
+      (acc, item) => {
+        acc.qty += Number(item.qty);
+        acc.amount += Number(item.amount);
+        return acc;
+      },
+      { qty: 0, amount: 0 }
+    );
+  }, [event.fsl_doctor_item, hasPobItems]);
 
   return (
     <>
       <ScrollArea className="max-h-[80vh]">
         <div className="p-2 space-y-4">
-
           {/* Doctor Section */}
           {doctorDetails?.doctorId && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
-                Doctor Name
-              </p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium mb-[4px]">Doctor</p>
 
-              <p className="text-sm text-muted-foreground">
-                {doctorDetails.doctorName}
+              {/* Row 1 */}
+              <div className="flex items-center gap-6 text-sm flex-wrap">
+                {/* Name */}
+                <span className="font-medium">
+                  {doctorDetails.doctorName}
+                </span>
+
+                {/* Speciality */}
                 {doctorDetails.doctorSpeciality && (
-                  <span className="block py-1 text-sm font-medium">
+                  <span className="text-muted-foreground">
                     {doctorDetails.doctorSpeciality}
                   </span>
                 )}
-              </p>
 
-              <div className="flex gap-4 text-sm">
+                {/* Code with Copy */}
                 {doctorDetails.doctorCode && (
-                  <span className="text-blue-600 font-medium">
+                  <span className="flex items-center gap-1 text-blue-600 font-medium">
                     {doctorDetails.doctorCode}
-                  </span>
-                )}
 
-                {doctorDetails.doctorCity && (
-                  <span className="text-muted-foreground">
-                    {doctorDetails.doctorCity}
+                    <Copy
+                      className="h-3.5 w-3.5 cursor-pointer hover:opacity-70"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          doctorDetails.doctorCode
+                        );
+                      }}
+                    />
                   </span>
                 )}
               </div>
+
+              {/* Row 2 - City */}
+              {doctorDetails.doctorCity && (
+                <p className="text-sm text-muted-foreground">
+                  {doctorDetails.doctorCity}
+                </p>
+              )}
             </div>
           )}
-
+          <p className="text-sm font-medium mb-[4px]">Participants</p>
           {/* Participants */}
           {employeeParticipants.map((p, index) => {
             const isCurrentUser =
@@ -382,7 +402,7 @@ export function EventDoctorVisitDialog({
           {doctorDetails?.doctorNotes?.length > 0 && (
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium mb-[4px]">
                   Notes
                 </p>
 
@@ -430,10 +450,7 @@ export function EventDoctorVisitDialog({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="ghost"
-                  onClick={() => {
-                    setShowEditor(false);
-                    setNewNote("");
-                  }}
+                  onClick={handleCancelNote}
                 >
                   Cancel
                 </Button>
@@ -449,7 +466,7 @@ export function EventDoctorVisitDialog({
           {/* ================= POB ================= */}
           {shouldShowPob && (
             <div className="space-y-3">
-              <p className="text-sm font-medium">
+              <p className="text-sm font-medium mb-[4px]">
                 POB
               </p>
 
@@ -482,16 +499,10 @@ export function EventDoctorVisitDialog({
                   <div className="grid grid-cols-3 gap-4 p-2 font-semibold bg-muted/40">
                     <span>Total</span>
                     <span>
-                      {event.fsl_doctor_item.reduce(
-                        (sum, i) => sum + Number(i.qty),
-                        0
-                      )}
+                      {pobTotals.qty}
                     </span>
                     <span>
-                      {event.fsl_doctor_item.reduce(
-                        (sum, i) => sum + Number(i.amount),
-                        0
-                      ).toFixed(2)}
+                      {pobTotals.amount.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -570,7 +581,7 @@ export function EventDoctorVisitDialog({
           </>
         )}
 
-        {/* {permissions.canDelete && (
+        {permissions.canDelete && !hasParticipants && (
           <Button
             variant="destructive"
             onClick={() =>
@@ -579,7 +590,7 @@ export function EventDoctorVisitDialog({
           >
             Delete
           </Button>
-        )} */}
+        )}
       </div>
     </>
   );

@@ -42,9 +42,7 @@ export function mapFormToErpEvent(values, options = {}) {
   
           // ✅ ROLE (ERP STRUCTURE)
           ...(empRoleId && {
-            kly_role_id: {
-              name: empRoleId,
-            },
+            kly_role_id: empRoleId,
           }),
         };
   
