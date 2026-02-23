@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/services/event-to-erp";
-import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob } from "@calendar/services/event.service";
+import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob, saveDocToQuotation } from "@calendar/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
 import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
@@ -31,6 +31,7 @@ import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useAuth } from "@calendar/components/auth/auth-context";
 import Tiptap from "@calendar/components/ui/TodoWysiwyg";
+import { mapDoctorVisitToQuotation } from "@calendar/services/quotation-to-erp";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
@@ -146,6 +147,16 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 		return differenceInCalendarDays(endDate, startDate) + 1;
 	}, [selectedTag, startDate, endDate, leavePeriod]);
+	useEffect(() => {
+		if (!startDate || !endDate) return;
+	  
+		if (endDate < startDate) {
+		  form.setValue("endDate", startDate, {
+			shouldDirty: true,
+			shouldValidate: true,
+		  });
+		}
+	  }, [startDate, endDate]);
 	const requiresMedical = useMemo(() => {
 		if (selectedTag !== TAG_IDS.LEAVE) return false;
 		if (leaveType !== "Sick Leave") return false;
@@ -536,24 +547,56 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		return calendarEvent;
 	};
 	const handleDefaultEvent = async (values) => {
-		const erpDoc = mapFormToErpEvent(values, {
-			erpName: event?.erpName,
-		});
+		let quotationName =
+		  event?.reference_docname || null;
+	  
+		// Only for Doctor Visit Plan
+		if (
+		  values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+		  values.pob_given === "Yes"
+		) {
+		  const doctorId = values?.doctor[0]?.value;
+	 
+		  const quotationDoc =
+			mapDoctorVisitToQuotation({
+			  values,
+			  doctorId,
+			  existingName: quotationName,
+			});
 
-		const savedEvent = await saveEvent(erpDoc);
-		const calendarEvent = buildCalendarEvent({
-			event,
-			values,
-			erpDoc,
-			savedName: savedEvent.name,
-			tagConfig,
-			employeeOptions,
-			doctorOptions,
-			ownerOverride: event ? event.owner : LOGGED_IN_USER.id,
+		  const savedQuotation =
+			await saveDocToQuotation(quotationDoc);
+	  
+		  quotationName = savedQuotation.name;
+		}
+	  
+		const erpDoc = mapFormToErpEvent(values, {
+		  erpName: event?.erpName,
 		});
+	  
+		if (quotationName) {
+		  erpDoc.reference_doctype = "Quotation";
+		  erpDoc.reference_docname = quotationName;
+		}
+	  
+		const savedEvent = await saveEvent(erpDoc);
+	  
+		const calendarEvent = buildCalendarEvent({
+		  event,
+		  values,
+		  erpDoc,
+		  savedName: savedEvent.name,
+		  tagConfig,
+		  employeeOptions,
+		  doctorOptions,
+		  ownerOverride:
+			event?.owner || LOGGED_IN_USER.id,
+		});
+	  
 		upsertCalendarEvent(calendarEvent);
-		finalize("Event saved");
-	};
+	  
+		finalize("Event updated");
+	  };
 	const handleDoctorVisitPlan = async (values) => {
 		const normalizedDoctors = (Array.isArray(values.doctor)
 			? values.doctor

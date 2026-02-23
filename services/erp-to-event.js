@@ -139,14 +139,11 @@ export function mapErpGraphqlEventToCalendar(node) {
     tag === TAG_IDS.DOCTOR_VISIT_PLAN &&
     Array.isArray(node.fsl_doctor_item)
   ) {
-    event.fsl_doctor_item = node.fsl_doctor_item.map(row => ({
-      item__name: row.item__name,
-      qty: Number(row.qty) || 0,
-      rate: Number(row.rate) || 0,
-      amount: Number(row.amount) || 0,
-    }));
-
-    event.pob_given = event.fsl_doctor_item.length ? "Yes" : "No";
+    event.fsl_doctor_item = node.fsl_doctor_item;
+    event.pob_given =
+      event.fsl_doctor_item.length > 0
+        ? "Yes"
+        : "No";
   }
 
   /* ---------------------------------------------

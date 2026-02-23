@@ -144,7 +144,7 @@ export function FormFooter({
         </Button>
       </ModalClose>
 
-      {showCaptureLocation && (
+      {showCaptureLocation && isEditing && (
         <Button
           type="button"
           variant="secondary"

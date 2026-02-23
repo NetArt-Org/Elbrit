@@ -16,6 +16,10 @@ query EventsByRange(
         all_day
         event_category
         attending
+        reference_doctype {
+          name
+        }
+        reference_docname__name
         fsl_role_id {
           name
         }
@@ -152,6 +156,26 @@ query Doctors($first: Int) {
   }
 }
 `
+export const QUOTATIONS_BY_NAMES_QUERY = `
+query Quotations(
+  $first: Int!
+  $filters: [DBFilterInput!]
+) {
+  Quotations(first: $first, filter: $filters) {
+    edges {
+      node {
+        name
+        items {
+          item_code { name }
+          qty
+          rate
+          amount
+        }
+      }
+    }
+  }
+}
+`;
 
 export const LEAVE_QUERY = `
 query LeaveApplications($first: Int) {

@@ -22,24 +22,37 @@ export function mapFormToErpTodo(values, resolvers) {
     docstatus: 0,
   };
 }
-  export function mapErpTodoToCalendar(todo) {
-    const start = startOfDay(new Date(`${todo.date}T00:00:00`));
-    const end = endOfDay(new Date(`${todo.date}T00:00:00`));
-  
-    return {
-      erpName: todo.name,
-      title: `To Do List-${todo.name}`,
-      description: todo.description,
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      tags: TAG_IDS.TODO_LIST,
-      color: "orange",
-      isTodo: true,
-      status: todo.status,
-      priority: todo.priority,
-      allocated_to:todo.allocated_to__name || todo.allocated_to,
-    };
+export function mapErpTodoToCalendar(todo) {
+  if (!todo?.date) {
+    console.warn("Invalid todo date:", todo);
+    return null; // prevent crash
   }
+
+  const baseDate = new Date(todo.date);
+
+  if (isNaN(baseDate.getTime())) {
+    console.warn("Unparseable todo date:", todo.date);
+    return null;
+  }
+
+  const start = startOfDay(baseDate);
+  const end = endOfDay(baseDate);
+
+  return {
+    erpName: todo.name,
+    title: `To Do List-${todo.name}`,
+    description: todo.description,
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    tags: TAG_IDS.TODO_LIST,
+    color: "orange",
+    isTodo: true,
+    status: todo.status,
+    priority: todo.priority,
+    allocated_to:
+      todo.allocated_to__name || todo.allocated_to,
+  };
+}
   
   
   

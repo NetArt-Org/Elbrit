@@ -102,7 +102,6 @@ export function EventLeaveDialog({
 			toast.error("Failed to update leave status");
 		}
 	};
-
 	return (
 		<>
 			<ScrollArea className="max-h-[80vh]">
