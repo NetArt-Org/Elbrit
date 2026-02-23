@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
 import { Input } from "@calendar/components/ui/input";
 import { Modal, ModalContent, ModalHeader, ModalTitle, ModalTrigger, } from "@calendar/components/ui/responsive-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@calendar/components/ui/select";
-import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, } from "@calendar/components/calendar/form-fields";
+import { RHFFieldWrapper, RHFComboboxField, RHFDateTimeField, InlineCheckboxField, FormFooter, RHFHQCardSelector, } from "@calendar/components/calendar/form-fields";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { RHFDoctorCardSelector } from "@calendar/components/RHFDoctorCardSelector";
 import { useDisclosure, useSubmissionRouter } from "@calendar/components/calendar/hooks";
@@ -149,14 +149,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	}, [selectedTag, startDate, endDate, leavePeriod]);
 	useEffect(() => {
 		if (!startDate || !endDate) return;
-	  
+
 		if (endDate < startDate) {
-		  form.setValue("endDate", startDate, {
-			shouldDirty: true,
-			shouldValidate: true,
-		  });
+			form.setValue("endDate", startDate, {
+				shouldDirty: true,
+				shouldValidate: true,
+			});
 		}
-	  }, [startDate, endDate]);
+	}, [startDate, endDate]);
 	const requiresMedical = useMemo(() => {
 		if (selectedTag !== TAG_IDS.LEAVE) return false;
 		if (leaveType !== "Sick Leave") return false;
@@ -254,7 +254,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		try {
 			setIsResolvingLocation(true);
 
-		    resolveLatLong(form, attending, isEditing, toast);
+			resolveLatLong(form, attending, isEditing, toast);
 
 		} finally {
 			setIsResolvingLocation(false);
@@ -368,13 +368,27 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	useEffect(() => {
 		if (!tagConfig?.forceAllDay) return;
 
+		// 1️⃣ Force allDay checkbox
 		if (form.getValues("allDay") !== true) {
 			form.setValue("allDay", true, {
 				shouldDirty: false,
 				shouldValidate: false,
 			});
 		}
-	}, [selectedTag]);
+
+		// 2️⃣ Keep endDate equal to startDate (dateOnly tags)
+		if (tagConfig.dateOnly) {
+			const start = form.getValues("startDate");
+			const end = form.getValues("endDate");
+
+			if (start && (!end || end.getTime() !== start.getTime())) {
+				form.setValue("endDate", start, {
+					shouldDirty: false,
+					shouldValidate: false,
+				});
+			}
+		}
+	}, [selectedTag, startDate]);
 
 	/* --------------------------------------------------
 	   RESET FORM
@@ -390,7 +404,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		form.reset({
 			...currentValues,               // ✅ keeps title
 			startDate: now,
-			endDate: addMinutes(now, 60),
+			endDate: tagConfig.dateOnly
+				? now
+				: addMinutes(now, 60),
 			tags: selectedTag,
 		});
 	}, [isOpen, selectedTag, isEditing]);
@@ -548,55 +564,55 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	};
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
-		  event?.reference_docname || null;
-	  
+			event?.reference_docname || null;
+
 		// Only for Doctor Visit Plan
 		if (
-		  values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-		  values.pob_given === "Yes"
+			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			values.pob_given === "Yes"
 		) {
-		  const doctorId = values?.doctor[0]?.value;
-	 
-		  const quotationDoc =
-			mapDoctorVisitToQuotation({
-			  values,
-			  doctorId,
-			  existingName: quotationName,
-			});
+			const doctorId = values?.doctor[0]?.value;
 
-		  const savedQuotation =
-			await saveDocToQuotation(quotationDoc);
-	  
-		  quotationName = savedQuotation.name;
+			const quotationDoc =
+				mapDoctorVisitToQuotation({
+					values,
+					doctorId,
+					existingName: quotationName,
+				});
+
+			const savedQuotation =
+				await saveDocToQuotation(quotationDoc);
+
+			quotationName = savedQuotation.name;
 		}
-	  
+
 		const erpDoc = mapFormToErpEvent(values, {
-		  erpName: event?.erpName,
+			erpName: event?.erpName,
 		});
-	  
+
 		if (quotationName) {
-		  erpDoc.reference_doctype = "Quotation";
-		  erpDoc.reference_docname = quotationName;
+			erpDoc.reference_doctype = "Quotation";
+			erpDoc.reference_docname = quotationName;
 		}
-	  
+
 		const savedEvent = await saveEvent(erpDoc);
-	  
+
 		const calendarEvent = buildCalendarEvent({
-		  event,
-		  values,
-		  erpDoc,
-		  savedName: savedEvent.name,
-		  tagConfig,
-		  employeeOptions,
-		  doctorOptions,
-		  ownerOverride:
-			event?.owner || LOGGED_IN_USER.id,
+			event,
+			values,
+			erpDoc,
+			savedName: savedEvent.name,
+			tagConfig,
+			employeeOptions,
+			doctorOptions,
+			ownerOverride:
+				event?.owner || LOGGED_IN_USER.id,
 		});
-	  
+
 		upsertCalendarEvent(calendarEvent);
-	  
+
 		finalize("Event updated");
-	  };
+	};
 	const handleDoctorVisitPlan = async (values) => {
 		const normalizedDoctors = (Array.isArray(values.doctor)
 			? values.doctor
@@ -632,7 +648,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				ownerOverride: LOGGED_IN_USER.id,
 			});
 			addEvent(calendarEvent);
-			
+
 		}
 		finalize(`Created ${values.doctor.length} Doctor Visit events`);
 	};
@@ -843,22 +859,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								)}
 							/>
 						)}
-
-						{/* ================= HQ TERRITORY ================= */}
-						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
-							!isEditReadOnlyField("hqTerritory") && (
-								<FormField
-									control={form.control}
-									name="hqTerritory"
-									render={({ field }) => (
-										<RHFFieldWrapper label="HQ Territory">
-											<RHFComboboxField  {...field} options={hqTerritoryOptions} placeholder="Select HQ Territory" />
-										</RHFFieldWrapper>
-									)}
-								/>
-							)}
-
-
 						{/* ================= MEETING ================= */}
 						{selectedTag === TAG_IDS.MEETING ? (
 							<>
@@ -977,6 +977,25 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								)}
 							</div>
 						)}
+
+						{/* ================= HQ TERRITORY ================= */}
+						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
+							!isEditReadOnlyField("hqTerritory") && (
+								<FormField
+									control={form.control}
+									name="hqTerritory"
+									render={({ field }) => (
+										<RHFFieldWrapper label="HQ Territory">
+											<RHFHQCardSelector
+												control={form.control}
+												name="hqTerritory"
+												options={hqTerritoryOptions}
+											// label="HQ"
+											/>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
 						{/* ================= DOCTOR ================= */}
 						{!tagConfig.hide?.includes("doctor") &&
 							!isEditReadOnlyField("doctor") && (
@@ -991,11 +1010,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 												options={doctorOptions}
 												multiple={isDoctorMulti}
 											/> :
-											<RHFComboboxField
-												{...field}
-												options={doctorOptions}
-												multiple={isDoctorMulti}
-											/>}
+												<RHFComboboxField
+													{...field}
+													options={doctorOptions}
+													multiple={isDoctorMulti}
+												/>}
 
 										</RHFFieldWrapper>
 									)}
