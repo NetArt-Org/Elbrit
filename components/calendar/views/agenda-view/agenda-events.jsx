@@ -162,11 +162,9 @@ export const AgendaEvents = ({ scope = "all" }) => {
       );
     }
 
-    if (scope === "month") {
-      return getEventsForMonth(events, selectedDate);
-    }
+    return getEventsForMonth(events, selectedDate);
 
-    return events;
+    // return events;
   }, [events, selectedDate, scope]);
 
   /* ===============================

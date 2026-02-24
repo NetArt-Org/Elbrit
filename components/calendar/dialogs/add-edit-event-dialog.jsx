@@ -375,19 +375,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				shouldValidate: false,
 			});
 		}
-
-		// 2️⃣ Keep endDate equal to startDate (dateOnly tags)
-		if (tagConfig.dateOnly) {
-			const start = form.getValues("startDate");
-			const end = form.getValues("endDate");
-
-			if (start && (!end || end.getTime() !== start.getTime())) {
-				form.setValue("endDate", start, {
-					shouldDirty: false,
-					shouldValidate: false,
-				});
-			}
-		}
 	}, [selectedTag, startDate]);
 
 	/* --------------------------------------------------
@@ -562,6 +549,40 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 		return calendarEvent;
 	};
+	useEffect(() => {
+		if (!isOpen) return;
+		if (!isEditing) return;
+		if (!event?.allocated_to) return;
+		if (!employeeOptions.length) return;
+	  
+		// allocated_to is EMAIL
+		const email = event.allocated_to.toLowerCase();
+	  
+		// Resolve employee ID from email
+		const employeeId =
+		  employeeResolvers.getEmployeeIdByEmail(email);
+	  
+		if (!employeeId) return;
+	  
+		// Find matching option object
+		const employeeOption =
+		  employeeOptions.find(
+			(opt) => opt.value === employeeId
+		  );
+	  
+		if (!employeeOption) return;
+	  
+		// Set full option object in form
+		form.setValue("allocated_to", employeeOption, {
+		  shouldDirty: false,
+		});
+	  }, [
+		isOpen,
+		isEditing,
+		event?.allocated_to,
+		employeeOptions,
+	  ]);
+
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
 			event?.reference_docname || null;
@@ -608,7 +629,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			ownerOverride:
 				event?.owner || LOGGED_IN_USER.id,
 		});
-
 		upsertCalendarEvent(calendarEvent);
 
 		finalize("Event updated");
@@ -975,6 +995,35 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 										)}
 									/>
 								)}
+								{selectedTag === TAG_IDS.TODO_LIST && isEditing && (
+  <FormField
+    control={form.control}
+    name="todoStatus"
+    render={({ field, fieldState }) => (
+      <RHFFieldWrapper
+        label="Status"
+        error={fieldState.error?.message}
+      >
+        <Select
+          value={field.value}
+          onValueChange={field.onChange}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+
+          <SelectContent>
+            {["Open", "Closed", "Cancelled"].map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </RHFFieldWrapper>
+    )}
+  />
+)}
 							</div>
 						)}
 

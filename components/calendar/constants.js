@@ -79,7 +79,7 @@ export function buildEventDefaultValues({ event, defaultTag }) {
     reportTo: event?.reportTo ?? "",
     medicalAttachment: event?.medicalAttachment ?? "",
     allDay: event?.allDay ?? false,
-    todoStatus: "Open",
+    todoStatus: event?.status || "Open",
     priority: "Medium",
     leavePeriod: "Full",
     halfDayDate: event?.halfDayDate ?? "",

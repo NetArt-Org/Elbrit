@@ -3,9 +3,22 @@ import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 
 export function mapFormToErpTodo(values, resolvers) {
-  const employeeId = values.allocated_to
+  const selected = values.allocated_to;
 
-  const email = resolvers.getEmployeeEmailById(employeeId);
+  let email = null;
+
+  // If combobox returns full option
+  if (selected?.email) {
+    email = selected.email;
+  }
+  // If only value (employeeId)
+  else if (selected?.value) {
+    email = resolvers.getEmployeeEmailById(selected.value);
+  }
+  // If raw employeeId
+  else if (typeof selected === "string") {
+    email = resolvers.getEmployeeEmailById(selected);
+  }
 
   if (!email) {
     throw new Error("Unable to resolve employee email");

@@ -21,22 +21,23 @@ export function RHFHQCardSelector({
   options = [],
   label,
 }) {
+  const [search, setSearch] = useState("");
+
+  const filteredOptions = useMemo(() => {
+    if (!search) return options;
+
+    return options.filter((opt) =>
+      opt.label
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [search, options]);
+  
   return (
     <FormField
       control={control}
       name={name}
       render={({ field, fieldState }) => {
-        const [search, setSearch] = useState("");
-
-        const filteredOptions = useMemo(() => {
-          if (!search) return options;
-
-          return options.filter((opt) =>
-            opt.label
-              .toLowerCase()
-              .includes(search.toLowerCase())
-          );
-        }, [search, options]);
 
         const selected = field.value;
 

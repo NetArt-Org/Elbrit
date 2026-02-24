@@ -8,6 +8,7 @@ import {
   formatTime,
   getBgColor,
   getColorClass,
+  getEventsForMonth,
   getFirstLetters,
   toCapitalize,
 } from "@calendar/components/calendar/helpers";
@@ -32,7 +33,7 @@ export const AgendaEventsMobile = () => {
     badgeVariant,
     agendaModeGroupBy,
     setMobileLayer,
-    setView,
+    setView,selectedDate
   } = useCalendar();
 
   const scrollRef = useRef(null);
@@ -79,13 +80,16 @@ export const AgendaEventsMobile = () => {
   /* ===============================
      GROUP EVENTS
   =============================== */
+  const monthEvents = useMemo(() => {
+    return getEventsForMonth(events, selectedDate);
+  }, [events, selectedDate]);
   const agendaEvents = useMemo(() => {
-    return Object.groupBy(events, (event) =>
+    return Object.groupBy(monthEvents, (event) =>
       agendaModeGroupBy === "date"
         ? format(parseISO(event.startDate), "yyyy-MM-dd")
         : event.color
     );
-  }, [events, agendaModeGroupBy]);
+  }, [monthEvents, agendaModeGroupBy]);
 
   const groupedAndSortedEvents = useMemo(() => {
     return Object.entries(agendaEvents).sort(
@@ -144,7 +148,7 @@ export const AgendaEventsMobile = () => {
                           </Avatar>
                         )}
                         <div className="w-full">
-                          <p className="font-medium text-sm">{event.title}
+                          <p className="font-medium text-sm">{event.tags}
                           </p>
                           {/* <p className="text-xs text-muted-foreground line-clamp-1">
                             {event.description}

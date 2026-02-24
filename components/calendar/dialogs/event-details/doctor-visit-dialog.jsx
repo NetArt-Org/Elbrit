@@ -86,7 +86,7 @@ export function EventDoctorVisitDialog({
     setShowEditor(false);
     setNewNote("");
   }, []);
-
+console.log("EVENT DR VISIT",event)
   const doctorResolvers = useDoctorResolvers(doctorOptions);
   const employeeResolvers = useEmployeeResolvers(employeeOptions);
   const employeeMap = useMemo(() => {
@@ -526,34 +526,6 @@ export function EventDoctorVisitDialog({
                 Join
               </Button>
             )}
-
-            {/* {visitState.needsLocation && (
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  try {
-                    await submitDoctorVisitLocation({
-                      event,
-                      loggedInUserId:
-                        LOGGED_IN_USER.id,
-                      removeEvent,
-                      addEvent,
-                    });
-
-                    toast.success(
-                      "Location submitted successfully"
-                    );
-                    setOpen(false);
-                  } catch {
-                    toast.error(
-                      "Failed to fetch location"
-                    );
-                  }
-                }}
-              >
-                Request Location
-              </Button>
-            )} */}
 
             {permissions.canVisitNow && (
               <>
