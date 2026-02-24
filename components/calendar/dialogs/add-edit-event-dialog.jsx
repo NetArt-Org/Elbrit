@@ -104,7 +104,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	const resetFieldsOnTagChange = () => {
 		reset({
 			employees: undefined, doctor: isDoctorMulti ? [] : undefined,
-			todoStatus: "Open", priority: "Medium", title: "",
+			status: "Open", priority: "Medium", title: "",
 		});
 		// ❌ HQ is REQUIRED for this tag — never reset it
 		if (selectedTag !== TAG_IDS.HQ_TOUR_PLAN) {
@@ -554,34 +554,34 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		if (!isEditing) return;
 		if (!event?.allocated_to) return;
 		if (!employeeOptions.length) return;
-	  
+
 		// allocated_to is EMAIL
 		const email = event.allocated_to.toLowerCase();
-	  
+
 		// Resolve employee ID from email
 		const employeeId =
-		  employeeResolvers.getEmployeeIdByEmail(email);
-	  
+			employeeResolvers.getEmployeeIdByEmail(email);
+
 		if (!employeeId) return;
-	  
+
 		// Find matching option object
 		const employeeOption =
-		  employeeOptions.find(
-			(opt) => opt.value === employeeId
-		  );
-	  
+			employeeOptions.find(
+				(opt) => opt.value === employeeId
+			);
+
 		if (!employeeOption) return;
-	  
+
 		// Set full option object in form
 		form.setValue("allocated_to", employeeOption, {
-		  shouldDirty: false,
+			shouldDirty: false,
 		});
-	  }, [
+	}, [
 		isOpen,
 		isEditing,
 		event?.allocated_to,
 		employeeOptions,
-	  ]);
+	]);
 
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
@@ -728,19 +728,26 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			toast.error(message);
 		}
 	};
-
 	const handleTodo = async (values) => {
 		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
+	  
 		const savedTodo = await saveDocToErp(todoDoc);
-		const calendarTodo = mapErpTodoToCalendar(
-			{
-				...todoDoc,
-				name: savedTodo.name
-			}
-		);
-		upsertCalendarEvent(calendarTodo);
+	  
+		const calendarTodo = mapErpTodoToCalendar({
+		  ...todoDoc,
+		  name: savedTodo.name,
+		});
+	  
+		// 🔥 PRESERVE EXISTING EVENT WHEN EDITING
+		const updatedEvent = {
+		  ...(event ?? {}),
+		  ...calendarTodo,
+		};
+	  
+		upsertCalendarEvent(updatedEvent);
+	  
 		finalize("Todo saved");
-	};
+	  };
 	const onInvalid = (errors) => {
 		showFirstFormErrorAsToast(errors);
 	};
@@ -996,34 +1003,34 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 									/>
 								)}
 								{selectedTag === TAG_IDS.TODO_LIST && isEditing && (
-  <FormField
-    control={form.control}
-    name="todoStatus"
-    render={({ field, fieldState }) => (
-      <RHFFieldWrapper
-        label="Status"
-        error={fieldState.error?.message}
-      >
-        <Select
-          value={field.value}
-          onValueChange={field.onChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
+									<FormField
+										control={form.control}
+										name="status"
+										render={({ field, fieldState }) => (
+											<RHFFieldWrapper
+												label="Status"
+												error={fieldState.error?.message}
+											>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select status" />
+													</SelectTrigger>
 
-          <SelectContent>
-            {["Open", "Closed", "Cancelled"].map((status) => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </RHFFieldWrapper>
-    )}
-  />
-)}
+													<SelectContent>
+														{["Open", "Closed", "Cancelled"].map((status) => (
+															<SelectItem key={status} value={status}>
+																{status}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</RHFFieldWrapper>
+										)}
+									/>
+								)}
 							</div>
 						)}
 

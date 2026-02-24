@@ -16,15 +16,31 @@ import { TAG_IDS } from "@calendar/components/calendar/constants";
 ===================================================== */
 
 function resolveAssignedTo(event, employeeResolvers) {
-  if (!event?.allocated_to) return null;
-
-  return {
-    id: event.allocated_to,
-    name:
-      employeeResolvers.getEmployeeNameById(event.allocated_to) ??
-      event.allocated_to,
-  };
-}
+    if (!event?.allocated_to) return null;
+  
+    const email = event.allocated_to.toLowerCase();
+  
+    // Resolve employee ID from email
+    const employeeId =
+      employeeResolvers.getEmployeeIdByEmail(email);
+  
+    if (!employeeId) {
+      // employeeOptions not loaded yet OR email not found
+      return {
+        email,
+        name: email,
+      };
+    }
+  
+    const name =
+      employeeResolvers.getEmployeeNameById(employeeId);
+  
+    return {
+      id: employeeId,
+      email,
+      name: name ?? email,
+    };
+  }
 
 function getDueDateMeta(startDate) {
   if (!startDate) return null;
@@ -40,11 +56,11 @@ function getDueDateMeta(startDate) {
 
 function getPriorityClass(priority) {
   switch (priority) {
-    case "HIGH":
+    case "High":
       return "text-red-600";
-    case "MEDIUM":
+    case "Medium":
       return "text-orange-500";
-    case "LOW":
+    case "Low":
       return "text-green-600";
     default:
       return "text-muted-foreground";
@@ -53,9 +69,9 @@ function getPriorityClass(priority) {
 
 function getStatusBadgeClass(status) {
   switch (status) {
-    case "OPEN":
+    case "Open":
       return "bg-orange-400";
-    case "CLOSED":
+    case "Closed":
       return "bg-green-600";
     default:
       return "bg-gray-400";

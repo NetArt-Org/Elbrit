@@ -27,7 +27,7 @@ export function mapFormToErpTodo(values, resolvers) {
   return {
     doctype: "ToDo",
     description: values.description || values.title,
-    status: values.todoStatus,
+    status: values.status,
     priority: values.priority,
     date: format(values.endDate, "yyyy-MM-dd"),
     allocated_to: email,
@@ -60,8 +60,9 @@ export function mapErpTodoToCalendar(todo) {
     tags: TAG_IDS.TODO_LIST,
     color: "orange",
     isTodo: true,
-    status: todo.status,
-    priority: todo.priority,
+    status:  todo.status.charAt(0) + todo.status.slice(1).toLowerCase(),
+  priority: todo.priority.charAt(0) +
+      todo.priority.slice(1).toLowerCase(),
     allocated_to:
       todo.allocated_to__name || todo.allocated_to,
   };
