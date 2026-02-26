@@ -61,7 +61,7 @@ export const eventSchema = z
     medicalAttachment: z.any().optional(),
     halfDayDate: z.date().optional(),
     approvedBy: z.string().optional(),
-
+    assignedTo:z.any().optional(),
     /* ---------- Todo ---------- */
     status: z.enum(["Open", "Closed", "Cancelled"]).optional(),
     priority: z.enum(["High", "Medium", "Low"]).optional(),

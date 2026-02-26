@@ -23,6 +23,7 @@ import {
   CommandList,
 } from "@calendar/components/ui/command";
 import { Avatar, AvatarFallback } from "@calendar/components/ui/avatar";
+import { TAG_IDS } from "../../constants";
 
 const PULL_THRESHOLD = 70;
 
@@ -33,7 +34,7 @@ export const AgendaEventsMobile = () => {
     badgeVariant,
     agendaModeGroupBy,
     setMobileLayer,
-    setView,selectedDate
+    setView, selectedDate
   } = useCalendar();
 
   const scrollRef = useRef(null);
@@ -96,7 +97,29 @@ export const AgendaEventsMobile = () => {
       (a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()
     );
   }, [agendaEvents]);
-
+  function getPriorityClass(priority) {
+    switch (priority) {
+      case "High":
+        return "text-red-600";
+      case "Medium":
+        return "text-orange-500";
+      case "Low":
+        return "text-green-600";
+      default:
+        return "text-muted-foreground";
+    }
+  }
+  
+  function getStatusBadgeClass(status) {
+    switch (status) {
+      case "Open":
+        return "bg-orange-400";
+      case "Closed":
+        return "bg-green-600";
+      default:
+        return "bg-gray-400";
+    }
+  }
   return (
     <div
       className="[&::-webkit-scrollbar]:hidden"
@@ -148,20 +171,46 @@ export const AgendaEventsMobile = () => {
                           </Avatar>
                         )}
                         <div className="w-full">
-                          <p className="font-medium text-sm">{event.tags}
-                          </p>
-                          {/* <p className="text-xs text-muted-foreground line-clamp-1">
-                            {event.description}
-                          </p> */}
+                          {event.tags === TAG_IDS.TODO_LIST ? (
+                            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                              <p className="font-medium text-sm">{event.title}
+                              </p>
+                              {event.priority && (
+                                <p
+                                className={`text-sm font-medium ${getPriorityClass(
+                                  event.priority
+                                )}`}
+                              >
+                                {event.priority ?? "-"}
+                              </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="font-medium text-sm">{event.tags}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             {event.owner?.name}
                           </p>
                         </div>
                       </div>
-                      <div className="text-xs flex items-center">
-                        {formatTime(event.startDate, use24HourFormat)} –{" "}
-                        {formatTime(event.endDate, use24HourFormat)}
-                      </div>
+                       <div className="text-xs flex items-center">
+                       {event.tags === TAG_IDS.TODO_LIST ? (
+                            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                              {event.status && (
+                                <span
+                                className={`text-white text-xs px-3 py-1 rounded-md ${getStatusBadgeClass(
+                                  event.status
+                                )}`}
+                              >
+                                {event.status}
+                              </span>
+                              )}
+                            </div>
+                          ) : null}
+                        {/* {formatTime(event.startDate, use24HourFormat)} –{" "}
+                        {formatTime(event.endDate, use24HourFormat)} */}
+                      </div> 
                     </div>
                   </EventDetailsDialog>
                 </CommandItem>

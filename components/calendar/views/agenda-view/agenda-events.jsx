@@ -254,10 +254,10 @@ export const AgendaEvents = ({ scope = "all" }) => {
                             </p>
                           </div>
                         </div>
-                        <div className="text-xs flex items-center">
+                        {/* <div className="text-xs flex items-center">
                           {formatTime(event.startDate, use24HourFormat)} –{" "}
                           {formatTime(event.endDate, use24HourFormat)}
-                        </div>
+                        </div> */}
                       </div>
                     </EventDetailsDialog>
                   </CommandItem>

@@ -9,38 +9,49 @@ import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
 import { useDeleteEvent } from "../../hooks";
-import { TAG_IDS } from "@calendar/components/calendar/constants";
 
 /* =====================================================
    PURE HELPERS
 ===================================================== */
 
-function resolveAssignedTo(event, employeeResolvers) {
-    if (!event?.allocated_to) return null;
-  
-    const email = event.allocated_to.toLowerCase();
-  
-    // Resolve employee ID from email
-    const employeeId =
-      employeeResolvers.getEmployeeIdByEmail(email);
-  
-    if (!employeeId) {
-      // employeeOptions not loaded yet OR email not found
-      return {
-        email,
-        name: email,
-      };
-    }
-  
-    const name =
-      employeeResolvers.getEmployeeNameById(employeeId);
-  
+function resolveAllocatedTo(event, employeeResolvers) {
+  if (!event?.allocated_to) return null;
+
+  const email = event.allocated_to.toLowerCase();
+
+  const employeeId =
+    employeeResolvers.getEmployeeIdByEmail(email);
+
+  if (!employeeId) {
     return {
-      id: employeeId,
       email,
-      name: name ?? email,
+      name: email,
     };
   }
+
+  const name =
+    employeeResolvers.getEmployeeNameById(employeeId);
+
+  return {
+    id: employeeId,
+    email,
+    name: name ?? email,
+  };
+}
+
+function resolveVisibleTo(event, employeeResolvers) {
+  if (!Array.isArray(event?.assignedTo)) return [];
+
+  return event.assignedTo.map((employeeId) => {
+    const name =
+      employeeResolvers.getEmployeeNameById(employeeId);
+
+    return {
+      id: employeeId,
+      name: name ?? employeeId,
+    };
+  });
+}
 
 function getDueDateMeta(startDate) {
   if (!startDate) return null;
@@ -88,7 +99,7 @@ export function EventTodoDialog({
   setOpen,
 }) {
   const { removeEvent, employeeOptions } = useCalendar();
-console.log("EVENT",event)
+
   const employeeResolvers =
     useEmployeeResolvers(employeeOptions);
 
@@ -98,13 +109,22 @@ console.log("EVENT",event)
 
   /* ================= Derived Data ================= */
 
-  const assignedTo = useMemo(
+  const allocatedTo = useMemo(
     () =>
-      resolveAssignedTo(
+      resolveAllocatedTo(
         event,
         employeeResolvers
       ),
     [event.allocated_to, employeeResolvers]
+  );
+
+  const visibleTo = useMemo(
+    () =>
+      resolveVisibleTo(
+        event,
+        employeeResolvers
+      ),
+    [event.assignedTo, employeeResolvers]
   );
 
   const dueDate = useMemo(
@@ -131,7 +151,6 @@ console.log("EVENT",event)
   /* =====================================================
      RENDER
   ===================================================== */
-
   return (
     <>
       <ScrollArea className="max-h-[80vh]">
@@ -147,8 +166,7 @@ console.log("EVENT",event)
               </p>
               {dueDate ? (
                 <p className="text-sm text-muted-foreground">
-                  {dueDate.formatted}{" "}
-                  ({dueDate.diffDays} days)
+                  {dueDate.formatted} ({dueDate.diffDays} days)
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -172,16 +190,16 @@ console.log("EVENT",event)
             </div>
           </div>
 
-          {/* ================= ASSIGNED + PRIORITY ================= */}
+          {/* ================= ALLOCATED + PRIORITY ================= */}
           <div className="flex justify-between items-start">
 
-            {/* Assigned To */}
+            {/* Allocated To */}
             <div>
               <p className="text-sm font-medium">
-                Assigned To
+                Allocated To
               </p>
               <p className="text-sm text-muted-foreground">
-                {assignedTo?.name ?? "-"}
+                {allocatedTo?.name ?? "-"}
               </p>
             </div>
 
@@ -200,20 +218,27 @@ console.log("EVENT",event)
             </div>
           </div>
 
-          {/* ================= VISIBLE TO (Custom Placeholder) ================= */}
+          {/* ================= VISIBLE TO ================= */}
           <div>
             <p className="text-sm font-medium">
               Visible To
             </p>
 
             <div className="flex gap-2 mt-2 flex-wrap">
-              {/* Temporary Static */}
-              <span className="bg-muted px-2 py-1 rounded text-xs">
-                Subash M
-              </span>
-              <span className="bg-muted px-2 py-1 rounded text-xs">
-                Sanjay
-              </span>
+              {visibleTo.length > 0 ? (
+                visibleTo.map((emp) => (
+                  <span
+                    key={emp.id}
+                    className="bg-muted px-2 py-1 rounded text-xs"
+                  >
+                    {emp.name}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-muted-foreground">
+                  -
+                </span>
+              )}
             </div>
           </div>
 
@@ -246,13 +271,12 @@ console.log("EVENT",event)
           <AddEditEventDialog
             event={event}
             forceValues={
-              tagConfig.ui?.primaryEditAction
-                ?.setOnEdit
+              tagConfig.ui?.primaryEditAction?.setOnEdit
             }
           >
             <Button>
-              {tagConfig.ui?.primaryEditAction
-                ?.label ?? "Edit"}
+              {tagConfig.ui?.primaryEditAction?.label ??
+                "Edit"}
             </Button>
           </AddEditEventDialog>
         )}

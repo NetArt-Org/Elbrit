@@ -1,22 +1,17 @@
-import { format,startOfDay, endOfDay  } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 
-export function mapFormToErpTodo(values, resolvers) {
+export function mapFormToErpTodo(values, resolvers,options = {}) {
   const selected = values.allocated_to;
-
+  const { erpName } = options;
   let email = null;
 
-  // If combobox returns full option
   if (selected?.email) {
     email = selected.email;
-  }
-  // If only value (employeeId)
-  else if (selected?.value) {
+  } else if (selected?.value) {
     email = resolvers.getEmployeeEmailById(selected.value);
-  }
-  // If raw employeeId
-  else if (typeof selected === "string") {
+  } else if (typeof selected === "string") {
     email = resolvers.getEmployeeEmailById(selected);
   }
 
@@ -24,7 +19,13 @@ export function mapFormToErpTodo(values, resolvers) {
     throw new Error("Unable to resolve employee email");
   }
 
-  return {
+  const customAssignedTo = Array.isArray(values.assignedTo)
+    ? values.assignedTo.map((empId) => ({
+        employee: empId,
+      }))
+    : [];
+
+  const doc = {
     doctype: "ToDo",
     description: values.description || values.title,
     status: values.status,
@@ -32,13 +33,21 @@ export function mapFormToErpTodo(values, resolvers) {
     date: format(values.endDate, "yyyy-MM-dd"),
     allocated_to: email,
     assigned_by: LOGGED_IN_USER.id,
+    custom_assigned_to: customAssignedTo,
     docstatus: 0,
   };
+
+  // ✅ IMPORTANT: include name if editing
+  if (erpName) {
+    doc.name = erpName;
+  }
+
+  return doc;
 }
 export function mapErpTodoToCalendar(todo) {
   if (!todo?.date) {
     console.warn("Invalid todo date:", todo);
-    return null; // prevent crash
+    return null;
   }
 
   const baseDate = new Date(todo.date);
@@ -51,6 +60,12 @@ export function mapErpTodoToCalendar(todo) {
   const start = startOfDay(baseDate);
   const end = endOfDay(baseDate);
 
+  // Normalize assignedTo
+  const assignedTo =
+    todo?.custom_assigned_to?.length
+      ? todo.custom_assigned_to.map(emp => emp.employee)
+        : [];
+
   return {
     erpName: todo.name,
     title: `To Do List-${todo.name}`,
@@ -60,13 +75,15 @@ export function mapErpTodoToCalendar(todo) {
     tags: TAG_IDS.TODO_LIST,
     color: "orange",
     isTodo: true,
-    status:  todo.status.charAt(0) + todo.status.slice(1).toLowerCase(),
-  priority: todo.priority.charAt(0) +
-      todo.priority.slice(1).toLowerCase(),
+    status:
+      todo.status?.charAt(0) +
+      todo.status?.slice(1).toLowerCase(),
+    priority:
+      todo.priority?.charAt(0) +
+      todo.priority?.slice(1).toLowerCase(),
     allocated_to:
       todo.allocated_to__name || todo.allocated_to,
+    assignedTo
   };
 }
-  
-  
-  
+

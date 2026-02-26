@@ -683,7 +683,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			const leaveDoc = mapFormToErpLeave(values);
 			delete leaveDoc.fsl_attach;
 
-			const savedLeave = await saveLeaveApplication(leaveDoc);
+			const savedLeave = await saveLeaveApplication(leaveDoc, {
+				erpName: event?.erpName,
+			});
 
 			// 🚨 If backend returned null (GraphQL validation error case)
 			if (!savedLeave) {
@@ -729,25 +731,21 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		}
 	};
 	const handleTodo = async (values) => {
-		const todoDoc = mapFormToErpTodo(values, employeeResolvers);
-	  
-		const savedTodo = await saveDocToErp(todoDoc);
-	  
-		const calendarTodo = mapErpTodoToCalendar({
-		  ...todoDoc,
-		  name: savedTodo.name,
+		const todoDoc = mapFormToErpTodo(values, employeeResolvers, {
+			erpName: event?.erpName,
 		});
-	  
-		// 🔥 PRESERVE EXISTING EVENT WHEN EDITING
-		const updatedEvent = {
-		  ...(event ?? {}),
-		  ...calendarTodo,
-		};
-	  
-		upsertCalendarEvent(updatedEvent);
-	  
+
+		const savedTodo = await saveDocToErp(todoDoc);
+
+		const calendarTodo = mapErpTodoToCalendar({
+			...todoDoc,
+			  name: savedTodo.name,
+		});
+
+		upsertCalendarEvent(calendarTodo);
+
 		finalize("Todo saved");
-	  };
+	};
 	const onInvalid = (errors) => {
 		showFirstFormErrorAsToast(errors);
 	};
