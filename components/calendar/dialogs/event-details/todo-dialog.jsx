@@ -124,6 +124,7 @@ export function EventTodoDialog({
     removeEvent,
     onClose: () => setOpen(false),
   });
+  console.log("EVENT",event)
 
   /* =====================================================
      RENDER

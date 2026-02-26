@@ -1,6 +1,7 @@
 import { format, startOfDay, endOfDay } from "date-fns";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
+import { normalizeChecklistFromERP, normalizeChecklistToERP } from "@calendar/components/calendar/helpers";
 
 export function mapFormToErpTodo(values, resolvers,options = {}) {
   const selected = values.allocated_to;
@@ -28,7 +29,9 @@ export function mapFormToErpTodo(values, resolvers,options = {}) {
   const doc = {
     doctype: "ToDo",
     custom_subject:values.title,
-    description: values.description || values.title,
+    description: normalizeChecklistToERP(
+      values.description || values.title
+    ),
     status: values.status,
     priority: values.priority,
     date: format(values.endDate, "yyyy-MM-dd"),
@@ -72,7 +75,8 @@ export function mapErpTodoToCalendar(todo) {
   return {
     erpName: todo.name,
     title: todo.custom_subject || todo.title,
-    description: todo.description,
+    description: normalizeChecklistFromERP(todo.description),
+    // description: todo.description,
     startDate: start.toISOString(),
     endDate: end.toISOString(),
     tags: TAG_IDS.TODO_LIST,
