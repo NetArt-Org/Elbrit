@@ -64,7 +64,7 @@ export function EventDetailsDialog({ event, children }) {
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{event.tags}</DialogTitle>
+          <DialogTitle>{event.tags == TAG_IDS.TODO_LIST ? event.title:event.tags}</DialogTitle>
         </DialogHeader>
 
         <LayoutComponent

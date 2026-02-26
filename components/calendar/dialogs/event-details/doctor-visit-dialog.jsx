@@ -86,7 +86,6 @@ export function EventDoctorVisitDialog({
     setShowEditor(false);
     setNewNote("");
   }, []);
-console.log("EVENT DR VISIT",event)
   const doctorResolvers = useDoctorResolvers(doctorOptions);
   const employeeResolvers = useEmployeeResolvers(employeeOptions);
   const employeeMap = useMemo(() => {

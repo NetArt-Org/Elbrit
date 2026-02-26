@@ -65,6 +65,7 @@ query ToDoes($first: Int!) {
         priority
         status
         allocated_to__name
+        custom_subject
         custom_assigned_to {
           employee__name
         }

@@ -246,7 +246,29 @@ export function formatTime(date, use24HourFormat) {
 	if (!isValid(parsedDate)) return "";
 	return format(parsedDate, use24HourFormat ? "HH:mm" : "h:mm a");
 }
-
+export function getPriorityClass(priority) {
+	switch (priority) {
+	  case "High":
+		return "text-red-600";
+	  case "Medium":
+		return "text-orange-500";
+	  case "Low":
+		return "text-green-600";
+	  default:
+		return "text-muted-foreground";
+	}
+  }
+  
+ export function getStatusBadgeClass(status) {
+	switch (status) {
+	  case "Open":
+		return "bg-orange-400";
+	  case "Closed":
+		return "bg-green-600";
+	  default:
+		return "bg-gray-400";
+	}
+  }
 export const getFirstLetters = str => {
 	if (!str) return "";
 	const words = str.split(" ");

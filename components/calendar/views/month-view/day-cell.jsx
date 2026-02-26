@@ -175,6 +175,12 @@ export function DayCell({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05, ...transition }}
               >
+                {/* <MonthEventBadge
+                  className="flex"
+                  event={event}
+                  cellDate={startOfDay(date)}
+                  isMobile={isMobile}
+                /> */}
                 {!isMobile && (
                   <MonthEventBadge
                     className="hidden lg:flex"
@@ -243,15 +249,15 @@ export function DayCell({
   if (isMobile) {
     return (
       <motion.div className={`${mobweek ? 'w-full' : 'w-[14%]'}`}
-    onPointerDown = {(e) => e.stopPropagation()
-  }
-  onClick = { toggleDateSelection }
-    >
-    { cellContent }
+        onPointerDown={(e) => e.stopPropagation()
+        }
+        onClick={toggleDateSelection}
+      >
+        {cellContent}
       </motion.div >
 
     );
-}
+  }
 
-return cellContent;
+  return cellContent;
 }

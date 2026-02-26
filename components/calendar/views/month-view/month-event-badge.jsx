@@ -6,6 +6,7 @@ import { EventDetailsDialog } from "@calendar/components/calendar/dialogs/event-
 import { DraggableEvent } from "@calendar/components/calendar/dnd/draggable-event";
 import { formatTime } from "@calendar/components/calendar/helpers";
 import {EventBullet} from "@calendar/components/calendar/views/month-view/event-bullet";
+import { TAG_IDS } from "../../constants";
 
 const eventBadgeVariants = cva(
     "mx-1 flex size-auto h-6.5 select-none items-center justify-between gap-1.5 truncate whitespace-nowrap rounded-md border px-2 text-xs",
@@ -102,7 +103,7 @@ export function MonthEventBadge({
 										Day {eventCurrentDay} of {eventTotalDays} •{" "}
 									</span>
 								)}
-								{event.title}
+								{TAG_IDS.TODO_LIST ? (event.title || event.tags) : event.tags}
 							</p>
 						)}
 					</div>

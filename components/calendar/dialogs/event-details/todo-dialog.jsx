@@ -9,6 +9,7 @@ import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
 import { useDeleteEvent } from "../../hooks";
+import { getPriorityClass, getStatusBadgeClass } from "../../helpers";
 
 /* =====================================================
    PURE HELPERS
@@ -65,30 +66,6 @@ function getDueDateMeta(startDate) {
   };
 }
 
-function getPriorityClass(priority) {
-  switch (priority) {
-    case "High":
-      return "text-red-600";
-    case "Medium":
-      return "text-orange-500";
-    case "Low":
-      return "text-green-600";
-    default:
-      return "text-muted-foreground";
-  }
-}
-
-function getStatusBadgeClass(status) {
-  switch (status) {
-    case "Open":
-      return "bg-orange-400";
-    case "Closed":
-      return "bg-green-600";
-    default:
-      return "bg-gray-400";
-  }
-}
-
 /* =====================================================
    COMPONENT
 ===================================================== */
@@ -99,7 +76,7 @@ export function EventTodoDialog({
   setOpen,
 }) {
   const { removeEvent, employeeOptions } = useCalendar();
-
+  console.log("EVENTS",event)
   const employeeResolvers =
     useEmployeeResolvers(employeeOptions);
 

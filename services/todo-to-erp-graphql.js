@@ -27,6 +27,7 @@ export function mapFormToErpTodo(values, resolvers,options = {}) {
 
   const doc = {
     doctype: "ToDo",
+    custom_subject:values.title,
     description: values.description || values.title,
     status: values.status,
     priority: values.priority,
@@ -62,13 +63,15 @@ export function mapErpTodoToCalendar(todo) {
 
   // Normalize assignedTo
   const assignedTo =
-    todo?.custom_assigned_to?.length
-      ? todo.custom_assigned_to.map(emp => emp.employee)
-        : [];
+  todo?.custom_assigned_to?.length
+    ? todo.custom_assigned_to.map((emp) =>
+        emp.employee ?? emp.employee__name ?? null
+      ).filter(Boolean)
+    : [];
 
   return {
     erpName: todo.name,
-    title: `To Do List-${todo.name}`,
+    title: todo.custom_subject || todo.title,
     description: todo.description,
     startDate: start.toISOString(),
     endDate: end.toISOString(),
