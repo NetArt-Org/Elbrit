@@ -13,7 +13,7 @@ export function mapDoctorVisitToQuotation({
 
     quotation_to: "Lead",
     party_name: doctorId,
-
+    custom_doctorvisit:doctorId,
     transaction_date: formatDateForERP(values.startDate),
     valid_till: formatDateForERP(values.endDate),
     company_address:"Elbrit Lifesciences Private Limited-Billing-22",

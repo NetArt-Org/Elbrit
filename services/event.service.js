@@ -392,12 +392,12 @@ mutation DeleteEvent($doctype: String!, $name: String!) {
 }
 `;
 
-export async function deleteEventFromErp(erpName) {
+export async function deleteEventFromErp(erpName,docname) {
   if (!erpName) return true;
 
   try {
     const data = await graphqlRequest(DELETE_EVENT_MUTATION, {
-      doctype: "Event",
+      doctype: docname ?? "Event",
       name: erpName,
     });
 

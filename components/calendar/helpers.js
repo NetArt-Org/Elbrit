@@ -246,6 +246,49 @@ export function formatTime(date, use24HourFormat) {
 	if (!isValid(parsedDate)) return "";
 	return format(parsedDate, use24HourFormat ? "HH:mm" : "h:mm a");
 }
+// -----------------------------
+// GEO UTILS
+// -----------------------------
+const toRad = (value) => (value * Math.PI) / 180;
+
+export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in KM
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+export function parseLatLong(value) {
+  if (!value) return null;
+
+  try {
+    const parsed =
+      typeof value === "string" ? JSON.parse(value) : value;
+
+    if (!parsed || parsed.x == null || parsed.y == null) {
+      return null;
+    }
+
+    return {
+      lat: Number(parsed.x),
+      lng: Number(parsed.y),
+    };
+  } catch (err) {
+    console.error("Invalid lat long:", err);
+    return null;
+  }
+}
 export function getPriorityClass(priority) {
 	switch (priority) {
 	  case "High":

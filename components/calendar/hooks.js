@@ -88,12 +88,12 @@ export const useSubmissionRouter = ({
 export function useDeleteEvent({ removeEvent, onClose }) {
   const deleteLockRef = useRef(false);
 
-  const handleDelete = async (erpName) => {
+  const handleDelete = async (erpName,docname) => {
     if (deleteLockRef.current) return;
     deleteLockRef.current = true;
 
     try {
-      await deleteEventFromErp(erpName);
+      await deleteEventFromErp(erpName,docname);
       removeEvent(erpName);
       onClose?.();
       toast.success("Event deleted successfully.");

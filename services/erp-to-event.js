@@ -98,6 +98,7 @@ export function mapErpGraphqlEventToCalendar(node) {
     title: node.subject || "",
     description: node.description ?? "",
     allDay: Boolean(node.all_day),
+    forceVisit:Boolean(node.fsl_is_force_visit),
     startDate: startDate ? startDate.toISOString() : null,
     endDate: endDate ? endDate.toISOString() : null,
     attending,

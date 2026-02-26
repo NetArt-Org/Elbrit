@@ -149,7 +149,7 @@ export function EventLeaveDialog({
 
 						<Button
 							variant="destructive"
-							onClick={() => handleDelete(event.erpName)}
+							onClick={() => handleDelete(event.erpName,"Leave Application")}
 						>
 							Delete
 						</Button>

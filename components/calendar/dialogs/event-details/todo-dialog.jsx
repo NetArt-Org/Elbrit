@@ -262,7 +262,7 @@ export function EventTodoDialog({
           <Button
             variant="destructive"
             onClick={() =>
-              handleDelete(event.erpName)
+              handleDelete(event.erpName,"ToDo")
             }
           >
             Delete

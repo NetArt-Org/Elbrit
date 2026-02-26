@@ -32,6 +32,7 @@ import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisp
 import { useAuth } from "@calendar/components/auth/auth-context";
 import Tiptap from "@calendar/components/ui/TodoWysiwyg";
 import { mapDoctorVisitToQuotation } from "@calendar/services/quotation-to-erp";
+import { calculateDistanceKm, parseLatLong } from "../helpers";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
@@ -48,7 +49,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
 	const [itemOptions, setItemOptions] = useState([]);
 	const [isResolvingLocation, setIsResolvingLocation] = useState(false);
-
+	const [distanceKm, setDistanceKm] = useState(null);
 	const endDateTouchedRef = useRef(false); // existing
 
 	const form = useForm({
@@ -86,7 +87,50 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		return true;
 	};
 	const currentLocation = form.watch("kly_lat_long");
-
+	useEffect(() => {
+		if (!isEditing) return;
+		if (!event?.participants?.length) return;
+		if (!currentLocation) {
+		  setDistanceKm(null);
+		  return;
+		}
+	  
+		// Doctor (Lead)
+		const doctor = event.participants.find(
+		  (p) => p.type === "Lead"
+		);
+	  
+		if (!doctor?.kly_lat_long) {
+		  setDistanceKm(null);
+		  return;
+		}
+	  
+		const doctorLoc = parseLatLong(doctor.kly_lat_long);
+		const visitLoc = parseLatLong(currentLocation);
+	  
+		if (!doctorLoc || !visitLoc) {
+		  setDistanceKm(null);
+		  return;
+		}
+	  
+		const dist = calculateDistanceKm(
+		  doctorLoc.lat,
+		  doctorLoc.lng,
+		  visitLoc.lat,
+		  visitLoc.lng
+		);
+	  
+		setDistanceKm(dist);
+	  
+		// 🔥 FORCE VISIT if within 50 meters
+		const isWithinRange = dist < 0.05;
+	  
+		form.setValue("forceVisit", isWithinRange, {
+		  shouldDirty: true,
+		  shouldValidate: true,
+		});
+	  
+	  }, [currentLocation, event, isEditing]);
 	const shouldShowRequestLocation =
 		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
 		!currentLocation &&
@@ -739,7 +783,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 		const calendarTodo = mapErpTodoToCalendar({
 			...todoDoc,
-			  name: savedTodo.name,
+			name: savedTodo.name,
 		});
 
 		upsertCalendarEvent(calendarTodo);
@@ -1183,7 +1227,23 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								</p>
 							</div>
 						)}
+						{isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
+							<div className="mt-2 space-y-1">
+								<p className="text-sm font-medium">Distance</p>
 
+								<p className="text-sm text-muted-foreground">
+									{distanceKm !== null
+										? distanceKm.toFixed(3) + " km"
+										: "Capture location to calculate distance"}
+								</p>
+
+								{distanceKm !== null && distanceKm < 0.05 && (
+									<p className="text-sm text-green-600 font-medium">
+										Within 50 meters — Force Visit Enabled
+									</p>
+								)}
+							</div>
+						)}
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (

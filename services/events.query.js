@@ -16,6 +16,7 @@ query EventsByRange(
         all_day
         event_category
         attending
+        fsl_is_force_visit
         reference_doctype {
           name
         }
