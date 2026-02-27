@@ -10,6 +10,7 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
 import { useDeleteEvent } from "../../hooks";
 import { getPriorityClass, getStatusBadgeClass } from "../../helpers";
+import TiptapViewer from "@calendar/components/ui/TiptapViewer";
 
 /* =====================================================
    PURE HELPERS
@@ -227,12 +228,9 @@ export function EventTodoDialog({
             </p>
 
             {event.description ? (
-              <div
-                className="border rounded-md p-3 text-sm"
-                dangerouslySetInnerHTML={{
-                  __html: event.description,
-                }}
-              />
+             <div className="border rounded-md p-3 text-sm">
+             <TiptapViewer content={event.description} />
+           </div>
             ) : (
               <div className="border rounded-md p-3 text-sm text-muted-foreground">
                 No description

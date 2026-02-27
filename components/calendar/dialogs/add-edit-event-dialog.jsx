@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addMinutes, differenceInCalendarDays, set } from "date-fns";
+import { addMinutes, differenceInCalendarDays, startOfDay, endOfDay } from "date-fns";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -38,7 +38,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { erpUrl, authToken } = useAuth();
 	const { addEvent, updateEvent, employeeOptions,
-		doctorOptions,
+		doctorOptions, events,
 		hqTerritoryOptions,
 		setEmployeeOptions,
 		setDoctorOptions,
@@ -91,46 +91,46 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		if (!isEditing) return;
 		if (!event?.participants?.length) return;
 		if (!currentLocation) {
-		  setDistanceKm(null);
-		  return;
+			setDistanceKm(null);
+			return;
 		}
-	  
+
 		// Doctor (Lead)
 		const doctor = event.participants.find(
-		  (p) => p.type === "Lead"
+			(p) => p.type === "Lead"
 		);
-	  
+
 		if (!doctor?.kly_lat_long) {
-		  setDistanceKm(null);
-		  return;
+			setDistanceKm(null);
+			return;
 		}
-	  
+
 		const doctorLoc = parseLatLong(doctor.kly_lat_long);
 		const visitLoc = parseLatLong(currentLocation);
-	  
+
 		if (!doctorLoc || !visitLoc) {
-		  setDistanceKm(null);
-		  return;
+			setDistanceKm(null);
+			return;
 		}
-	  
+
 		const dist = calculateDistanceKm(
-		  doctorLoc.lat,
-		  doctorLoc.lng,
-		  visitLoc.lat,
-		  visitLoc.lng
+			doctorLoc.lat,
+			doctorLoc.lng,
+			visitLoc.lat,
+			visitLoc.lng
 		);
-	  
+
 		setDistanceKm(dist);
-	  
+
 		// 🔥 FORCE VISIT if within 50 meters
 		const isWithinRange = dist < 0.05;
-	  
+
 		form.setValue("forceVisit", isWithinRange, {
-		  shouldDirty: true,
-		  shouldValidate: true,
+			shouldDirty: true,
+			shouldValidate: true,
 		});
-	  
-	  }, [currentLocation, event, isEditing]);
+
+	}, [currentLocation, event, isEditing]);
 	const shouldShowRequestLocation =
 		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
 		!currentLocation &&
@@ -626,7 +626,54 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 		event?.allocated_to,
 		employeeOptions,
 	]);
+	const hasValidHqTourPlan = useMemo(() => {
+		if (!startDate || !events?.length) return false;
 
+		const selected = startOfDay(new Date(startDate));
+
+		return events.some((ev) => {
+			if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
+
+			const isUserParticipant =
+				ev.participants?.some(
+					(p) => p.id === LOGGED_IN_USER.id
+				);
+
+			if (!isUserParticipant) return false;
+
+			const planStart = startOfDay(new Date(ev.startDate));
+			const planEnd = endOfDay(new Date(ev.endDate));
+
+			return selected >= planStart && selected <= planEnd;
+		});
+	}, [events, startDate]);
+	console.log("EVENTS HQ Tour Plan", events, hasValidHqTourPlan)
+	const validHqIntervals = useMemo(() => {
+		if (!events?.length) return [];
+
+		return events
+			.filter((ev) => {
+				if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
+
+				return ev.participants?.some(
+					(p) => p.id === LOGGED_IN_USER.id
+				);
+			})
+			.map((ev) => ({
+				start: startOfDay(new Date(ev.startDate)),
+				end: endOfDay(new Date(ev.endDate)),
+			}));
+	}, [events]);
+	const isDateWithinHqRange = useMemo(() => {
+		if (!startDate) return false;
+
+		const selected = startOfDay(new Date(startDate));
+
+		return validHqIntervals.some(
+			({ start, end }) =>
+				selected >= start && selected <= end
+		);
+	}, [startDate, validHqIntervals]);
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
 			event?.reference_docname || null;
@@ -850,7 +897,12 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 								name="tags"
 								render={({ field }) => (
 									<div className="flex flex-wrap gap-2">
-										{TAGS.map((tag) => (
+										{TAGS.filter((tag) => {
+											if (tag.id === TAG_IDS.DOCTOR_VISIT_PLAN) {
+												return hasValidHqTourPlan;
+											}
+											return true;
+										}).map((tag) => (
 											<button
 												key={tag.id}
 												type="button"
@@ -1002,8 +1054,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 											control={form.control}
 											form={form}
 											name="startDate"
-											label={getFieldLabel("startDate", "Start Date")}
-											hideTime={tagConfig.dateOnly}
+											label="Date"
+											hideTime
+											minDate={
+												validHqIntervals.length
+													? validHqIntervals[0].start
+													: undefined
+											}
+											maxDate={
+												validHqIntervals.length
+													? validHqIntervals[0].end
+													: undefined
+											}
 										/>
 									)}
 
