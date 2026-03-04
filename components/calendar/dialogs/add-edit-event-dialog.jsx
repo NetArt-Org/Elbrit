@@ -33,20 +33,23 @@ import { useAuth } from "@calendar/components/auth/auth-context";
 import Tiptap from "@calendar/components/ui/TodoWysiwyg";
 import { mapDoctorVisitToQuotation } from "@calendar/services/quotation-to-erp";
 import { calculateDistanceKm, parseLatLong } from "../helpers";
+import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
+import { DoctorNotesSection } from "../doctor/DoctorNotesSection";
 
-export function AddEditEventDialog({ children, event, defaultTag, forceValues }) {
+export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { erpUrl, authToken } = useAuth();
 	const { addEvent, updateEvent, employeeOptions,
 		doctorOptions, events,
 		hqTerritoryOptions,
 		setEmployeeOptions,
-		setDoctorOptions,
+		setDoctorOptions, customerOptions, selectedDate,
 		setHqTerritoryOptions, } = useCalendar();
 	const isEditing = !!event;
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
 	const employeeResolvers = useEmployeeResolvers(employeeOptions);
+	const doctorResolvers = useDoctorResolvers(doctorOptions);
 	const [itemOptions, setItemOptions] = useState([]);
 	const [isResolvingLocation, setIsResolvingLocation] = useState(false);
 	const [distanceKm, setDistanceKm] = useState(null);
@@ -191,6 +194,23 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 		return differenceInCalendarDays(endDate, startDate) + 1;
 	}, [selectedTag, startDate, endDate, leavePeriod]);
+	const doctorDetails = useMemo(() => {
+		const doctorRef = event?.participants?.find(
+			(p) => p.type === "Lead"
+		);
+
+		const doctorId = doctorRef?.id;
+		if (!doctorId) return null;
+
+		return {
+			doctorId,
+			doctorNotes:
+				doctorResolvers.getDoctorFieldById(
+					doctorId,
+					"notes"
+				) ?? [],
+		};
+	}, [event?.participants, doctorResolvers]);
 	useEffect(() => {
 		if (!startDate || !endDate) return;
 
@@ -428,19 +448,25 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 
 	useEffect(() => {
 		if (!isOpen || isEditing) return;
-
+	
 		const now = new Date();
+	
+		const baseDate =
+			initialStartDate ??
+			selectedDate ??
+			now;
+	
 		const currentValues = form.getValues();
-
+	
 		form.reset({
-			...currentValues,               // ✅ keeps title
-			startDate: now,
+			...currentValues,
+			startDate: baseDate,
 			endDate: tagConfig.dateOnly
-				? now
-				: addMinutes(now, 60),
+				? baseDate
+				: addMinutes(baseDate, 60),
 			tags: selectedTag,
 		});
-	}, [isOpen, selectedTag, isEditing]);
+	}, [isOpen, selectedTag, isEditing, initialStartDate, selectedDate]);
 
 
 	/* --------------------------------------------------
@@ -647,7 +673,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 			return selected >= planStart && selected <= planEnd;
 		});
 	}, [events, startDate]);
-	console.log("EVENTS HQ Tour Plan", events, hasValidHqTourPlan)
 	const validHqIntervals = useMemo(() => {
 		if (!events?.length) return [];
 
@@ -664,16 +689,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 				end: endOfDay(new Date(ev.endDate)),
 			}));
 	}, [events]);
-	const isDateWithinHqRange = useMemo(() => {
-		if (!startDate) return false;
+	useEffect(() => {
+		const customer = form.watch("customer");
 
-		const selected = startOfDay(new Date(startDate));
-
-		return validHqIntervals.some(
-			({ start, end }) =>
-				selected >= start && selected <= end
-		);
-	}, [startDate, validHqIntervals]);
+		if (!customer) {
+			form.setValue("pob_given", undefined, { shouldDirty: true });
+			form.setValue("fsl_doctor_item", [], { shouldDirty: true });
+		}
+	}, [form.watch("customer")]);
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
 			event?.reference_docname || null;
@@ -1299,16 +1322,36 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 										: "Capture location to calculate distance"}
 								</p>
 
-								{distanceKm !== null && distanceKm < 0.05 && (
+								{distanceKm !== null && distanceKm < 0.5 && (
 									<p className="text-sm text-green-600 font-medium">
-										Within 50 meters — Force Visit Enabled
+										Within 500 meters — Force Visit Enabled
 									</p>
 								)}
 							</div>
 						)}
-						{/* ================= POB QUESTION ================= */}
+						{/* ================= CUSTOMER ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
+								<FormField
+									control={form.control}
+									name="customer"
+									render={({ field }) => (
+										<RHFFieldWrapper label="Customer">
+											<RHFComboboxField
+												{...field}
+												options={customerOptions}
+												multiple={false}
+												placeholder="Select Customer"
+												searchPlaceholder="Search customer"
+											/>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
+						{/* ================= POB QUESTION ================= */}
+						{isEditing &&
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+							form.watch("customer") && (
 								<FormField
 									control={form.control}
 									name="pob_given"
@@ -1343,6 +1386,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 						{/* ================= POB ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+							form.watch("customer") &&
 							pobGiven === "Yes" && (
 								<div className="space-y-4">
 									<h4 className="font-medium">POB Details</h4>
@@ -1422,7 +1466,16 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues })
 									</Button>
 								</div>
 							)}
-
+						{/* ================= Notes ================= */}
+						{isEditing &&
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+							doctorDetails?.doctorId && (
+								<DoctorNotesSection
+									doctorId={doctorDetails.doctorId}
+									notes={doctorDetails.doctorNotes}
+									setDoctorOptions={setDoctorOptions}
+								/>
+							)}
 						{/* ================= DESCRIPTION ================= */}
 						{!tagConfig.hide?.includes("description") && (
 							<FormField

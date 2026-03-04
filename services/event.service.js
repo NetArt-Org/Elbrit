@@ -1,6 +1,6 @@
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { serializeEventDoc } from "./event-to-erp";
-import { EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, QUOTATIONS_BY_NAMES_QUERY, TODO_LIST_QUERY } from "@calendar/services/events.query";
+import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, QUOTATIONS_BY_NAMES_QUERY, TODO_LIST_QUERY } from "@calendar/services/events.query";
 import { mapErpGraphqlEventToCalendar } from "@calendar/services/erp-to-event";
 import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
@@ -264,6 +264,16 @@ export async function fetchAllLeaveApplications() {
       .filter(Boolean);
   });
 }
+export async function fetchAllCustomers() {
+  return getCached("CUSTOMERS", async () => {
+    const data = await graphqlRequest(CUSTOMER_QUERY, {
+      first: 500,
+    });
+
+    return data.Customers.edges
+      .map(edge => edge.node.name)  // return only the name of the customer to the UI to show in the calendar as a customer name to select from the calendar
+  });
+}
 export async function fetchAllTodoList() {
    return getCached("TODO_LIST", async () => {
        const data = await graphqlRequest(TODO_LIST_QUERY, {
@@ -376,7 +386,6 @@ export async function fetchEventsByRange(startDate, endDate, view) {
   // --------------------------------------------
   const leaves = await fetchAllLeaveApplications();
   const todolist = await fetchAllTodoList();
-
   const merged = [...events, ...leaves, ...todolist];
 
   setCachedEvents(cacheKey, merged);

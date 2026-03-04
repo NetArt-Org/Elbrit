@@ -181,7 +181,17 @@ query Quotations(
   }
 }
 `;
-
+export const CUSTOMER_QUERY = `
+query Customers($first: Int) {
+  Customers(first: $first) {
+    edges {
+      node {
+       name
+      }
+    }
+  }
+}
+`
 export const LEAVE_QUERY = `
 query LeaveApplications($first: Int) {
   LeaveApplications(first: $first) {

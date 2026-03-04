@@ -258,7 +258,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
                                   )}
                                 </div>
                               ) : (
-                                <p className="font-medium text-sm">{event.tags}
+                                <p className="font-medium text-sm">{event.title}
                                 </p>
                               )}
                               {/* <p className="font-medium text-sm">

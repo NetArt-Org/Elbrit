@@ -27,6 +27,7 @@ import {
 import { Avatar, AvatarFallback } from "@calendar/components/ui/avatar";
 import { TAG_IDS } from "../../constants";
 import { ICON_MAP } from "../../mobile/MobileAddEventBar";
+import { navigateDate } from "@calendar/components/calendar/helpers";
 const PULL_THRESHOLD = 70;
 
 export const AgendaEventsMobile = () => {
@@ -36,14 +37,16 @@ export const AgendaEventsMobile = () => {
     badgeVariant,
     agendaModeGroupBy,
     setMobileLayer,
-    setView, selectedDate
+    setView, selectedDate,setSelectedDate
   } = useCalendar();
 
   const scrollRef = useRef(null);
   const startY = useRef(0);
   const pulling = useRef(false);
   const [isAtTop, setIsAtTop] = useState(true);
-
+  const SWIPE_THRESHOLD = 70;
+  const startX = useRef(0);
+const swiping = useRef(false);
   /* ===============================
      SCROLL TRACKING
   =============================== */
@@ -56,28 +59,52 @@ export const AgendaEventsMobile = () => {
      TOUCH CAPTURE (CRITICAL)
   =============================== */
   const onTouchStartCapture = (e) => {
-    if (!isAtTop) return;
     startY.current = e.touches[0].clientY;
+    startX.current = e.touches[0].clientX;
     pulling.current = false;
+    swiping.current = false;
   };
 
   const onTouchMoveCapture = (e) => {
-    if (!isAtTop) return;
     const deltaY = e.touches[0].clientY - startY.current;
-    if (deltaY > 10) pulling.current = true;
+    const deltaX = e.touches[0].clientX - startX.current;
+  
+    // vertical pull → switch to week
+    if (isAtTop && deltaY > 10) {
+      pulling.current = true;
+    }
+  
+    // horizontal swipe
+    if (Math.abs(deltaX) > 10) {
+      swiping.current = true;
+    }
   };
-
   const onTouchEndCapture = (e) => {
-    if (!isAtTop || !pulling.current) return;
-
     const deltaY =
       e.changedTouches[0].clientY - startY.current;
-
-    if (deltaY < PULL_THRESHOLD) return;
-
-    // ✅ SWITCH TO WEEK
-    setMobileLayer("week");
-    setView("week");
+  
+    const deltaX =
+      e.changedTouches[0].clientX - startX.current;
+  
+    /* ===============================
+       Vertical pull → week view
+    =============================== */
+    if (isAtTop && pulling.current && deltaY > PULL_THRESHOLD) {
+      setMobileLayer("week");
+      setView("week");
+      return;
+    }
+  
+    /* ===============================
+       Horizontal swipe → month change
+    =============================== */
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+      const direction = deltaX < 0 ? "next" : "previous";
+  
+      setSelectedDate((prev) =>
+        navigateDate(prev, "month", direction)
+      );
+    }
   };
 
   /* ===============================
@@ -171,7 +198,7 @@ export const AgendaEventsMobile = () => {
                                   )}
                                 </div>
                               ) : (
-                                <p className="font-medium text-sm">{event.tags}
+                                <p className="font-medium text-sm">{event.title}
                                 </p>
                               )}
                               {/* <p className="font-medium text-sm">

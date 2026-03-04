@@ -52,7 +52,7 @@ export const eventSchema = z
     doctor: z.any().optional(),
     allocated_to:z.any().optional(),
     hqTerritory: z.string().optional(),
-
+    customer: z.string().optional(),
     allDay: z.boolean().optional(),
 
     /* ---------- Leave ---------- */
