@@ -11,6 +11,7 @@ import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-ed
 import { useDeleteEvent } from "../../hooks";
 import { getPriorityClass, getStatusBadgeClass } from "../../helpers";
 import TiptapViewer from "@calendar/components/ui/TiptapViewer";
+import TodoComments from "@calendar/components/ui/TodoCommentsSection";
 
 /* =====================================================
    PURE HELPERS
@@ -77,7 +78,7 @@ export function EventTodoDialog({
   setOpen,
 }) {
   const { removeEvent, employeeOptions } = useCalendar();
-  console.log("EVENTS",event)
+  console.log("EVENTS", event)
   const employeeResolvers =
     useEmployeeResolvers(employeeOptions);
 
@@ -125,7 +126,7 @@ export function EventTodoDialog({
     removeEvent,
     onClose: () => setOpen(false),
   });
-  console.log("EVENT",event)
+  console.log("EVENT", event)
 
   /* =====================================================
      RENDER
@@ -228,9 +229,9 @@ export function EventTodoDialog({
             </p>
 
             {event.description ? (
-             <div className="border rounded-md p-3 text-sm">
-             <TiptapViewer content={event.description} />
-           </div>
+              <div className="border rounded-md p-3 text-sm">
+                <TiptapViewer content={event.description} />
+              </div>
             ) : (
               <div className="border rounded-md p-3 text-sm text-muted-foreground">
                 No description
@@ -238,6 +239,9 @@ export function EventTodoDialog({
             )}
           </div>
         </div>
+        {event?.erpName && (
+          <TodoComments todoName={event.erpName} />
+        )}
       </ScrollArea>
 
       {/* ================= FOOTER ================= */}
@@ -261,7 +265,7 @@ export function EventTodoDialog({
           <Button
             variant="destructive"
             onClick={() =>
-              handleDelete(event.erpName,"ToDo")
+              handleDelete(event.erpName, "ToDo")
             }
           >
             Delete

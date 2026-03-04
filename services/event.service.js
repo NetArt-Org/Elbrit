@@ -1,6 +1,6 @@
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { serializeEventDoc } from "./event-to-erp";
-import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, QUOTATIONS_BY_NAMES_QUERY, TODO_LIST_QUERY } from "@calendar/services/events.query";
+import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, GET_TODO_COMMENTS, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, QUOTATIONS_BY_NAMES_QUERY, TODO_LIST_QUERY } from "@calendar/services/events.query";
 import { mapErpGraphqlEventToCalendar } from "@calendar/services/erp-to-event";
 import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
@@ -15,6 +15,7 @@ import {
 } from "@calendar/lib/calendar/leave-cache";
 import { mapErpLeaveToCalendar } from "./leave-to-erp";
 import { mapErpTodoToCalendar } from "./todo-to-erp-graphql";
+import { normalizeChecklistFromERP } from "@calendar/components/calendar/helpers";
 const PAGE_SIZE = 50;
 
 const SAVE_EVENT_MUTATION = `
@@ -85,6 +86,41 @@ mutation UpdateLeaveAttachment(
   }
 }
 `;
+
+export const SAVE_COMMENT = `
+mutation SaveComment($doc: String!) {
+  saveDoc(doctype: "Comment", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+export async function fetchTodoComments(referenceName) {
+  const res = await graphqlRequest(GET_TODO_COMMENTS, {
+    referenceName,
+  });
+
+  const nodes = res?.Comments?.edges?.map(e => e.node) ?? [];
+
+  // convert ERP → Tiptap
+  return nodes.map((c) => ({
+    ...c,
+    content: normalizeChecklistFromERP(c.content),
+  }));
+}
+
+export async function saveTodoComment(doc) {
+  const data = await graphqlRequest(SAVE_COMMENT, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return Comment name");
+  }
+
+  return data.saveDoc.doc;
+}
 export async function fetchQuotationsByNames(names) {
   if (!names?.length) return {};
 
@@ -274,6 +310,7 @@ export async function fetchAllCustomers() {
       .map(edge => edge.node.name)  // return only the name of the customer to the UI to show in the calendar as a customer name to select from the calendar
   });
 }
+
 export async function fetchAllTodoList() {
    return getCached("TODO_LIST", async () => {
        const data = await graphqlRequest(TODO_LIST_QUERY, {

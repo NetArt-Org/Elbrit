@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Tiptap from "@calendar/components/ui/TodoWysiwyg";
 import { toast } from "sonner";
 import { Button } from "@calendar/components/ui/button";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";

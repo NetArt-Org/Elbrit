@@ -192,6 +192,29 @@ query Customers($first: Int) {
   }
 }
 `
+export const GET_TODO_COMMENTS = `
+query GetTodoComments($referenceName: String!) {
+  Comments(
+    first: 100
+    filter: [
+      { fieldname: "reference_doctype", operator: EQ, value: "ToDo" }
+      { fieldname: "reference_name", operator: EQ, value: $referenceName }
+      { fieldname: "comment_type", operator: EQ, value: "Comment" }
+    ]
+  ) {
+    edges {
+      node {
+        name
+        content
+        comment_by
+        comment_email
+        creation
+      }
+    }
+  }
+}
+`;
+
 export const LEAVE_QUERY = `
 query LeaveApplications($first: Int) {
   LeaveApplications(first: $first) {

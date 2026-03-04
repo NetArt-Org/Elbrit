@@ -35,6 +35,7 @@ import { mapDoctorVisitToQuotation } from "@calendar/services/quotation-to-erp";
 import { calculateDistanceKm, parseLatLong } from "../helpers";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { DoctorNotesSection } from "../doctor/DoctorNotesSection";
+import TodoComments from "@calendar/components/ui/TodoCommentsSection";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
@@ -448,16 +449,16 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 	useEffect(() => {
 		if (!isOpen || isEditing) return;
-	
+
 		const now = new Date();
-	
+
 		const baseDate =
 			initialStartDate ??
 			selectedDate ??
 			now;
-	
+
 		const currentValues = form.getValues();
-	
+
 		form.reset({
 			...currentValues,
 			startDate: baseDate,
@@ -1490,6 +1491,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									</RHFFieldWrapper>
 								)}
 							/>
+						)}
+						{selectedTag === TAG_IDS.TODO_LIST && event?.erpName && (
+							<TodoComments todoName={event.erpName} />
 						)}
 					</form>
 				</Form>
