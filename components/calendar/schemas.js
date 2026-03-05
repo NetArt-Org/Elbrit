@@ -44,7 +44,7 @@ export const eventSchema = z
 
     startDate: z.date(),
     endDate: z.date().optional(),
-
+    custom_force_visit_reason :z.string().optional(),
     description: z.string().optional(),
     color: z.string().optional(),
     forceVisit: z.boolean().optional(),

@@ -403,6 +403,17 @@ export function EventDoctorVisitDialog({
             notes={doctorDetails.doctorNotes}
             setDoctorOptions={setDoctorOptions}
           />
+          {/* ================= Force Visit Reason ================= */}
+          {event.forceVisit && (
+            <div>
+              <p className="text-sm font-medium mb-[4px]">
+                Force Visit Reason
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {event.custom_force_visit_reason}
+              </p>
+            </div>
+          )}
           {/* ================= POB ================= */}
           {shouldShowPob && (
             <div className="space-y-3">

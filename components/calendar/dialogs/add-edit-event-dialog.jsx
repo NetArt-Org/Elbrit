@@ -36,6 +36,7 @@ import { calculateDistanceKm, parseLatLong } from "../helpers";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { DoctorNotesSection } from "../doctor/DoctorNotesSection";
 import TodoComments from "@calendar/components/ui/TodoCommentsSection";
+import { Textarea } from "@calendar/components/ui/textarea";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
@@ -55,7 +56,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const [isResolvingLocation, setIsResolvingLocation] = useState(false);
 	const [distanceKm, setDistanceKm] = useState(null);
 	const endDateTouchedRef = useRef(false); // existing
-
+	const [showReason, setShowReason] = useState(false);
 	const form = useForm({
 		resolver: zodResolver(eventSchema),
 		mode: "onChange",
@@ -96,16 +97,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		if (!event?.participants?.length) return;
 		if (!currentLocation) {
 			setDistanceKm(null);
+			setShowReason(false);
 			return;
 		}
 
-		// Doctor (Lead)
-		const doctor = event.participants.find(
-			(p) => p.type === "Lead"
-		);
+		const doctor = event.participants.find((p) => p.type === "Lead");
 
 		if (!doctor?.kly_lat_long) {
 			setDistanceKm(null);
+			setShowReason(false);
 			return;
 		}
 
@@ -114,6 +114,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		if (!doctorLoc || !visitLoc) {
 			setDistanceKm(null);
+			setShowReason(false);
 			return;
 		}
 
@@ -126,13 +127,21 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		setDistanceKm(dist);
 
-		// 🔥 FORCE VISIT if within 50 meters
-		const isWithinRange = dist < 0.05;
+		// 🔴 FORCE VISIT when outside 500m
+		const isForceVisit = dist > 0.5;
 
-		form.setValue("forceVisit", isWithinRange, {
+		form.setValue("forceVisit", isForceVisit, {
 			shouldDirty: true,
 			shouldValidate: true,
 		});
+
+		setShowReason(isForceVisit);
+
+		if (isForceVisit) {
+			toast.warning(
+				"Employee location is outside 500 meters from doctor. Force Visit reason required."
+			);
+		}
 
 	}, [currentLocation, event, isEditing]);
 	const shouldShowRequestLocation =
@@ -468,7 +477,46 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			tags: selectedTag,
 		});
 	}, [isOpen, selectedTag, isEditing, initialStartDate, selectedDate]);
+	const hasDuplicateHqForDay = useMemo(() => {
+		if (selectedTag !== TAG_IDS.HQ_TOUR_PLAN) return false;
+		if (!startDate) return false;
+	
+		const selectedDay = startOfDay(new Date(startDate));
+	
+		const selectedEmployeeIds = (Array.isArray(employees)
+			? employees
+			: [employees]
+		)
+			.filter(Boolean)
+			.map((e) => (typeof e === "object" ? e.value : e));
+	
+		return events.some((ev) => {
+			if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
+	
+			// Ignore self when editing
+			if (isEditing && ev.erpName === event?.erpName) return false;
+	
+			const evDay = startOfDay(new Date(ev.startDate));
+	
+			if (evDay.getTime() !== selectedDay.getTime()) return false;
+	
+			const evParticipants =
+				ev.participants?.map((p) => p.id) ?? [];
+	
+			// Check if ANY participant overlaps
+			return selectedEmployeeIds.some((id) =>
+				evParticipants.includes(id)
+			);
+		});
+	}, [events, startDate, employees, selectedTag, isEditing, event]);
 
+	useEffect(() => {
+		if (hasDuplicateHqForDay) {
+			toast.warning(
+				"HQ Tour Plan already exists for the selected date."
+			);
+		}
+	}, [hasDuplicateHqForDay]);
 
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
@@ -873,6 +921,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	});
 
 	const onSubmit = async (values) => {
+		if (
+			values.tags === TAG_IDS.HQ_TOUR_PLAN &&
+			hasDuplicateHqForDay
+		) {
+			toast.error(
+				"HQ Tour Plan already exists for this date."
+			);
+			return;
+		}
 		const handler =
 			submitHandlers[values.tags] || submitHandlers.default;
 		await handler(values);
@@ -1323,11 +1380,34 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 										: "Capture location to calculate distance"}
 								</p>
 
-								{distanceKm !== null && distanceKm < 0.5 && (
+								{distanceKm !== null && distanceKm <= 0.5 && (
 									<p className="text-sm text-green-600 font-medium">
-										Within 500 meters — Force Visit Enabled
+										Within 500 meters — Normal Visit
 									</p>
 								)}
+
+								{distanceKm !== null && distanceKm > 0.5 && (
+									<p className="text-sm text-red-600 font-medium">
+										Outside 500 meters — Force Visit Required
+									</p>
+								)}
+							</div>
+						)}
+						{isEditing && selectedTag == TAG_IDS.DOCTOR_VISIT_PLAN && showReason && (
+							<div className="mt-2 space-y-1">
+								<FormField
+									control={form.control}
+									name="custom_force_visit_reason"
+									render={({ field }) => (
+										<RHFFieldWrapper label={"Force Visit Reason"}>
+											<Textarea content={field.value} onChange={field.onChange} />
+											{/* <Tiptap
+											content={field.value}
+											onChange={field.onChange}
+										/> */}
+										</RHFFieldWrapper>
+									)}
+								/>
 							</div>
 						)}
 						{/* ================= CUSTOMER ================= */}
@@ -1501,7 +1581,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				<div className="pt-4 flex mt-auto justify-end">
 					<FormFooter
 						isEditing={isEditing}
-						disabled={form.formState.isSubmitting}
+						disabled={
+							form.formState.isSubmitting ||
+							hasDuplicateHqForDay
+						}
 						showCaptureLocation={shouldShowRequestLocation}
 						onCaptureLocation={handleRequestLocation}
 						isResolvingLocation={isResolvingLocation}

@@ -15,8 +15,8 @@ query EventsByRange(
         color
         all_day
         event_category
-        attending
         fsl_is_force_visit
+        custom_force_visit_reason
         reference_doctype {
           name
         }
