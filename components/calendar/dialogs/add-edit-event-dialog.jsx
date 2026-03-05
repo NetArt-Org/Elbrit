@@ -477,47 +477,54 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			tags: selectedTag,
 		});
 	}, [isOpen, selectedTag, isEditing, initialStartDate, selectedDate]);
+	// ----------------------------------------------------
+	// RULE A: Only one HQ Tour Plan per day per participant
+	// Prevents duplicate HQ booking for same day
+	// ----------------------------------------------------
 	const hasDuplicateHqForDay = useMemo(() => {
 		if (selectedTag !== TAG_IDS.HQ_TOUR_PLAN) return false;
-		if (!startDate) return false;
-	
+		if (!startDate || !events?.length) return false;
+
 		const selectedDay = startOfDay(new Date(startDate));
-	
-		const selectedEmployeeIds = (Array.isArray(employees)
-			? employees
-			: [employees]
-		)
+
+		// normalize selected employees
+		const selectedEmployeeIds = (Array.isArray(employees) ? employees : [employees])
 			.filter(Boolean)
 			.map((e) => (typeof e === "object" ? e.value : e));
-	
+
 		return events.some((ev) => {
+			// only HQ events
 			if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
-	
-			// Ignore self when editing
+
+			// ignore same event while editing
 			if (isEditing && ev.erpName === event?.erpName) return false;
-	
+
 			const evDay = startOfDay(new Date(ev.startDate));
-	
+
+			// different date
 			if (evDay.getTime() !== selectedDay.getTime()) return false;
-	
-			const evParticipants =
-				ev.participants?.map((p) => p.id) ?? [];
-	
-			// Check if ANY participant overlaps
+
+			// participant ids
+			const evParticipants = ev.participants?.map((p) => p.id) ?? [];
+
+			// if any participant overlaps -> duplicate
 			return selectedEmployeeIds.some((id) =>
 				evParticipants.includes(id)
 			);
 		});
 	}, [events, startDate, employees, selectedTag, isEditing, event]);
+	const duplicateToastShown = useRef(false);
 
 	useEffect(() => {
-		if (hasDuplicateHqForDay) {
-			toast.warning(
-				"HQ Tour Plan already exists for the selected date."
-			);
+		if (hasDuplicateHqForDay && !duplicateToastShown.current) {
+			toast.warning("HQ Tour Plan already exists for selected date.");
+			duplicateToastShown.current = true;
+		}
+
+		if (!hasDuplicateHqForDay) {
+			duplicateToastShown.current = false;
 		}
 	}, [hasDuplicateHqForDay]);
-
 	/* --------------------------------------------------
 	   AUTO TITLE (SAFE)
 	-------------------------------------------------- */
@@ -701,25 +708,29 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		event?.allocated_to,
 		employeeOptions,
 	]);
+	// ----------------------------------------------------
+	// RULE B: Doctor Visit Plan tab only visible
+	// if user has HQ Tour Plan for selected date
+	// ----------------------------------------------------
 	const hasValidHqTourPlan = useMemo(() => {
 		if (!startDate || !events?.length) return false;
 
-		const selected = startOfDay(new Date(startDate));
+		const selectedDay = startOfDay(new Date(startDate));
 
 		return events.some((ev) => {
 			if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
 
-			const isUserParticipant =
-				ev.participants?.some(
-					(p) => p.id === LOGGED_IN_USER.id
-				);
+			// logged in user must be participant
+			const isParticipant = ev.participants?.some(
+				(p) => p.id === LOGGED_IN_USER.id
+			);
 
-			if (!isUserParticipant) return false;
+			if (!isParticipant) return false;
 
 			const planStart = startOfDay(new Date(ev.startDate));
 			const planEnd = endOfDay(new Date(ev.endDate));
 
-			return selected >= planStart && selected <= planEnd;
+			return selectedDay >= planStart && selectedDay <= planEnd;
 		});
 	}, [events, startDate]);
 	const validHqIntervals = useMemo(() => {
@@ -738,6 +749,35 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				end: endOfDay(new Date(ev.endDate)),
 			}));
 	}, [events]);
+	// ----------------------------------------------------
+	// Disabled dates for HQ Tour Plan (logged-in user only)
+	// Prevent selecting dates where HQ already exists
+	// ----------------------------------------------------
+	const disabledHqDates = useMemo(() => {
+		if (!events?.length) return [];
+
+		const disabled = [];
+
+		events.forEach((ev) => {
+			if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return;
+
+			const isParticipant = ev.participants?.some(
+				(p) => p.id === LOGGED_IN_USER.id
+			);
+
+			if (!isParticipant) return;
+
+			let current = startOfDay(new Date(ev.startDate));
+			const end = endOfDay(new Date(ev.endDate));
+
+			while (current <= end) {
+				disabled.push(new Date(current));
+				current.setDate(current.getDate() + 1);
+			}
+		});
+		return disabled;
+	}, [events]);
+
 	useEffect(() => {
 		const customer = form.watch("customer");
 
@@ -920,18 +960,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		handleDefaultEvent,
 	});
 
+	// ----------------------------------------------------
+	// FINAL SUBMIT HANDLER (HQ validation guard)
+	// ----------------------------------------------------
 	const onSubmit = async (values) => {
-		if (
-			values.tags === TAG_IDS.HQ_TOUR_PLAN &&
-			hasDuplicateHqForDay
-		) {
-			toast.error(
-				"HQ Tour Plan already exists for this date."
-			);
-			return;
+
+		// 🔒 HARD GUARD – prevent duplicate HQ submission
+		if (selectedTag === TAG_IDS.HQ_TOUR_PLAN && hasDuplicateHqForDay) {
+			toast.error("HQ Tour Plan already exists for this date.");
+			return; // ❌ stop submission
 		}
+
 		const handler =
 			submitHandlers[values.tags] || submitHandlers.default;
+
 		await handler(values);
 	};
 
@@ -953,7 +995,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	}, [event, employeeOptions, doctorOptions]);
 	const shouldHideDateGrid =
 		isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN;
-
+	const isSubmitDisabled =
+		form.formState.isSubmitting || hasDuplicateHqForDay;
 
 	return (
 		<Modal open={isOpen} onOpenChange={onToggle}>
@@ -1137,15 +1180,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											name="startDate"
 											label="Date"
 											hideTime
+											/* Doctor Tour Plan restriction */
 											minDate={
-												validHqIntervals.length
+												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && validHqIntervals.length
 													? validHqIntervals[0].start
 													: undefined
 											}
+
 											maxDate={
-												validHqIntervals.length
+												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && validHqIntervals.length
 													? validHqIntervals[0].end
 													: undefined
+											}
+											disabledDates={
+												selectedTag === TAG_IDS.HQ_TOUR_PLAN ? disabledHqDates : []
 											}
 										/>
 									)}
@@ -1218,7 +1266,12 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								)}
 							</div>
 						)}
-
+						{/* ================= Error HQ TERRITORY ================= */}
+						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && hasDuplicateHqForDay && (
+							<p className="text-red-500 text-sm">
+								HQ Tour Plan already exists for this date.
+							</p>
+						)}
 						{/* ================= HQ TERRITORY ================= */}
 						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
 							!isEditReadOnlyField("hqTerritory") && (
@@ -1581,10 +1634,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				<div className="pt-4 flex mt-auto justify-end">
 					<FormFooter
 						isEditing={isEditing}
-						disabled={
-							form.formState.isSubmitting ||
-							hasDuplicateHqForDay
-						}
+						disabled={isSubmitDisabled}
 						showCaptureLocation={shouldShowRequestLocation}
 						onCaptureLocation={handleRequestLocation}
 						isResolvingLocation={isResolvingLocation}
