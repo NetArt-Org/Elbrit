@@ -11,9 +11,7 @@ import {
   addDays,
 } from "date-fns";
 
-import { useMemo, useRef, useState } from "react";
-import { startTransition } from "react";
-
+import { useMemo, useRef, useState, startTransition } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@calendar/lib/utils";
@@ -27,8 +25,6 @@ import {
   getFirstLetters,
   toCapitalize,
   navigateDate,
-  getStatusBadgeClass,
-  getPriorityClass,
 } from "@calendar/components/calendar/helpers";
 
 import { EventDetailsDialog } from "@calendar/components/calendar/dialogs/event-details-dialog";
@@ -65,14 +61,14 @@ export const AgendaEvents = ({ scope = "all" }) => {
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const [doctorAccordionOpen, setDoctorAccordionOpen] = useState(false);
+  const [doctorAccordionOpen, setDoctorAccordionOpen] = useState({});
 
   const startX = useRef(0);
   const startY = useRef(0);
   const isSwiping = useRef(false);
 
   /* ===============================
-     TOUCH
+     TOUCH NAVIGATION
   =============================== */
 
   const onTouchStartCapture = (e) => {
@@ -144,7 +140,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
   };
 
   /* ===============================
-     EVENT FILTER
+     FILTER EVENTS
   =============================== */
 
   const scopedEvents = useMemo(() => {
@@ -170,22 +166,10 @@ export const AgendaEvents = ({ scope = "all" }) => {
   }, [events, selectedDate, scope]);
 
   /* ===============================
-     SPLIT EVENTS
+     GROUP EVENTS
   =============================== */
 
-  const doctorTourEvents = scopedEvents.filter(
-    (event) => event.tags === TAG_IDS.DOCTOR_VISIT_PLAN
-  );
-
-  const normalEvents = scopedEvents.filter(
-    (event) => event.tags !== TAG_IDS.DOCTOR_VISIT_PLAN
-  );
-
-  /* ===============================
-     GROUP NORMAL EVENTS
-  =============================== */
-
-  const agendaEvents = Object.groupBy(normalEvents, (event) =>
+  const agendaEvents = Object.groupBy(scopedEvents, (event) =>
     agendaModeGroupBy === "date"
       ? format(parseISO(event.startDate), "yyyy-MM-dd")
       : event.color
@@ -196,17 +180,7 @@ export const AgendaEvents = ({ scope = "all" }) => {
   );
 
   /* ===============================
-     GROUP DOCTOR EVENTS
-  =============================== */
-
-  const doctorGroups = Object.entries(
-    Object.groupBy(doctorTourEvents, (event) =>
-      format(parseISO(event.startDate), "yyyy-MM-dd")
-    )
-  ).sort((a, b) => new Date(a[0]) - new Date(b[0]));
-
-  /* ===============================
-     RENDER EVENT CARD
+     EVENT CARD
   =============================== */
 
   const renderEventCard = (event) => {
@@ -281,62 +255,62 @@ export const AgendaEvents = ({ scope = "all" }) => {
 
         <CommandList className="px-2 border-t max-h-none overflow-visible">
 
-          {/* DOCTOR VISIT PLAN ACCORDION */}
+          {groupedAndSortedEvents.map(([groupKey, groupedEvents]) => {
 
-          {doctorTourEvents.length > 0 && (
-            <>
-              <CommandItem
-                value="doctor-visit-plan"
-                onSelect={() =>
-                  setDoctorAccordionOpen((p) => !p)
+            const doctorEvents = groupedEvents.filter(
+              (event) => event.tags === TAG_IDS.DOCTOR_VISIT_PLAN
+            );
+
+            const normalEvents = groupedEvents.filter(
+              (event) => event.tags !== TAG_IDS.DOCTOR_VISIT_PLAN
+            );
+
+            const isOpen = doctorAccordionOpen[groupKey];
+
+            return (
+              <CommandGroup
+                key={groupKey}
+                heading={
+                  agendaModeGroupBy === "date"
+                    ? format(parseISO(groupKey), "EEEE, MMMM d, yyyy")
+                    : toCapitalize(groupedEvents[0].color)
                 }
-                className="mb-1 p-2 border rounded-md cursor-pointer font-medium mt-2"
               >
-                <div className="flex justify-between w-full">
+    {/* DOCTOR EVENTS */}
+    {doctorEvents.length > 0 && (
+                  <>
+                    <CommandItem
+                      value={`doctor-${groupKey}`}
+                      onSelect={() =>
+                        setDoctorAccordionOpen((prev) => ({
+                          ...prev,
+                          [groupKey]: !prev[groupKey],
+                        }))
+                      }
+                      className="mb-1 p-2 border rounded-md cursor-pointer font-medium mt-2"
+                    >
+                      <div className="flex justify-between w-full">
+                        {doctorEvents.length} Doctor Visit Plan Events
 
-                  {doctorTourEvents.length} Doctor Visit Plan Events
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition",
+                            isOpen && "rotate-180"
+                          )}
+                        />
+                      </div>
+                    </CommandItem>
 
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition",
-                      doctorAccordionOpen && "rotate-180"
-                    )}
-                  />
-                </div>
-              </CommandItem>
+                    {isOpen && doctorEvents.map(renderEventCard)}
+                  </>
+                )}
 
-              {doctorAccordionOpen &&
-                doctorGroups.map(([date, events]) => (
-                  <CommandGroup
-                    key={date}
-                    heading={format(
-                      parseISO(date),
-                      "EEEE, MMMM d, yyyy"
-                    )} 
-                  >
-                    {events.map(renderEventCard)}
-                  </CommandGroup>
-                ))}
-            </>
-          )}
-
-          {/* NORMAL EVENTS */}
-
-          {groupedAndSortedEvents.map(([groupKey, groupedEvents]) => (
-            <CommandGroup
-              key={groupKey}
-              heading={
-                agendaModeGroupBy === "date"
-                  ? format(
-                      parseISO(groupKey),
-                      "EEEE, MMMM d, yyyy"
-                    )
-                  : toCapitalize(groupedEvents[0].color)
-              }
-            >
-              {groupedEvents.map(renderEventCard)}
-            </CommandGroup>
-          ))}
+                {/* NORMAL EVENTS */}
+                {normalEvents.map(renderEventCard)}
+            
+              </CommandGroup>
+            );
+          })}
 
           <CommandEmpty>No results found.</CommandEmpty>
 

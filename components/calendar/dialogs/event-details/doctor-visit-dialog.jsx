@@ -21,6 +21,7 @@ import { fetchDoctors } from "@calendar/services/participants.service";
 import { CircleCheck, Copy } from "lucide-react"
 import { useCallback } from "react";
 import { DoctorNotesSection } from "../../doctor/DoctorNotesSection";
+import DeleteEventDialog from "../delete-event-dialog";
 /* =====================================================
    PURE HELPERS (NO LOGIC CHANGE)
 ===================================================== */
@@ -505,14 +506,9 @@ export function EventDoctorVisitDialog({
         )}
 
         {permissions.canDelete && !hasParticipants && (
-          <Button
-            variant="destructive"
-            onClick={() =>
-              handleDelete(event.erpName)
-            }
-          >
-            Delete
-          </Button>
+            <DeleteEventDialog
+            onConfirm={() => handleDelete(event.erpName)}
+          />
         )}
       </div>
     </>

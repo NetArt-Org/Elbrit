@@ -1463,29 +1463,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								/>
 							</div>
 						)}
-						{/* ================= CUSTOMER ================= */}
-						{isEditing &&
-							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
-								<FormField
-									control={form.control}
-									name="customer"
-									render={({ field }) => (
-										<RHFFieldWrapper label="Customer">
-											<RHFComboboxField
-												{...field}
-												options={customerOptions}
-												multiple={false}
-												placeholder="Select Customer"
-												searchPlaceholder="Search customer"
-											/>
-										</RHFFieldWrapper>
-									)}
-								/>
-							)}
+
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&
-							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-							form.watch("customer") && (
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
 								<FormField
 									control={form.control}
 									name="pob_given"
@@ -1516,12 +1497,30 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									)}
 								/>
 							)}
-
+						{/* ================= CUSTOMER ================= */}
+						{isEditing &&
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && 
+							pobGiven === "Yes" && (
+								<FormField
+									control={form.control}
+									name="customer"
+									render={({ field }) => (
+										<RHFFieldWrapper label="Customer">
+											<RHFComboboxField
+												{...field}
+												options={customerOptions}
+												multiple={false}
+												placeholder="Select Customer"
+												searchPlaceholder="Search customer"
+											/>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
 						{/* ================= POB ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-							form.watch("customer") &&
-							pobGiven === "Yes" && (
+							pobGiven === "Yes" && form.watch("customer") && (
 								<div className="space-y-4">
 									<h4 className="font-medium">POB Details</h4>
 

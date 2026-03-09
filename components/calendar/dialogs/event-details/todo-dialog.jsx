@@ -12,6 +12,7 @@ import { useDeleteEvent } from "../../hooks";
 import { getPriorityClass, getStatusBadgeClass } from "../../helpers";
 import TiptapViewer from "@calendar/components/ui/TiptapViewer";
 import TodoComments from "@calendar/components/ui/TodoCommentsSection";
+import DeleteEventDialog from "../delete-event-dialog";
 
 /* =====================================================
    PURE HELPERS
@@ -262,14 +263,9 @@ export function EventTodoDialog({
         )}
 
         {permissions.canDelete && (
-          <Button
-            variant="destructive"
-            onClick={() =>
-              handleDelete(event.erpName, "ToDo")
-            }
-          >
-            Delete
-          </Button>
+            <DeleteEventDialog
+            onConfirm={() => handleDelete(event.erpName, "ToDo")}
+          />
         )}
       </div>
     </>

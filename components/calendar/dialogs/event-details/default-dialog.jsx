@@ -10,6 +10,7 @@ import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisp
 import { ICONS } from "../event-details-dialog";
 import { useDeleteEvent } from "../../hooks";
 import TiptapViewer from "@calendar/components/ui/TiptapViewer";
+import DeleteEventDialog from "../delete-event-dialog";
 
 export function EventDefaultDialog({
   event, setOpen
@@ -65,12 +66,9 @@ export function EventDefaultDialog({
         )}
 
         {canDelete && (
-          <Button
-            variant="destructive"
-            onClick={() => handleDelete(event.erpName)}
-          >
-            Delete
-          </Button>
+         <DeleteEventDialog
+         onConfirm={() => handleDelete(event.erpName)}
+       />
         )}
       </div>
     </>
