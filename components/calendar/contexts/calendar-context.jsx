@@ -53,6 +53,7 @@ export function CalendarProvider({
 	const [activeDate, setActiveDate] = useState(null);
 	const isEventListOpen = eventListDate !== null;
 	const [mobileLayer, setMobileLayer] = useState("month-expanded");
+	const [showOnlyApprovedLeaves, setShowOnlyApprovedLeaves] = useState(false);
 	const updateSettings = (newPartialSettings) => {
 		setSettings({
 			...settings,
@@ -264,7 +265,7 @@ export function CalendarProvider({
 		if (event.tags === TAG_IDS.LEAVE) {
 			if (event.employee) {
 				ids.add(event.employee);
-			} 
+			}
 
 			if (event.leave_approver) {
 				const approverId = employeeEmailToId.get(
@@ -273,7 +274,7 @@ export function CalendarProvider({
 
 				if (approverId) {
 					ids.add(approverId);
-				} 
+				}
 			}
 		}
 
@@ -285,30 +286,30 @@ export function CalendarProvider({
 	};
 	useEffect(() => {
 		let cancelled = false;
-	  
+
 		async function hydrateCustomers() {
-		  try {
-			const customers = await fetchAllCustomers();
-	  
-			const normalized = (customers ?? []).map((name) => ({
-			  label: name,
-			  value: name,
-			}));
-	  
-			if (!cancelled) {
-			  setCustomerOptions(normalized);
+			try {
+				const customers = await fetchAllCustomers();
+
+				const normalized = (customers ?? []).map((name) => ({
+					label: name,
+					value: name,
+				}));
+
+				if (!cancelled) {
+					setCustomerOptions(normalized);
+				}
+			} catch (err) {
+				console.error("Failed to fetch customers", err);
 			}
-		  } catch (err) {
-			console.error("Failed to fetch customers", err);
-		  }
 		}
-	  
+
 		hydrateCustomers();
-	  
+
 		return () => {
-		  cancelled = true;
+			cancelled = true;
 		};
-	  }, []);
+	}, []);
 	const visibleRoleIds = useMemo(() => {
 		if (elbritRoleLoading) return [];
 		return resolveVisibleRoleIds(elbritRoleEdges);
@@ -423,7 +424,9 @@ export function CalendarProvider({
 		setDoctorOptions,
 		setHqTerritoryOptions,
 		elbritRoleEdges,
-		elbritRoleLoading,customerOptions,setCustomerOptions
+		elbritRoleLoading, customerOptions, setCustomerOptions,
+		showOnlyApprovedLeaves,
+		setShowOnlyApprovedLeaves,
 	};
 
 	return (

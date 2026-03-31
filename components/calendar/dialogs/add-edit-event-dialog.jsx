@@ -712,15 +712,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	// RULE B: Doctor Visit Plan tab only visible
 	// if user has HQ Tour Plan for selected date
 	// ----------------------------------------------------
-	const hasValidHqTourPlan = useMemo(() => {
-		if (!startDate || !events?.length) return false;
+	const matchedHqEvent = useMemo(() => {
+		if (!startDate || !events?.length) return null;
 
 		const selectedDay = startOfDay(new Date(startDate));
 
-		return events.some((ev) => {
+		return events.find((ev) => {
 			if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
 
-			// logged in user must be participant
 			const isParticipant = ev.participants?.some(
 				(p) => p.id === LOGGED_IN_USER.id
 			);
@@ -733,22 +732,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			return selectedDay >= planStart && selectedDay <= planEnd;
 		});
 	}, [events, startDate]);
-	const validHqIntervals = useMemo(() => {
-		if (!events?.length) return [];
+	const hasValidHqTourPlan = !!matchedHqEvent;
+	useEffect(() => {
+		if (selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN) return;
+		if (!matchedHqEvent) return;
 
-		return events
-			.filter((ev) => {
-				if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
+		const currentHq = form.getValues("hqTerritory");
+		if (currentHq) return;
 
-				return ev.participants?.some(
-					(p) => p.id === LOGGED_IN_USER.id
-				);
-			})
-			.map((ev) => ({
-				start: startOfDay(new Date(ev.startDate)),
-				end: endOfDay(new Date(ev.endDate)),
-			}));
-	}, [events]);
+		form.setValue("hqTerritory", matchedHqEvent.hqTerritory, {
+			shouldDirty: true,
+			shouldValidate: true,
+		});
+	}, [selectedTag, matchedHqEvent]);
+	
 	// ----------------------------------------------------
 	// Disabled dates for HQ Tour Plan (logged-in user only)
 	// Prevent selecting dates where HQ already exists
@@ -1182,14 +1179,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											hideTime
 											/* Doctor Tour Plan restriction */
 											minDate={
-												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && validHqIntervals.length
-													? validHqIntervals[0].start
+												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && matchedHqEvent
+													? startOfDay(new Date(matchedHqEvent.startDate))
 													: undefined
 											}
 
 											maxDate={
-												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && validHqIntervals.length
-													? validHqIntervals[0].end
+												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && matchedHqEvent
+													? endOfDay(new Date(matchedHqEvent.endDate))
 													: undefined
 											}
 											disabledDates={
@@ -1499,7 +1496,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 							)}
 						{/* ================= CUSTOMER ================= */}
 						{isEditing &&
-							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && 
+							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
 							pobGiven === "Yes" && (
 								<FormField
 									control={form.control}
