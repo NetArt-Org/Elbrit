@@ -334,7 +334,7 @@ export const AgendaEventsMobile = () => {
                   const name = hqOnly[0]?.hqName || hqId;
                   const title =
                     doctor.length > 0
-                      ? `${name}-${doctor.length}-Doctor-Plan`
+                      ? `${name?name:"No-HQ"}-${doctor.length}-Doctor-Plan`
                       : name;
 
                   return (
