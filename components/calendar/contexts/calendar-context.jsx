@@ -215,32 +215,32 @@ export function CalendarProvider({
 			cancelled = true;
 		};
 	}, []);
-	useEffect(() => {
-		let cancelled = false;
+	// useEffect(() => {
+	// 	let cancelled = false;
 
-		async function hydrateElbritRoles() {
-			try {
-				const data = await graphqlRequest(ELBRIT_ROLEID, {
-					first: 1000,
-				});
+	// 	async function hydrateElbritRoles() {
+	// 		try {
+	// 			const data = await graphqlRequest(ELBRIT_ROLEID, {
+	// 				first: 1000,
+	// 			});
 
-				const edges = data?.ElbritRoleIDS?.edges ?? [];
-				if (!cancelled) {
-					setElbritRoleEdges(edges);
-					setElbritRoleLoading(false);
-				}
-			} catch (err) {
-				console.error("❌ Failed to fetch ElbritRoleIDS", err);
-				setElbritRoleLoading(false);
-			}
-		}
+	// 			const edges = data?.ElbritRoleIDS?.edges ?? [];
+	// 			if (!cancelled) {
+	// 				setElbritRoleEdges(edges);
+	// 				setElbritRoleLoading(false);
+	// 			}
+	// 		} catch (err) {
+	// 			console.error("❌ Failed to fetch ElbritRoleIDS", err);
+	// 			setElbritRoleLoading(false);
+	// 		}
+	// 	}
 
-		hydrateElbritRoles();
+	// 	hydrateElbritRoles();
 
-		return () => {
-			cancelled = true;
-		};
-	}, []);
+	// 	return () => {
+	// 		cancelled = true;
+	// 	};
+	// }, []);
 	const getEventEmployeeIds = (event) => {
 		const ids = new Set();
 

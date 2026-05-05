@@ -6,7 +6,7 @@ query EventsByRange(
 ) {
   Events(first: $first, after: $after, filter: $filters) {
     edges {
-        node {
+      node {
         name
         subject
         description
@@ -15,18 +15,36 @@ query EventsByRange(
         color
         all_day
         event_category
-        event_participants{
-          attending
-          name
-        }
+        fsl_is_force_visit
+        custom_force_visit_reason
         reference_doctype {
           name
         }
         reference_docname__name
+        fsl_role_id {
+          name
+        }
         owner {
           name
           full_name
           email
+        }
+         fsl_territory__name
+          event_participants {
+          reference_doctype__name
+          kly_lat_long
+          reference_docname__name
+          attending
+          email
+          kly_role_id {
+            name
+          }
+        }
+          fsl_doctor_item {
+          amount
+          item__name
+          qty
+          rate
         }
       }
     }
@@ -48,6 +66,10 @@ query ToDoes($first: Int!) {
         priority
         status
         allocated_to__name
+        custom_subject
+        custom_assigned_to {
+          employee__name
+        }
       }
     }
   }
@@ -79,9 +101,13 @@ query GetEmployees($first: Int!) {
         employee_name
         company_email
         idx
+        leave_approver {
+          name
+        }
         designation{
         name
         }
+        role_id
       }
     }
   }
@@ -117,12 +143,18 @@ query Doctors($first: Int) {
       node {
         name
         lead_name
+        fsl_lat_lon
         city
+        fsl_speciality__name
+        fsl_ecubix_code
         email_id
         notes {
           note
           creation
         }
+        fsl_category1__name
+        fsl_category2__name
+        fsl_category3__name
         territory__name
       }
     }
@@ -197,6 +229,7 @@ query LeaveApplications($first: Int) {
         description
         posting_date
         status
+        fsl_attach
         leave_approver {
           name
         }
