@@ -79,7 +79,7 @@ mutation UpdateLeaveAttachment(
   setValue(
     doctype: "Leave Application"
     name: $name
-    fieldname: "fsl_attach"
+    fieldname: "custom_attachment"
     value: $value
   ) {
     name

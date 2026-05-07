@@ -229,7 +229,7 @@ query LeaveApplications($first: Int) {
         description
         posting_date
         status
-        fsl_attach
+        custom_attachment
         leave_approver {
           name
         }

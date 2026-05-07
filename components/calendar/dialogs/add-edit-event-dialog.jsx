@@ -881,7 +881,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			}
 
 			const leaveDoc = mapFormToErpLeave(values);
-			delete leaveDoc.fsl_attach;
+			delete leaveDoc.custom_attachment;
 
 			const savedLeave = await saveLeaveApplication(leaveDoc, {
 				erpName: event?.erpName,

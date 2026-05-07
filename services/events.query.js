@@ -6,7 +6,7 @@ query EventsByRange(
 ) {
   Events(first: $first, after: $after, filter: $filters) {
     edges {
-        node {
+      node {
         name
         subject
         description
@@ -15,18 +15,30 @@ query EventsByRange(
         color
         all_day
         event_category
-        event_participants{
-          attending
-          name
-        }
+        fsl_is_force_visit:custom_is_force_visit
+        custom_force_visit_reason
         reference_doctype {
           name
         }
         reference_docname__name
+        fsl_role_id :custom_role_id {
+          name
+        }
         owner {
           name
           full_name
           email
+        }
+         fsl_territory__name:custom_hq_territory__name
+          event_participants {
+          reference_doctype__name
+          kly_lat_long:custom_lat__long
+          reference_docname__name
+          attending
+          email
+          kly_role_id:custom_role_id {
+              name
+            }
         }
       }
     }
@@ -48,6 +60,10 @@ query ToDoes($first: Int!) {
         priority
         status
         allocated_to__name
+        custom_subject
+        custom_assigned_to {
+          employee__name
+        }
       }
     }
   }
@@ -79,9 +95,13 @@ query GetEmployees($first: Int!) {
         employee_name
         company_email
         idx
+        leave_approver {
+          name
+        }
         designation{
         name
         }
+        role_id
       }
     }
   }
@@ -98,7 +118,7 @@ query Items(
       node {
         item_code
         item_name
-        whg_last_pts
+        custom_last_mrp
       }
     }
     pageInfo {
@@ -117,12 +137,17 @@ query Doctors($first: Int) {
       node {
         name
         lead_name
+        custom_latitude__longitude
         city
+        custom_speciality
         email_id
         notes {
           note
           creation
         }
+        custom_category_3
+        custom_category_2
+        custom_category_1
         territory__name
       }
     }
@@ -197,6 +222,7 @@ query LeaveApplications($first: Int) {
         description
         posting_date
         status
+        custom_attachement
         leave_approver {
           name
         }
