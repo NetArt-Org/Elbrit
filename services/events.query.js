@@ -70,20 +70,50 @@ query ToDoes($first: Int!) {
 }
 `;
 export const ELBRIT_ROLEID = `
-query ElbritRoleIDS($first: Int) {
-  ElbritRoleIDS(first: $first) {
+query RoleProfiles($first: Int) {
+  RoleProfiles(first: $first) {
     edges {
       node {
+      role_profile
+      custom_department {
+        department_name
         lft
         rgt
-        role_id
-        sales_team__name
-        parent_elbrit_role_id__name
+        parent_department__name
+      }
+      parent_role_profile {
+        name
         is_group
       }
     }
+    }
   }
 }`
+export function normalizeRoleProfiles(data) {
+	return {
+		ElbritRoleIDS: {
+			edges:
+				data?.RoleProfiles?.edges?.map(({ node }) => ({
+					node: {
+						lft: node?.custom_department?.lft ?? null,
+
+						rgt: node?.custom_department?.rgt ?? null,
+
+						role_id: node?.role_profile ?? null,
+
+						sales_team__name:
+							node?.custom_department?.department_name ?? null,
+
+						parent_elbrit_role_id__name:
+							node?.parent_role_profile?.name ?? null,
+
+						is_group:
+							node?.parent_role_profile?.is_group ?? false,
+					},
+				})) ?? [],
+		},
+	};
+}
 export const EMPLOYEES_QUERY = `
 query GetEmployees($first: Int!) {
   Employees(

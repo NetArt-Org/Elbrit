@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useLocalStorage } from "@calendar/components/calendar/hooks";
 import { fetchAllCustomers, fetchEventsByRange } from "@calendar/services/event.service";
 import { resolveCalendarRange } from "@calendar/lib/calendar/range";
-import { ELBRIT_ROLEID, EMPLOYEES_QUERY } from "@calendar/services/events.query";
+import { ELBRIT_ROLEID, EMPLOYEES_QUERY, normalizeRoleProfiles } from "@calendar/services/events.query";
 import { mapEmployeesToCalendarUsers } from "@calendar/services/employee-to-calendar-user";
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { enrichEventsWithParticipants } from "@calendar/lib/calendar/enrich-events";
@@ -215,32 +215,34 @@ export function CalendarProvider({
 			cancelled = true;
 		};
 	}, []);
-	// useEffect(() => {
-	// 	let cancelled = false;
+	useEffect(() => {
+		let cancelled = false;
 
-	// 	async function hydrateElbritRoles() {
-	// 		try {
-	// 			const data = await graphqlRequest(ELBRIT_ROLEID, {
-	// 				first: 1000,
-	// 			});
+		async function hydrateElbritRoles() {
+			try {
+				const rawData = await graphqlRequest(ELBRIT_ROLEID, {
+					first: 1000,
+				});
+	
+				const data = normalizeRoleProfiles(rawData);
 
-	// 			const edges = data?.ElbritRoleIDS?.edges ?? [];
-	// 			if (!cancelled) {
-	// 				setElbritRoleEdges(edges);
-	// 				setElbritRoleLoading(false);
-	// 			}
-	// 		} catch (err) {
-	// 			console.error("❌ Failed to fetch ElbritRoleIDS", err);
-	// 			setElbritRoleLoading(false);
-	// 		}
-	// 	}
+				const edges = data?.ElbritRoleIDS?.edges ?? [];
+				if (!cancelled) {
+					setElbritRoleEdges(edges);
+					setElbritRoleLoading(false);
+				}
+			} catch (err) {
+				console.error("❌ Failed to fetch ElbritRoleIDS", err);
+				setElbritRoleLoading(false);
+			}
+		}
 
-	// 	hydrateElbritRoles();
+		hydrateElbritRoles();
 
-	// 	return () => {
-	// 		cancelled = true;
-	// 	};
-	// }, []);
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 	const getEventEmployeeIds = (event) => {
 		const ids = new Set();
 
