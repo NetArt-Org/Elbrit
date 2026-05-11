@@ -968,10 +968,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			return; // ❌ stop submission
 		}
 
-		// const handler =
-		// 	submitHandlers[values.tags] || submitHandlers.default;
+		const handler =
+			submitHandlers[values.tags] || submitHandlers.default;
 
-		// await handler(values);
+		await handler(values);
 	};
 
 	const editReadOnlyKeys = useMemo(() => {
