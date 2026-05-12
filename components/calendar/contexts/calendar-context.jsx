@@ -425,7 +425,7 @@ export function CalendarProvider({
 		setEmployeeOptions,
 		setDoctorOptions,
 		setHqTerritoryOptions,
-		elbritRoleEdges,
+		elbritRoleEdges,allowedEmployeeIds,
 		elbritRoleLoading, customerOptions, setCustomerOptions,
 		showOnlyApprovedLeaves,
 		setShowOnlyApprovedLeaves,
