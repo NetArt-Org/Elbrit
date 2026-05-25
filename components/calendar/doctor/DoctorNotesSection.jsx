@@ -46,10 +46,11 @@ export function DoctorNotesSection({
 
   const handleDeleteNote = async (noteName) => {
     try {
-      await deleteLeadNote(noteName);
-
+      console.log("NOTE",doctorId,noteName)
+      await deleteLeadNote(doctorId, noteName);
+  
       toast.success("Note deleted");
-
+  
       await refreshDoctors();
     } catch (err) {
       console.error(err);
@@ -75,7 +76,7 @@ export function DoctorNotesSection({
         const formattedDate = noteObj.creation
           ? new Date(noteObj.creation).toLocaleDateString("en-GB")
           : "";
-
+console.log("NOTE OBJ",noteObj)
         return (
           <div
             key={index}
