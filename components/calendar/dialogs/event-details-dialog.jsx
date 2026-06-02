@@ -14,7 +14,7 @@ import { EventLeaveDialog } from "./event-details/leave-dialog";
 import { EventDefaultDialog } from "./event-details/default-dialog";
 import { Calendar, Clock, Text, User } from "lucide-react";
 import { EventDoctorVisitDialog } from "./event-details/doctor-visit-dialog";
-import { EventTodoDialog } from "./event-details/todo-dialog";
+import { EventTodoDialog } from "../module/todo/components/todo-dialog";
 
 export const ICONS = {
 	owner: User,

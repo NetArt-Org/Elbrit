@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Button } from "@calendar/components/ui/button";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
-import Tiptap from "@calendar/components/ui/TodoWysiwyg";
+import Tiptap from "@calendar/components/calendar/module/todo/components/TodoWysiwyg";
 
 import { addLeadNote, deleteLeadNote } from "@calendar/services/event.service";
-import { clearParticipantCache } from "@calendar/lib/participants-cache";
+import { clearParticipantCache } from "@calendar/lib/data-cache";
 import { fetchDoctors } from "@calendar/services/participants.service";
 
 export function DoctorNotesSection({

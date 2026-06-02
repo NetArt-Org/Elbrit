@@ -4,7 +4,6 @@
 import {
   useEditor,
   EditorContent,
-  Editor,
   useEditorState,
 } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -28,7 +27,7 @@ import {
 import { Button } from "@calendar/components/ui/button";
 import { Input } from "@calendar/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@calendar/components/ui/popover";
-import { ReactNode, useState } from "react";
+import {  useState } from "react";
 import {
   Select,
   SelectContent,

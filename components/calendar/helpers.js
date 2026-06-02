@@ -26,6 +26,7 @@ import {
 	subYears,
 } from "date-fns";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
+import { STATUS, STATUS_MAP } from "@calendar/components/calendar/constants";
 
 const FORMAT_STRING = "MMM d, yyyy";
 
@@ -246,87 +247,6 @@ export function formatTime(date, use24HourFormat) {
 	if (!isValid(parsedDate)) return "";
 	return format(parsedDate, use24HourFormat ? "HH:mm" : "h:mm a");
 }
-export function normalizeChecklistToERP(html = "") {
-	if (!html) return "";
-
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, "text/html");
-	const root = doc.body;
-
-	// 🔹 Convert task items to Quill format
-	root.querySelectorAll('li[data-type="taskItem"]').forEach((li) => {
-		const checked = li.getAttribute("data-checked") === "true";
-
-		li.removeAttribute("data-type");
-		li.removeAttribute("data-checked");
-		li.setAttribute("data-list", checked ? "checked" : "unchecked");
-
-		const span = document.createElement("span");
-		span.className = "ql-ui";
-		span.setAttribute("contenteditable", "false");
-
-		const p = li.querySelector("p");
-
-		if (p) {
-			li.innerHTML = "";
-			li.appendChild(span);
-			li.innerHTML += p.innerHTML;
-		} else {
-			li.prepend(span);
-		}
-	});
-
-	// 🔹 Convert UL[data-type="taskList"] → OL
-	root.querySelectorAll('ul[data-type="taskList"]').forEach((ul) => {
-		const ol = document.createElement("ol");
-		ol.innerHTML = ul.innerHTML;
-		ul.replaceWith(ol);
-	});
-
-	return `<div class="ql-editor read-mode">${root.innerHTML}</div>`;
-}
-export function normalizeChecklistFromERP(html = "") {
-	if (!html) return "";
-
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, "text/html");
-
-	const wrapper = doc.querySelector(".ql-editor");
-	const root = wrapper || doc.body;
-
-	// 🔹 Convert Quill checklist items
-	root.querySelectorAll("li[data-list]").forEach((li) => {
-		const checked = li.getAttribute("data-list") === "checked";
-
-		li.removeAttribute("data-list");
-		li.setAttribute("data-type", "taskItem");
-		li.setAttribute("data-checked", checked ? "true" : "false");
-
-		// Remove quill span
-		const span = li.querySelector(".ql-ui");
-		if (span) span.remove();
-
-		// Wrap content in <p> if needed
-		if (!li.querySelector("p")) {
-			const p = document.createElement("p");
-			p.innerHTML = li.innerHTML;
-			li.innerHTML = "";
-			li.appendChild(p);
-		}
-	});
-
-	// 🔹 Convert OL containing checklist → taskList UL
-	root.querySelectorAll("ol").forEach((ol) => {
-		if (ol.querySelector('[data-type="taskItem"]')) {
-			const ul = document.createElement("ul");
-			ul.setAttribute("data-type", "taskList");
-			ul.innerHTML = ol.innerHTML;
-			ol.replaceWith(ul);
-		}
-	});
-
-	return root.innerHTML;
-}
 // -----------------------------
 // GEO UTILS
 // -----------------------------
@@ -536,3 +456,14 @@ export const toCapitalize = str => {
 	if (!str) return "";
 	return str.charAt(0).toUpperCase() + str.slice(1);
 };
+
+export function normalizeStatus(
+	status,
+	fallback = STATUS.OPEN
+  ) {
+	return (
+	  STATUS_MAP[
+		status?.trim()?.toLowerCase()
+	  ] ?? fallback
+	);
+  }

@@ -16,7 +16,7 @@ import { useDeleteEvent } from "../../hooks";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { joinDoctorVisit, leaveDoctorVisit } from "@calendar/lib/helper";
-import { clearParticipantCache } from "@calendar/lib/participants-cache";
+import { clearParticipantCache } from "@calendar/lib/data-cache";
 import { fetchDoctors } from "@calendar/services/participants.service";
 import { CircleCheck, Copy } from "lucide-react"
 import { useCallback } from "react";

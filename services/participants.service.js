@@ -3,7 +3,7 @@ import {
   EMPLOYEES_QUERY, DOCTOR_QUERY, HQ_TERRITORIES_QUERY,
   ITEMS_QUERY
 } from "@calendar/services/events.query";
-import { getCached } from "@calendar/lib/participants-cache";
+import { getCached } from "@calendar/lib/data-cache";
 import { email } from "zod";
 
 const MAX_ROWS = 1000; // safe upper bound

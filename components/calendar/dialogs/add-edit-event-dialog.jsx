@@ -21,7 +21,7 @@ import { eventSchema } from "@calendar/components/calendar/schemas";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@calendar/lib/participants";
 import { TimePicker } from "@calendar/components/ui/TimePicker";
-import { mapFormToErpTodo, mapErpTodoToCalendar } from "@calendar/services/todo-to-erp-graphql";
+import { mapErpTodoToCalendar,mapFormToErpTodo } from "@calendar/components/calendar/module/todo/mappers/todo.mapper";
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/services/leave-to-erp";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
@@ -30,12 +30,12 @@ import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes,
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useAuth } from "@calendar/components/auth/auth-context";
-import Tiptap from "@calendar/components/ui/TodoWysiwyg";
+import Tiptap from "@calendar/components/calendar/module/todo/components/TodoWysiwyg";
 import { mapDoctorVisitToQuotation } from "@calendar/services/quotation-to-erp";
 import { calculateDistanceKm, parseLatLong } from "../helpers";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { DoctorNotesSection } from "../doctor/DoctorNotesSection";
-import TodoComments from "@calendar/components/ui/TodoCommentsSection";
+import TodoComments from "@calendar/components/calendar/module/todo/components/TodoCommentsSection";
 import { Textarea } from "@calendar/components/ui/textarea";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
