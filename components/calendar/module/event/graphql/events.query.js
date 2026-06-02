@@ -140,7 +140,6 @@ query Items(
   }
 }
 `;
-
 export const DOCTOR_QUERY = `
 query Doctors($first: Int) {
   Leads(first: $first) {
@@ -202,7 +201,6 @@ query Customers($first: Int) {
   }
 }
 `
-
 export const HQ_TERRITORIES_QUERY = `
 query GetHQTerritories($first: Int!){
   Territorys(first: $first)  {
@@ -214,3 +212,23 @@ query GetHQTerritories($first: Int!){
   }
   }
 `;
+export const SAVE_EVENT_MUTATION = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "Event", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+
+export const SAVE_EVENT_QUOTATION = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "Quotation", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`
+

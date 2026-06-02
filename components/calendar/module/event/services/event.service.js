@@ -1,7 +1,7 @@
 import { graphqlRequest } from "@calendar/lib/graphql-client";
-import { serializeEventDoc } from "./event-to-erp";
-import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, QUOTATIONS_BY_NAMES_QUERY } from "@calendar/services/events.query";
-import { mapErpGraphqlEventToCalendar } from "@calendar/services/erp-to-event";
+import { serializeEventDoc } from "../mappers/event-to-erp";
+import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, QUOTATIONS_BY_NAMES_QUERY, SAVE_EVENT_MUTATION,SAVE_EVENT_QUOTATION } from "@calendar/components/calendar/module/event/graphql/events.query";
+import { mapErpGraphqlEventToCalendar } from "@calendar/components/calendar/module/event/mappers/erp-to-event";
 import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
 import { clearEventCache } from "@calendar/lib/calendar/event-cache";
@@ -11,34 +11,6 @@ import { GOOGLE_CALENDAR_BY_USER } from "@calendar/components/calendar/google-au
 import { fetchAllTodoList } from "@calendar/components/calendar/module/todo/services/todo.service";
 import { fetchAllLeaveApplications } from "@calendar/components/calendar/module/leave/services/leave.service";
 const PAGE_SIZE = 50;
-
-const SAVE_EVENT_MUTATION = `
-mutation SaveEvent($doc: String!) {
-  saveDoc(doctype: "Event", doc: $doc) {
-    doc {
-      name
-    }
-  }
-}
-`;
-const SAVE_EVENT_TODO = `
-mutation SaveEvent($doc: String!) {
-  saveDoc(doctype: "ToDo", doc: $doc) {
-    doc {
-      name
-    }
-  }
-}
-`;
-const SAVE_EVENT_QUOTATION = `
-mutation SaveEvent($doc: String!) {
-  saveDoc(doctype: "Quotation", doc: $doc) {
-    doc {
-      name
-    }
-  }
-}
-`
 
 
 export async function fetchQuotationsByNames(names) {
@@ -177,18 +149,6 @@ export async function deleteLeadNote(
   );
 }
 
-export async function saveDocToErp(doc) {
-  const data = await graphqlRequest(SAVE_EVENT_TODO, {
-    doc: JSON.stringify(doc),
-  });
-
-  if (!data?.saveDoc?.doc?.name) {
-    throw new Error("ERP did not return document name");
-  }
-
-  clearEventCache();
-  return data.saveDoc.doc;
-}
 export async function saveDocToQuotation(doc) {
   const data = await graphqlRequest(SAVE_EVENT_QUOTATION, {
     doc: JSON.stringify(doc),
@@ -211,7 +171,6 @@ export async function fetchAllCustomers() {
       .map(edge => edge.node.name)  // return only the name of the customer to the UI to show in the calendar as a customer name to select from the calendar
   });
 }
-
 
 export async function fetchGoogleCalendarStatus(email) {
   if (!email) return null;
@@ -310,14 +269,6 @@ export async function fetchEventsByRange(startDate, endDate, view) {
     ) {
       const quotation =
         quotationMap[node.reference_docname__name];
-
-        console.log(
-          "Injecting quotation",
-          node.name,
-          quotation.name,
-          quotation.items
-        );
-
       node.fsl_doctor_item =
         quotation.items?.map((row) => ({
           item__name: row.item_code?.name,

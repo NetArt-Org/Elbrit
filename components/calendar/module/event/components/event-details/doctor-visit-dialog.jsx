@@ -7,21 +7,21 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { ScrollArea } from "@calendar/components/ui/scroll-area";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
-import { addLeadNote, saveEvent } from "@calendar/services/event.service";
+import { addLeadNote, saveEvent } from "@calendar/components/calendar/module/event/services/event.service";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 // import { resolveDoctorVisitState, submitDoctorVisitLocation } from "@calendar/lib/doctorVisitState";
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
-import { useDeleteEvent } from "../../hooks";
+import { useDeleteEvent } from "@calendar/components/calendar/hooks";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { joinDoctorVisit, leaveDoctorVisit } from "@calendar/lib/helper";
 import { clearParticipantCache } from "@calendar/lib/data-cache";
-import { fetchDoctors } from "@calendar/services/participants.service";
+import { fetchDoctors } from "@calendar/components/calendar/module/event/services/master-data.service";
 import { CircleCheck, Copy } from "lucide-react"
 import { useCallback } from "react";
-import { DoctorNotesSection } from "../../doctor/DoctorNotesSection";
-import DeleteEventDialog from "../delete-event-dialog";
+import DeleteEventDialog from "@calendar/components/calendar/dialogs/delete-event-dialog";
+import { DoctorNotesSection } from "@calendar/components/calendar/module/event/components/DoctorNotesSection";
 /* =====================================================
    PURE HELPERS (NO LOGIC CHANGE)
 ===================================================== */

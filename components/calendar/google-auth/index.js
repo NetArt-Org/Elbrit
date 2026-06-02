@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchGoogleCalendarStatus } from "@calendar/services/event.service";
+import { fetchGoogleCalendarStatus } from "@calendar/components/calendar/module/event/services/event.service";
 import { useAuth } from "@calendar/components/auth/auth-context";
 import { Button } from "@calendar/components/ui/button";
 

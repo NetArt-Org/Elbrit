@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
-import { mapFormToErpEvent } from "@calendar/services/event-to-erp";
-import { saveDocToErp, saveEvent, saveDocToQuotation } from "@calendar/services/event.service";
+import { mapFormToErpEvent } from "@calendar/components/calendar/module/event/mappers/event-to-erp";
+import {  saveEvent, saveDocToQuotation } from "@calendar/components/calendar/module/event/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
 import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
@@ -25,19 +25,20 @@ import { mapErpTodoToCalendar,mapFormToErpTodo } from "@calendar/components/cale
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
-import { fetchItems } from "@calendar/services/participants.service";
+import { fetchItems } from "@calendar/components/calendar/module/event/services/master-data.service";
 import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import { useAuth } from "@calendar/components/auth/auth-context";
 import Tiptap from "@calendar/components/calendar/module/todo/components/TodoWysiwyg";
-import { mapDoctorVisitToQuotation } from "@calendar/services/quotation-to-erp";
+import { mapDoctorVisitToQuotation } from "@calendar/components/calendar/module/event/mappers/quotation-to-erp";
 import { calculateDistanceKm, parseLatLong } from "../helpers";
 import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
-import { DoctorNotesSection } from "../doctor/DoctorNotesSection";
+import { DoctorNotesSection } from "../module/event/components/DoctorNotesSection";
 import TodoComments from "@calendar/components/calendar/module/todo/components/TodoCommentsSection";
 import { Textarea } from "@calendar/components/ui/textarea";
 import { fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment } from "@calendar/components/calendar/module/leave/services/leave.service";
+import { saveDocToErp } from "@calendar/components/calendar/module/todo/services/todo.service";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();

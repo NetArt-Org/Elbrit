@@ -1,7 +1,8 @@
 import { eventSchema } from "@calendar/components/calendar/schemas";
-import { COLOR_HEX_MAP } from "@calendar/components/calendar/constants";
+import { COLOR_HEX_MAP, DEFAULT_COLORS } from "@calendar/components/calendar/constants";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
+import { normalizeStatus } from "@calendar/components/calendar/helpers";
 /**
  * ERP GraphQL → Calendar Event
  * Employees & Doctors are derived ONLY from participants
@@ -91,25 +92,15 @@ const participants = event_participants.map((p) => ({
     participants.some(
       (p) => p.type === "Employee" && p.attending === "YES"
     );
-  const color =
-    tag === TAG_IDS.DOCTOR_VISIT_PLAN && hasEmployeeAttendingYes
-      ? "green"
+    const color =
+    tag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+    hasEmployeeAttendingYes
+      ? DEFAULT_COLORS.EVENT_COMPLETED
       : tagConfig.fixedColor ??
-      mapHexToColor(node.color) ??
-      "blue";
-  const attending = normalizeAttending(node.attending);
-  const statusMap = {
-    open: "Open",
-    completed: "Closed",
-    closed:"Closed",
-    cancelled: "Cancelled",
-  };
-  
-  const normalizedStatus =
-    statusMap[
-      node.status?.trim()?.toLowerCase()
-    ] ?? "Open";
+        mapHexToColor(node.color) ??
+        DEFAULT_COLORS.EVENT;
 
+  const attending = normalizeAttending(node.attending);
   /* ---------------------------------------------
      EVENT OBJECT (SCHEMA-SAFE)
   --------------------------------------------- */
@@ -117,7 +108,7 @@ const participants = event_participants.map((p) => ({
     erpName: node.name,
     title: node.subject || "",
     description: node.description ?? "",
-    status: normalizedStatus,    
+    status: normalizeStatus(node.status),    
     allDay: Boolean(node.all_day),
     forceVisit:Boolean(node.fsl_is_force_visit),
     startDate: startDate ? startDate.toISOString() : null,

@@ -51,3 +51,13 @@ mutation SaveComment($doc: String!) {
   }
 }
 `;
+
+export const SAVE_EVENT_TODO = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "ToDo", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;

@@ -1,10 +1,10 @@
 "use client";;
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useLocalStorage } from "@calendar/components/calendar/hooks";
-import { fetchAllCustomers, fetchEventsByRange } from "@calendar/services/event.service";
+import { fetchAllCustomers, fetchEventsByRange } from "@calendar/components/calendar/module/event/services/event.service";
 import { resolveCalendarRange } from "@calendar/lib/calendar/range";
-import { ELBRIT_ROLEID, EMPLOYEES_QUERY, normalizeRoleProfiles } from "@calendar/services/events.query";
-import { mapEmployeesToCalendarUsers } from "@calendar/services/employee-to-calendar-user";
+import { ELBRIT_ROLEID, EMPLOYEES_QUERY, normalizeRoleProfiles } from "@calendar/components/calendar/module/event/graphql/events.query";
+import { mapEmployeesToCalendarUsers } from "@calendar/components/calendar/module/event/services/employee-to-calendar-user";
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { resolveVisibleEmployeeIds, resolveVisibleRoleIds } from "@calendar/lib/employeeHeirachy";
 import { TAG_IDS, TAGS } from "../constants";

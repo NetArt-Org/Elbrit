@@ -57,7 +57,7 @@ export function mapErpLeaveToCalendar(leave) {
   const totalDays =
     leave.total_leave_days ??
     calculateTotalLeaveDays(start, end, isHalfDay);
-    
+    const normalizedStatus = normalizeStatus(leave.status);
   return {
     erpName: `${leave.name}`,
     id: `${leave.name}`,
@@ -71,9 +71,10 @@ export function mapErpLeaveToCalendar(leave) {
     total_leave_days: totalDays,
     halfDayDate: leave.half_day_date ?? "",
     description: leave.description,
-    color: DEFAULT_COLORS[
-        `LEAVE_${normalizeStatus.toUpperCase()}`
-      ] ?? DEFAULT_COLORS.LEAVE_OPEN,
+    color:
+    DEFAULT_COLORS[
+      `LEAVE_${normalizedStatus.toUpperCase()}`
+    ] ?? DEFAULT_COLORS.LEAVE_OPEN,
     medicalAttachment: leave.custom_attachment ?? "",
     employee: leave.employee?.name,
     approvedBy: leave.leave_approver_name ?? "",

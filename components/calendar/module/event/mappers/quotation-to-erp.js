@@ -1,6 +1,6 @@
 // services/quotation-to-erp.js
 import { format } from "date-fns";
-import { formatDateForERP } from "./event.service";
+import { formatDateForERP } from "../services/event.service";
 
 export function mapDoctorVisitToQuotation({
   values,

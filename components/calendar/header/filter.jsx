@@ -17,8 +17,6 @@ export default function FilterEvents() {
 		"blue",
 		"green",
 		"red",
-		"indigo",
-		"yellow",
 		"purple",
 		"orange",
 	];

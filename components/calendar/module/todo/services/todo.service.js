@@ -40,3 +40,17 @@ export async function fetchAllTodoList() {
   
     return data.saveDoc.doc;
   }
+
+  
+export async function saveDocToErp(doc) {
+  const data = await graphqlRequest(SAVE_EVENT_TODO, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return document name");
+  }
+
+  clearEventCache();
+  return data.saveDoc.doc;
+}
