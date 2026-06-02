@@ -32,7 +32,8 @@ query EventsByRange(
          fsl_territory__name:custom_hq_territory__name
           event_participants {
           reference_doctype__name
-          kly_lat_long:custom_lat__long
+          custom_latitude
+          custom_longitude
           reference_docname__name
           attending
           email
@@ -167,8 +168,9 @@ query Doctors($first: Int) {
       node {
         name
         lead_name
-        custom_latitude__longitude
         city
+        custom_latitude
+        custom_longitude
         custom_speciality
         email_id
         notes {

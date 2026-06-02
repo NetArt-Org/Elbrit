@@ -16,6 +16,7 @@ import {
 import { mapErpLeaveToCalendar } from "./leave-to-erp";
 import { mapErpTodoToCalendar } from "./todo-to-erp-graphql";
 import { normalizeChecklistFromERP } from "@calendar/components/calendar/helpers";
+import { GOOGLE_CALENDAR_BY_USER } from "@calendar/components/calendar/google-auth/queries";
 const PAGE_SIZE = 50;
 
 const SAVE_EVENT_MUTATION = `
@@ -365,6 +366,28 @@ export async function fetchAllTodoList() {
       .map(edge => mapErpTodoToCalendar(edge.node))
       .filter(Boolean);
   });
+}
+export async function fetchGoogleCalendarStatus(email) {
+  if (!email) return null;
+
+  const data = await graphqlRequest(
+    GOOGLE_CALENDAR_BY_USER,
+    {
+      first: 1,
+      filter: [
+        {
+          fieldname: "user",
+          operator: "EQ",
+          value: email,
+        },
+      ],
+    }
+  );
+
+  return (
+    data?.GoogleCalendars?.edges?.[0]?.node ||
+    null
+  );
 }
 
 export async function fetchEventsByRange(startDate, endDate, view) {

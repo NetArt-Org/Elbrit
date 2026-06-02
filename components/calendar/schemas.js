@@ -72,7 +72,8 @@ export const eventSchema = z
     roleId: z.string().optional(),
     leave_approver:z.string().optional(),
     attending: z.enum(["Yes", "No","Maybe",""]).optional(),
-    kly_lat_long: z.string().optional(),
+    custom_latitude: z.string().optional(),
+    custom_longitude: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     const config = TAG_FORM_CONFIG[data.tags] ?? TAG_FORM_CONFIG.DEFAULT;

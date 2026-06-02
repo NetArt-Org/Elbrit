@@ -290,9 +290,10 @@ export function EventDoctorVisitDialog({
    RENDER
 ===================================================== */
 
-  const hasLocation =
-    !!currentEmployeeParticipant?.kly_lat_long;
-
+const hasLocation =
+  !isNaN(parseFloat(currentEmployeeParticipant?.custom_latitude)) &&
+  !isNaN(parseFloat(currentEmployeeParticipant?.custom_longitude));
+  
   const isAttending =
     currentEmployeeParticipant?.attending?.toLowerCase() === "yes";
   const isVisitCompleted = isAttending && hasLocation;

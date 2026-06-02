@@ -16,6 +16,7 @@ import FilterEvents from "@calendar/components/calendar/header/filter";
 import { UserSelect } from "@calendar/components/calendar/header/user-select";
 import { Settings } from "@calendar/components/calendar/settings/settings";
 import Views from "@calendar/components/calendar/header/view-tabs";
+import GoogleCalendarConnect from "../google-auth";
 
 export function CalendarHeader() {
 	const { view, events,activeDate, selectedDate  } = useCalendar();
@@ -47,6 +48,7 @@ const startDateForDialog = isPast ? undefined : candidateDate;
 				animate="animate"
 				transition={transition}>
 				<div className="options flex-wrap flex items-center gap-4 md:gap-2">
+					<GoogleCalendarConnect/>
 					<Views />
 				</div>
 

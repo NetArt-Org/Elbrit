@@ -58,9 +58,9 @@ export function mapErpLeaveToCalendar(leave) {
     calculateTotalLeaveDays(start, end, isHalfDay);
   // 🎯 Status → Color mapping
   const statusColorMap = {
-    Approved: "green",
-    Rejected: "red",
-    Open: "orange",
+    approved: "green",
+    rejected: "red",
+    open: "blue",
   };
   return {
     erpName: `${leave.name}`,
@@ -75,7 +75,7 @@ export function mapErpLeaveToCalendar(leave) {
     total_leave_days: totalDays,
     halfDayDate: leave.half_day_date ?? "",
     description: leave.description,
-    color: statusColorMap[leave.status] ?? "red",
+    color: statusColorMap[leave.status?.trim()?.toLowerCase()] ?? "indigo",
     medicalAttachment: leave.custom_attachment ?? "",
     employee: leave.employee?.name,
     approvedBy: leave.leave_approver_name ?? "",

@@ -6,7 +6,6 @@ import { resolveCalendarRange } from "@calendar/lib/calendar/range";
 import { ELBRIT_ROLEID, EMPLOYEES_QUERY, normalizeRoleProfiles } from "@calendar/services/events.query";
 import { mapEmployeesToCalendarUsers } from "@calendar/services/employee-to-calendar-user";
 import { graphqlRequest } from "@calendar/lib/graphql-client";
-import { enrichEventsWithParticipants } from "@calendar/lib/calendar/enrich-events";
 import { resolveVisibleEmployeeIds, resolveVisibleRoleIds } from "@calendar/lib/employeeHeirachy";
 import { TAG_IDS, TAGS } from "../constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";

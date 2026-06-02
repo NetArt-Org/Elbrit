@@ -28,31 +28,40 @@ export function mapErpGraphqlEventToCalendar(node) {
   --------------------------------------------- */
 
   const event_participants =
-    node.event_participants?.map((p) => ({
-      reference_doctype: p.reference_doctype__name,
-      reference_docname: String(p.reference_docname__name),
-      attending: p.attending,
-      kly_lat_long: p.kly_lat_long,
-      email: p.email ?? null,
-      // ✅ Only meaningful for Employee
-      kly_role_id:
-        p.reference_doctype__name === "Employee"
-          ? p.kly_role_id?.name ?? null
-          : null,
-    })) ?? [];
+  node.event_participants?.map((p) => ({
+    reference_doctype: p.reference_doctype__name,
+    reference_docname: String(p.reference_docname__name),
 
-  const participants = event_participants.map((p) => ({
-    type: p.reference_doctype,
-    id: p.reference_docname,
     attending: p.attending,
-    kly_lat_long: p.kly_lat_long,
-    email: p.email,
 
-    // ✅ Only Employee gets roleId
-    ...(p.reference_doctype === "Employee" && {
-      kly_role_id: p.kly_role_id,
-    }),
-  }));
+    custom_latitude: p.custom_latitude ?? null,
+    custom_longitude: p.custom_longitude ?? null,
+
+    email: p.email ?? null,
+
+    // ✅ Only meaningful for Employee
+    kly_role_id:
+      p.reference_doctype__name === "Employee"
+        ? p.kly_role_id?.name ?? null
+        : null,
+  })) ?? [];
+
+const participants = event_participants.map((p) => ({
+  type: p.reference_doctype,
+  id: p.reference_docname,
+
+  attending: p.attending,
+
+  custom_latitude: p.custom_latitude,
+  custom_longitude: p.custom_longitude,
+
+  email: p.email,
+
+  // ✅ Only Employee gets roleId
+  ...(p.reference_doctype === "Employee" && {
+    kly_role_id: p.kly_role_id,
+  }),
+}));
 
   /* ---------------------------------------------
      DERIVE EMPLOYEES & DOCTORS

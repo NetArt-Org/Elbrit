@@ -507,6 +507,7 @@ export const getBgColor = color => {
 		orange: "bg-orange-400 dark:bg-orange-600",
 		purple: "bg-purple-400 dark:bg-purple-600",
 		teal: "bg-teal-400 dark:bg-teal-600", 
+		indigo: "bg-indigo-400 dark:bg-indigo-600",
 	};
 	return colorClasses[color] || "";
 };

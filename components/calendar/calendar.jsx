@@ -44,7 +44,6 @@ export function Calendar() {
       <DndProvider showConfirmation={false}>
         <div className="h-screen w-full overflow-hidden flex flex-col">
           {isMobile ? <MobileCalendarHeader /> : <CalendarHeader />}
-
           {/* ===== Desktop Split Layout ===== */}
           <div className="flex flex-1 overflow-hidden">
             {!isMobile && (

@@ -48,8 +48,8 @@ export function mapFormToErpEvent(values, options = {}) {
               "roleId"
             );
         const participant = {
-          reference_doctype: "Employee",
-          reference_docname: empId,
+          reference_doctype: "User",
+          reference_docname: empEmail,
           email: empEmail || "",
           // ✅ ROLE (ERP STRUCTURE)
           ...(empRoleId && {
@@ -63,8 +63,9 @@ export function mapFormToErpEvent(values, options = {}) {
             participant.attending = values.attending;
           }
 
-          if (values.kly_lat_long) {
-            participant.custom_lat__long = values.kly_lat_long;
+          if (values.custom_latitude && values.custom_longitude) {
+            participant.custom_latitude = parseFloat(values.custom_latitude);
+            participant.custom_longitude = parseFloat(values.custom_longitude);
           }
         }
 
@@ -100,10 +101,17 @@ export function mapFormToErpEvent(values, options = {}) {
 
         if (
           isObject &&
-          doctor.kly_lat_long &&
-          (!isUpdate || !participant.custom_lat__long)
+          doctor.custom_latitude &&
+          doctor.custom_longitude  &&
+          (!isUpdate || !participant.custom_latitude)
         ) {
-          participant.custom_lat__long = doctor.kly_lat_long;
+          participant.custom_latitude = parseFloat(
+            doctor.custom_latitude
+          );
+        
+          participant.custom_longitude = parseFloat(
+            doctor.custom_longitude
+          );
         }
 
         participants.push(participant);
@@ -144,7 +152,7 @@ export function mapFormToErpEvent(values, options = {}) {
       COLOR_HEX_MAP.blue,
     all_day: isBirthday || values.allDay ? 1 : 0,
     custom_is_force_visit: values.forceVisit ? 1 : 0,
-    event_type: "Public",
+    event_type: "Private",
     status: "Open",
     docstatus: 0,
     event_participants: buildParticipants(values),

@@ -80,7 +80,7 @@ export function mapErpTodoToCalendar(todo) {
     startDate: start.toISOString(),
     endDate: end.toISOString(),
     tags: TAG_IDS.TODO_LIST,
-    color: "orange",
+    color: "indigo",
     isTodo: true,
     status:
       todo.status?.charAt(0) +
