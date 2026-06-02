@@ -30,7 +30,6 @@ function resolveDoctorDetails(event, doctorResolvers) {
   const doctorRef = event.participants?.find(
     (p) => p.type === "Lead"
   );
-
   const doctorId = doctorRef?.id;
   if (!doctorId) return null;
 
@@ -78,7 +77,7 @@ export function EventDoctorVisitDialog({
   } = useCalendar();
   const [showEditor, setShowEditor] = useState(false);
   const [newNote, setNewNote] = useState("");
-
+console.log("EVENT",event)
   const { handleDelete } = useDeleteEvent({
     removeEvent,
     onClose: () => setOpen(false),

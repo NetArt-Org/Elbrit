@@ -799,18 +799,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		) {
 			const doctorId = values?.doctor[0]?.value;
 
-			// const quotationDoc =
-			// 	mapDoctorVisitToQuotation({
-			// 		values,
-			// 		doctorId,
-			// 		existingName: quotationName,
-			// 	});
+			const quotationDoc =
+				mapDoctorVisitToQuotation({
+					values,
+					doctorId,
+					existingName: quotationName,
+				});
 
-			// const savedQuotation =
-			// 	await saveDocToQuotation(quotationDoc);
+			const savedQuotation =
+				await saveDocToQuotation(quotationDoc);
 
-			// quotationName = savedQuotation.name;
-			quotationName = "SAL-QTN-2026-00001"
+			quotationName = savedQuotation.name;
+			// quotationName = "SAL-QTN-2026-00001"
 		}
 
 		const erpDoc = mapFormToErpEvent(values, {

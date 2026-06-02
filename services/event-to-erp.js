@@ -48,8 +48,8 @@ export function mapFormToErpEvent(values, options = {}) {
               "roleId"
             );
         const participant = {
-          reference_doctype: "User",
-          reference_docname: empEmail,
+          reference_doctype: "Employee",
+          reference_docname: empId,
           email: empEmail || "",
           // ✅ ROLE (ERP STRUCTURE)
           ...(empRoleId && {
@@ -162,7 +162,25 @@ export function mapFormToErpEvent(values, options = {}) {
     add_video_conferencing: values.tags === TAG_IDS.MEETING ? 1 : 0,
   };
 
-
+  // ✅ POB DETAILS (Doctor Visit Plan – Edit only)
+  if (
+    isDoctorVisitPlan &&
+    isUpdate &&
+    values.pob_given === "Yes" &&
+    Array.isArray(values.fsl_doctor_item)
+  ) {
+    doc.fsl_doctor_item = values.fsl_doctor_item.map((row) => ({
+      item:
+        typeof row.item__name === "object"
+          ? row.item__name.value
+          : row.item__name,
+    
+      qty: Number(row.qty) || 0,
+      rate: Number(row.rate) || 0,
+      amount: Number(row.amount) || 0,
+    }));
+    
+  }
   /* ------------------------------------
      🎂 Birthday repeat logic (ERP)
   ------------------------------------ */

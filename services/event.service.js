@@ -465,6 +465,13 @@ export async function fetchEventsByRange(startDate, endDate, view) {
       const quotation =
         quotationMap[node.reference_docname__name];
 
+        console.log(
+          "Injecting quotation",
+          node.name,
+          quotation.name,
+          quotation.items
+        );
+
       node.fsl_doctor_item =
         quotation.items?.map((row) => ({
           item__name: row.item_code?.name,
