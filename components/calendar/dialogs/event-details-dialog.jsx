@@ -10,7 +10,7 @@ import {
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { TAG_IDS } from "@calendar/components/calendar/constants"
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
-import { EventLeaveDialog } from "./event-details/leave-dialog";
+import { EventLeaveDialog } from "../module/leave/components/leave-dialog";
 import { EventDefaultDialog } from "./event-details/default-dialog";
 import { Calendar, Clock, Text, User } from "lucide-react";
 import { EventDoctorVisitDialog } from "./event-details/doctor-visit-dialog";

@@ -1,21 +1,15 @@
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { serializeEventDoc } from "./event-to-erp";
-import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY,  LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, QUOTATIONS_BY_NAMES_QUERY } from "@calendar/services/events.query";
+import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, QUOTATIONS_BY_NAMES_QUERY } from "@calendar/services/events.query";
 import { mapErpGraphqlEventToCalendar } from "@calendar/services/erp-to-event";
 import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
 import { clearEventCache } from "@calendar/lib/calendar/event-cache";
 import { format } from "date-fns";
 import { getCached } from "@calendar/lib/data-cache";
-import {
-  getCachedLeaveBalance,
-  setCachedLeaveBalance,
-  getLeaveCacheKey,
-  clearLeaveCache,
-} from "@calendar/lib/calendar/leave-cache";
-import { mapErpLeaveToCalendar } from "./leave-to-erp";
 import { GOOGLE_CALENDAR_BY_USER } from "@calendar/components/calendar/google-auth/queries";
 import { fetchAllTodoList } from "@calendar/components/calendar/module/todo/services/todo.service";
+import { fetchAllLeaveApplications } from "@calendar/components/calendar/module/leave/services/leave.service";
 const PAGE_SIZE = 50;
 
 const SAVE_EVENT_MUTATION = `
@@ -45,47 +39,6 @@ mutation SaveEvent($doc: String!) {
   }
 }
 `
-const SAVE_LEAVE_APPLICATION_MUTATION = `
-mutation SaveEvent($doc: String!) {
-  saveDoc(doctype: "Leave Application", doc: $doc) {
-    doc {
-      name
-    }
-  }
-}
-`;
-const UPDATE_LEAVE_STATUS_MUTATION = `
-mutation UpdateLeaveStatus(
-  $name: String!
-  $value: DOCFIELD_VALUE_TYPE!
-) {
-  setValue(
-    doctype: "Leave Application"
-    name: $name
-    fieldname: "status"
-    value: $value
-  ) {
-    name
-  }
-}
-`;
-
-
-const UPDATE_LEAVE_ATTACHMENT_MUTATION = `
-mutation UpdateLeaveAttachment(
-  $name: String!
-  $value: DOCFIELD_VALUE_TYPE!
-) {
-  setValue(
-    doctype: "Leave Application"
-    name: $name
-    fieldname: "custom_attachment"
-    value: $value
-  ) {
-    name
-  }
-}
-`;
 
 
 export async function fetchQuotationsByNames(names) {
@@ -115,25 +68,6 @@ export async function fetchQuotationsByNames(names) {
 
   return map;
 }
-export async function updateLeaveAttachment(leaveName, fileUrl) {
-  if (!leaveName || !fileUrl) return;
-
-  const data = await graphqlRequest(
-    UPDATE_LEAVE_ATTACHMENT_MUTATION,
-    {
-      name: leaveName,
-      value: fileUrl,
-    }
-  );
-
-  if (!data?.setValue?.name) {
-    throw new Error("Failed to update leave attachment");
-  }
-  clearLeaveCache();
-  return true;
-}
-
-
 export async function saveEvent(doc) {
   const data = await graphqlRequest(SAVE_EVENT_MUTATION, {
     doc: serializeEventDoc(doc),
@@ -146,28 +80,6 @@ export async function saveEvent(doc) {
   clearEventCache();
 
   return data.saveDoc.doc;
-}
-export async function updateLeaveStatus(leaveName, newStatus) {
-  if (!leaveName || !newStatus) {
-    throw new Error("Invalid leave update payload");
-  }
-
-  const data = await graphqlRequest(
-    UPDATE_LEAVE_STATUS_MUTATION,
-    {
-      name: leaveName,
-      value: newStatus,
-    }
-  );
-
-  if (!data?.setValue?.name) {
-    throw new Error("Failed to update leave status");
-  }
-
-  // Clear all relevant caches
-  clearLeaveCache();
-
-  return true;
 }
 async function fetchLeadNotes(leadName) {
   const res = await graphqlRequest(
@@ -288,29 +200,6 @@ export async function saveDocToQuotation(doc) {
 
   clearEventCache();
   return data.saveDoc.doc;
-}
-export async function saveLeaveApplication(doc) {
-  const data = await graphqlRequest(SAVE_LEAVE_APPLICATION_MUTATION, {
-    doc: JSON.stringify(doc),
-  });
-
-  if (!data?.saveDoc?.doc?.name) {
-    throw new Error("Failed to create Leave Application");
-  }
-
-  clearLeaveCache();
-  return data.saveDoc.doc;
-}
-export async function fetchAllLeaveApplications() {
-  return getCached("LEAVE_APPLICATIONS", async () => {
-    const data = await graphqlRequest(LEAVE_QUERY, {
-      first: 500,
-    });
-
-    return data.LeaveApplications.edges
-      .map(edge => mapErpLeaveToCalendar(edge.node))
-      .filter(Boolean);
-  });
 }
 export async function fetchAllCustomers() {
   return getCached("CUSTOMERS", async () => {
@@ -513,104 +402,7 @@ export async function deleteEventFromErp(erpName, docname) {
   }
 }
 
-// ---------------------------------------------
-// Leave Filters
-// ---------------------------------------------
-const getLeaveAllocationFilters = (employeeId) => [
-  { fieldname: "employee", operator: "EQ", value: employeeId },
-  { fieldname: "docstatus", operator: "EQ", value: "1" },
-];
 
-const getLeaveUsedFilters = (employeeId) => [
-  { fieldname: "employee", operator: "EQ", value: employeeId },
-  { fieldname: "status", operator: "EQ", value: "Approved" },
-  { fieldname: "docstatus", operator: "EQ", value: "1" },
-];
-
-const getLeavePendingFilters = (employeeId) => [
-  { fieldname: "employee", operator: "EQ", value: employeeId },
-  { fieldname: "status", operator: "EQ", value: "Open" },
-];
-
-/* =====================================================
-   EMPLOYEE LEAVE BALANCE (WITH CACHE)
-===================================================== */
-export async function fetchEmployeeLeaveBalance(employeeId) {
-  const cacheKey = getLeaveCacheKey(employeeId);
-  const cached = getCachedLeaveBalance(cacheKey);
-
-  // ⏱ 5-minute TTL
-  if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
-    return cached.data;
-  }
-
-  const [allocRes, usedRes, pendingRes] = await Promise.all([
-    graphqlRequest(LEAVE_ALLOCATIONS_QUERY, {
-      first: 20,
-      filters: getLeaveAllocationFilters(employeeId),
-    }),
-    graphqlRequest(LEAVE_APPLICATIONS_QUERY, {
-      first: 100,
-      filters: getLeaveUsedFilters(employeeId),
-    }),
-    graphqlRequest(LEAVE_APPLICATIONS_QUERY, {
-      first: 100,
-      filters: getLeavePendingFilters(employeeId),
-    }),
-  ]);
-
-  const balance = {};
-
-  allocRes.LeaveAllocations.edges.forEach(({ node }) => {
-    balance[node.leave_type__name] = {
-      allocated: node.total_leaves_allocated,
-      used: 0,
-      pending: 0,
-    };
-  });
-
-  usedRes.LeaveApplications.edges.forEach(({ node }) => {
-    if (balance[node.leave_type__name]) {
-      balance[node.leave_type__name].used += node.total_leave_days;
-    }
-  });
-
-  pendingRes.LeaveApplications.edges.forEach(({ node }) => {
-    if (balance[node.leave_type__name]) {
-      balance[node.leave_type__name].pending += node.total_leave_days;
-    }
-  });
-
-  Object.values(balance).forEach((b) => {
-    b.available = b.allocated - b.used - b.pending;
-  });
-
-  setCachedLeaveBalance(cacheKey, balance);
-  return balance;
-}
 export function formatDateForERP(date) {
   return format(date, "yyyy-MM-dd");
 }
-export async function updateLeadDob(leadName, dob) {
-  const mutation = `
-  mutation UpdateLeadDOB(
-  $name: String!
-  $value: DOCFIELD_VALUE_TYPE!
-) {
-  setValue(
-    doctype: "Lead"
-    name: $name
-    fieldname: "fsl_dob"
-    value: $value
-  ) {
-    name
-  }
-}
-  `;
-
-  return graphqlRequest(mutation, {
-    name: leadName,
-    value: formatDateForERP(dob),
-  });
-}
-

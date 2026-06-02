@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/services/event-to-erp";
-import { saveDocToErp, saveEvent, fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment, updateLeadDob, saveDocToQuotation } from "@calendar/services/event.service";
+import { saveDocToErp, saveEvent, saveDocToQuotation } from "@calendar/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
 import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
@@ -22,7 +22,7 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@calendar/lib/participants";
 import { TimePicker } from "@calendar/components/ui/TimePicker";
 import { mapErpTodoToCalendar,mapFormToErpTodo } from "@calendar/components/calendar/module/todo/mappers/todo.mapper";
-import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/services/leave-to-erp";
+import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
 import { fetchItems } from "@calendar/services/participants.service";
@@ -37,6 +37,7 @@ import { useDoctorResolvers } from "@calendar/lib/doctorResolver";
 import { DoctorNotesSection } from "../doctor/DoctorNotesSection";
 import TodoComments from "@calendar/components/calendar/module/todo/components/TodoCommentsSection";
 import { Textarea } from "@calendar/components/ui/textarea";
+import { fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment } from "@calendar/components/calendar/module/leave/services/leave.service";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();

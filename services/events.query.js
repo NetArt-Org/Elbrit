@@ -141,7 +141,6 @@ query Items(
 }
 `;
 
-
 export const DOCTOR_QUERY = `
 query Doctors($first: Int) {
   Leads(first: $first) {
@@ -204,37 +203,6 @@ query Customers($first: Int) {
 }
 `
 
-export const LEAVE_QUERY = `
-query LeaveApplications($first: Int) {
-  LeaveApplications(first: $first) {
-    edges {
-      node {
-        name
-        from_date
-        to_date
-        half_day
-        half_day_date
-        total_leave_days
-        description
-        posting_date
-        status
-        custom_attachement
-        leave_approver {
-          name
-        }
-        leave_approver_name
-        leave_balance
-        employee_name
-        employee {
-          name
-        }
-        leave_type__name
-      }
-    }
-  }
-}
-`
-
 export const HQ_TERRITORIES_QUERY = `
 query GetHQTerritories($first: Int!){
   Territorys(first: $first)  {
@@ -246,32 +214,3 @@ query GetHQTerritories($first: Int!){
   }
   }
 `;
-
-export const LEAVE_ALLOCATIONS_QUERY = `
-query LeaveAllocationsByEmployee(
-  $first: Int!
-  $filters: [DBFilterInput!]
-) {
-  LeaveAllocations(first: $first, filter: $filters) {
-    edges {
-      node {
-        leave_type__name
-        total_leaves_allocated
-      }
-    }
-  }
-}
-`;
-export const LEAVE_APPLICATIONS_QUERY = `
-query LeaveApplications($first: Int!, $filters: [DBFilterInput!]) {
-  LeaveApplications(first: $first, filter: $filters) {
-    edges {
-      node {
-        leave_type__name
-        total_leave_days
-      }
-    }
-  }
-}
-`;
-

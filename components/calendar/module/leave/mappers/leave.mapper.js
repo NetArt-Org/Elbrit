@@ -1,5 +1,6 @@
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
-import { TAG_IDS } from "@calendar/components/calendar/constants";
+import {  DEFAULT_COLORS, TAG_IDS } from "@calendar/components/calendar/constants";
+import { normalizeStatus } from "@calendar/components/calendar/helpers";
 import { differenceInCalendarDays, startOfDay, endOfDay, format } from "date-fns";
 function toERPDate(date = new Date()) {
   return format(startOfDay(date), "yyyy-MM-dd");
@@ -56,24 +57,7 @@ export function mapErpLeaveToCalendar(leave) {
   const totalDays =
     leave.total_leave_days ??
     calculateTotalLeaveDays(start, end, isHalfDay);
-  // 🎯 Status → Color mapping
-  const statusColorMap = {
-    approved: "green",
-    rejected: "red",
-    open: "blue",
-  };
-  const statusMap = {
-    open: "Open",
-    approved: "Approved",
-    rejected: "Rejected",
-    cancelled: "Cancelled",
-  };
-  
-  const normalizedStatus =
-    statusMap[
-      leave.status?.trim()?.toLowerCase()
-    ] ?? "Open";
-
+    
   return {
     erpName: `${leave.name}`,
     id: `${leave.name}`,
@@ -82,12 +66,14 @@ export function mapErpLeaveToCalendar(leave) {
     leaveType: leave.leave_type__name,
     startDate: start.toISOString(), // ✅ normalized
     endDate: end.toISOString(),     // ✅ normalized
-     status: normalizedStatus,
+     status: normalizeStatus(leave.status),
     half_day: isHalfDay ? 1 : 0,
     total_leave_days: totalDays,
     halfDayDate: leave.half_day_date ?? "",
     description: leave.description,
-    color: statusColorMap[leave.status?.trim()?.toLowerCase()] ?? "indigo",
+    color: DEFAULT_COLORS[
+        `LEAVE_${normalizeStatus.toUpperCase()}`
+      ] ?? DEFAULT_COLORS.LEAVE_OPEN,
     medicalAttachment: leave.custom_attachment ?? "",
     employee: leave.employee?.name,
     approvedBy: leave.leave_approver_name ?? "",
