@@ -63,7 +63,7 @@ export const eventSchema = z
     approvedBy: z.string().optional(),
     assignedTo:z.any().optional(),
     /* ---------- Todo ---------- */
-    status: z.enum(["Open", "Closed", "Cancelled"]).optional(),
+    status: z.enum(["Open", "Closed", "Cancelled","Completed","Approved","Rejected"]).optional(),
     priority: z.enum(["High", "Medium", "Low"]).optional(),
 
     /* ---------- Doctor Visit ---------- */

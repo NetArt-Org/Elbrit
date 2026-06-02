@@ -38,6 +38,7 @@ export function CalendarProvider({
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [selectedUserId, setSelectedUserId] = useState("all");
 	const [selectedColors, setSelectedColors] = useState([]);
+	const [selectedStatuses, setSelectedStatuses] = useState([]);
 	const [allEvents, setAllEvents] = useState(events || []);
 	// const [filteredEvents, setFilteredEvents] = useState(events || []);
 	const [users, setUsers] = useState([]);
@@ -100,6 +101,20 @@ export function CalendarProvider({
 
 		setSelectedColors(newColors);
 	};
+	const filterEventsBySelectedStatus = (status) => {
+		const normalized = status.toLowerCase();
+	  
+		const isSelected =
+		  selectedStatuses.includes(normalized);
+	  
+		const newStatuses = isSelected
+		  ? selectedStatuses.filter(
+			  (s) => s !== normalized
+			)
+		  : [...selectedStatuses, normalized];
+	  
+		setSelectedStatuses(newStatuses);
+	  };
 	const filterEventsBySelectedUser = (userId) => {
 		setSelectedUserId(userId);
 	};
@@ -152,6 +167,7 @@ export function CalendarProvider({
 	const clearFilter = () => {
 		// setFilteredEvents(allEvents);
 		setSelectedColors([]);
+		setSelectedStatuses([]);
 		setSelectedUserId("all");
 	};
 	useEffect(() => {
@@ -344,7 +360,13 @@ export function CalendarProvider({
 					selectedColors.includes(event.color || "blue")
 				);
 			}
-
+			if (selectedStatuses.length) {
+				result = result.filter((event) =>
+				  selectedStatuses.includes(
+					event.status?.trim()?.toLowerCase()
+				  )
+				);
+			  }
 			return result;
 		}
 
@@ -377,7 +399,13 @@ export function CalendarProvider({
 				selectedColors.includes(event.color || "blue")
 			);
 		}
-
+		if (selectedStatuses.length) {
+			result = result.filter(event =>
+			  selectedStatuses.includes(
+				event.status?.trim()?.toLowerCase()
+			  )
+			);
+		  }
 		return result;
 
 	}, [
@@ -385,7 +413,7 @@ export function CalendarProvider({
 		visibleRoleIds,
 		allowedEmployeeIds,
 		selectedUserId,
-		selectedColors
+		selectedColors,selectedStatuses
 	]);
 
 	const value = {
@@ -399,6 +427,8 @@ export function CalendarProvider({
 		usersLoading,
 		selectedColors,
 		filterEventsBySelectedColors,
+		selectedStatuses,
+		filterEventsBySelectedStatus,
 		filterEventsBySelectedUser,
 		events: filteredEvents,
 		view: currentView,

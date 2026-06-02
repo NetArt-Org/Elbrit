@@ -14,6 +14,7 @@ query EventsByRange(
         ends_on
         color
         all_day
+        status
         event_category
         fsl_is_force_visit:custom_is_force_visit
         custom_force_visit_reason

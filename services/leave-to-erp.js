@@ -62,6 +62,18 @@ export function mapErpLeaveToCalendar(leave) {
     rejected: "red",
     open: "blue",
   };
+  const statusMap = {
+    open: "Open",
+    approved: "Approved",
+    rejected: "Rejected",
+    cancelled: "Cancelled",
+  };
+  
+  const normalizedStatus =
+    statusMap[
+      leave.status?.trim()?.toLowerCase()
+    ] ?? "Open";
+
   return {
     erpName: `${leave.name}`,
     id: `${leave.name}`,
@@ -70,7 +82,7 @@ export function mapErpLeaveToCalendar(leave) {
     leaveType: leave.leave_type__name,
     startDate: start.toISOString(), // ✅ normalized
     endDate: end.toISOString(),     // ✅ normalized
-    status: leave.status,
+     status: normalizedStatus,
     half_day: isHalfDay ? 1 : 0,
     total_leave_days: totalDays,
     halfDayDate: leave.half_day_date ?? "",

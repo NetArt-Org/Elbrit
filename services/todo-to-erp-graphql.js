@@ -71,7 +71,15 @@ export function mapErpTodoToCalendar(todo) {
         emp.employee ?? emp.employee__name ?? null
       ).filter(Boolean)
     : [];
-
+    const statusMap = {
+      closed: "Completed",
+      open: "Open",
+      cancelled: "Cancelled",
+    };
+    
+    const normalizedStatus =
+      statusMap[todo.status?.toLowerCase()] ??
+      todo.status;
   return {
     erpName: todo.name,
     title: todo.custom_subject || todo.title || "Todo List",
@@ -82,9 +90,7 @@ export function mapErpTodoToCalendar(todo) {
     tags: TAG_IDS.TODO_LIST,
     color: "indigo",
     isTodo: true,
-    status:
-      todo.status?.charAt(0) +
-      todo.status?.slice(1).toLowerCase(),
+    status:normalizedStatus,
     priority:
       todo.priority?.charAt(0) +
       todo.priority?.slice(1).toLowerCase(),

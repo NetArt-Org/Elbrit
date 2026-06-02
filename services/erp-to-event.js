@@ -98,6 +98,16 @@ const participants = event_participants.map((p) => ({
       mapHexToColor(node.color) ??
       "blue";
   const attending = normalizeAttending(node.attending);
+  const statusMap = {
+    open: "Open",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
+  
+  const normalizedStatus =
+    statusMap[
+      node.status?.trim()?.toLowerCase()
+    ] ?? "Open";
 
   /* ---------------------------------------------
      EVENT OBJECT (SCHEMA-SAFE)
@@ -106,6 +116,7 @@ const participants = event_participants.map((p) => ({
     erpName: node.name,
     title: node.subject || "",
     description: node.description ?? "",
+    status: normalizedStatus,    
     allDay: Boolean(node.all_day),
     forceVisit:Boolean(node.fsl_is_force_visit),
     startDate: startDate ? startDate.toISOString() : null,
