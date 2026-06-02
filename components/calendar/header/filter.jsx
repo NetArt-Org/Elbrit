@@ -26,7 +26,7 @@ export default function FilterEvents() {
 		"Open",
 		"Approved",
 		"Rejected",
-		"Completed",
+		"Closed",
 	];
 	return (
 		<DropdownMenu>

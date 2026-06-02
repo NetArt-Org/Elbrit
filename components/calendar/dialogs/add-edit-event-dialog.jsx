@@ -156,7 +156,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	}, [currentLatitude, currentLongitude, event, isEditing]);
 	const shouldShowRequestLocation =
 		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-		!currentLocation &&
+		(!currentLatitude || !currentLongitude) &&
 		!isResolvingLocation;
 
 
@@ -799,17 +799,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		) {
 			const doctorId = values?.doctor[0]?.value;
 
-			const quotationDoc =
-				mapDoctorVisitToQuotation({
-					values,
-					doctorId,
-					existingName: quotationName,
-				});
+			// const quotationDoc =
+			// 	mapDoctorVisitToQuotation({
+			// 		values,
+			// 		doctorId,
+			// 		existingName: quotationName,
+			// 	});
 
-			const savedQuotation =
-				await saveDocToQuotation(quotationDoc);
+			// const savedQuotation =
+			// 	await saveDocToQuotation(quotationDoc);
 
-			quotationName = savedQuotation.name;
+			// quotationName = savedQuotation.name;
+			quotationName = "SAL-QTN-2026-00001"
 		}
 
 		const erpDoc = mapFormToErpEvent(values, {
@@ -822,21 +823,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpDoc.reference_doctype = "Quotation";
 			erpDoc.reference_docname = quotationName;
 		}
-		console.log(erpDoc);
-		// const savedEvent = await saveEvent(erpDoc);
+		const savedEvent = await saveEvent(erpDoc);
 
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,
 			erpDoc,
-			// savedName: savedEvent.name,
+			savedName: savedEvent.name,
 			tagConfig,
 			employeeOptions,
 			doctorOptions,
 			ownerOverride:
 				event?.owner || LOGGED_IN_USER.id,
 		});
-		// upsertCalendarEvent(calendarEvent);
+		upsertCalendarEvent(calendarEvent);
 
 		finalize("Event updated");
 	};

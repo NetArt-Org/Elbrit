@@ -72,7 +72,7 @@ export function mapErpTodoToCalendar(todo) {
       ).filter(Boolean)
     : [];
     const statusMap = {
-      closed: "Completed",
+      closed: "Closed",
       open: "Open",
       cancelled: "Cancelled",
     };

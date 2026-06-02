@@ -100,7 +100,8 @@ const participants = event_participants.map((p) => ({
   const attending = normalizeAttending(node.attending);
   const statusMap = {
     open: "Open",
-    completed: "Completed",
+    completed: "Closed",
+    closed:"Closed",
     cancelled: "Cancelled",
   };
   
