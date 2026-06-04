@@ -598,7 +598,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			leavePeriod: "Full",
 			halfDayDate: undefined,
 			medicalAttachment: undefined, allocated_to: undefined,
-			assignedTo: [], custom_latitude: "", custom_longitude: "",
+			assignedTo: [], custom_latitude: undefined, custom_longitude:undefined,
 			hqTerritory: "",
 			allDay: false,
 		});
@@ -803,20 +803,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
 			values.pob_given === "Yes"
 		) {
-			// const doctorId = values?.doctor[0]?.value;
+			const doctorId = values?.doctor[0]?.value;
 
-			// const quotationDoc =
-			// 	mapDoctorVisitToQuotation({
-			// 		values,
-			// 		doctorId,
-			// 		existingName: quotationName,
-			// 	});
+			const quotationDoc =
+				mapDoctorVisitToQuotation({
+					values,
+					doctorId,
+					existingName: quotationName,
+				});
 
-			// const savedQuotation =
-			// 	await saveDocToQuotation(quotationDoc);
+			const savedQuotation =
+				await saveDocToQuotation(quotationDoc);
 
-			// quotationName = savedQuotation.name;
-			quotationName = "SAL-QTN-2026-00001"
+			quotationName = savedQuotation.name;
+			// quotationName = "SAL-QTN-2026-00001"
 		}
 
 		const erpDoc = mapFormToErpEvent(values, {
@@ -830,7 +830,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpDoc.reference_docname = quotationName;
 		}
 		const savedEvent = await saveEvent(erpDoc);
-
+		console.log("ERP DOC DR Visit",erpDoc)
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,
@@ -870,6 +870,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				employeeResolvers,
 				doctorResolvers,
 			});
+			
 			const savedEvent = await saveEvent(erpDoc);
 
 			const calendarEvent = buildCalendarEvent({

@@ -276,8 +276,12 @@ export async function fetchEventsByRange(startDate, endDate, view) {
           rate: Number(row.rate) || 0,
           amount: Number(row.amount) || 0,
         })) || [];
+        node.pob_given =
+        quotation.items?.length > 0
+          ? "Yes"
+          : "No";
     }
-
+   
     return node;
   });
 
@@ -305,19 +309,6 @@ export async function fetchEventsByRange(startDate, endDate, view) {
 const DELETE_EVENT_MUTATION = `
 mutation DeleteEvent($doctype: String!, $name: String!) {
   deleteDoc(doctype: $doctype, name: $name) {
-    name
-  }
-}
-`;
-const DELETE_LEAD_NOTE_MUTATION = `
-mutation DeleteLeadNote(
-  $doctype: String!,
-  $name: String!
-) {
-  deleteDoc(
-    doctype: $doctype,
-    name: $name
-  ) {
     name
   }
 }

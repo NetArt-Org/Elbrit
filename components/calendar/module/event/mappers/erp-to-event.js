@@ -140,6 +140,16 @@ const participants = event_participants.map((p) => ({
 
     // 👇 UI derived
     participants,
+    pob_given: node.pob_given ?? "No",
+
+    fsl_doctor_item:
+      node.fsl_doctor_item ?? [],
+  
+    reference_doctype:
+      node.reference_doctype?.name,
+  
+    reference_docname:
+      node.reference_docname__name,
   };
 
   /* ---------------------------------------------
