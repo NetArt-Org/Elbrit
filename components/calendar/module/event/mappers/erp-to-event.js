@@ -32,14 +32,10 @@ export function mapErpGraphqlEventToCalendar(node) {
   node.event_participants?.map((p) => ({
     reference_doctype: p.reference_doctype__name,
     reference_docname: String(p.reference_docname__name),
-
     attending: p.attending,
-
     custom_latitude: p.custom_latitude ?? null,
     custom_longitude: p.custom_longitude ?? null,
-
     email: p.email ?? null,
-
     // ✅ Only meaningful for Employee
     kly_role_id:
       p.reference_doctype__name === "Employee"
@@ -50,14 +46,10 @@ export function mapErpGraphqlEventToCalendar(node) {
 const participants = event_participants.map((p) => ({
   type: p.reference_doctype,
   id: p.reference_docname,
-
   attending: p.attending,
-
   custom_latitude: p.custom_latitude,
   custom_longitude: p.custom_longitude,
-
   email: p.email,
-
   // ✅ Only Employee gets roleId
   ...(p.reference_doctype === "Employee" && {
     kly_role_id: p.kly_role_id,
@@ -188,11 +180,11 @@ function parseErpDate(value) {
 }
 
 function mapHexToColor(hex) {
-  if (!hex) return "blue";
+  if (!hex) return DEFAULT_COLORS.EVENT;
 
   const entry = Object.entries(COLOR_HEX_MAP).find(
     ([, value]) => value.toLowerCase() === hex.toLowerCase()
   );
 
-  return entry ? entry[0] : "blue";
+  return entry ? entry[0] : DEFAULT_COLORS.EVENT;
 }

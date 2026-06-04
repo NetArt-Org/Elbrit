@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { COLOR_HEX_MAP } from "@calendar/components/calendar/constants";
+import { COLOR_HEX_MAP, DEFAULT_COLORS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 
@@ -133,7 +133,7 @@ export function mapFormToErpEvent(values, options = {}) {
     hasEmployee &&
     values.attending === "Yes";
   const resolvedColor = hasEmployeeAttendingYes
-    ? "green"
+    ? DEFAULT_COLORS.EVENT_COMPLETED
     : values.color;
 
   const isBirthday = values.tags === "Birthday";

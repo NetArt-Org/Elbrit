@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/components/calendar/module/event/mappers/event-to-erp";
-import {  saveEvent, saveDocToQuotation } from "@calendar/components/calendar/module/event/services/event.service";
+import { saveEvent, saveDocToQuotation } from "@calendar/components/calendar/module/event/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
 import { Form, FormControl, FormField, } from "@calendar/components/ui/form";
@@ -21,7 +21,7 @@ import { eventSchema } from "@calendar/components/calendar/schemas";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@calendar/lib/participants";
 import { TimePicker } from "@calendar/components/ui/TimePicker";
-import { mapErpTodoToCalendar,mapFormToErpTodo } from "@calendar/components/calendar/module/todo/mappers/todo.mapper";
+import { mapErpTodoToCalendar, mapFormToErpTodo } from "@calendar/components/calendar/module/todo/mappers/todo.mapper";
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
@@ -115,7 +115,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		const doctorLat = parseFloat(doctor.custom_latitude);
 		const doctorLng = parseFloat(doctor.custom_longitude);
-
+		console.log("DOCTOR LANG", doctorLat, doctorLng)
 		const visitLat = parseFloat(currentLatitude);
 		const visitLng = parseFloat(currentLongitude);
 
@@ -156,12 +156,16 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		}
 
 	}, [currentLatitude, currentLongitude, event, isEditing]);
+	const hasValidLocation =
+		Number(currentLatitude) !== 0 &&
+		Number(currentLongitude) !== 0 &&
+		currentLatitude != null &&
+		currentLongitude != null;
+
 	const shouldShowRequestLocation =
 		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-		(!currentLatitude || !currentLongitude) &&
+		!hasValidLocation &&
 		!isResolvingLocation;
-
-
 	const getFieldLabel = (field, fallback) => {
 		return tagConfig.labels?.[field] ?? fallback;
 	};
@@ -333,14 +337,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		}
 
 		// existing geo logic (unchanged)
-		resolveLatLong(form, attending, isEditing, toast);
-	}, [attending, isEditing]);
+		resolveLatLong(form, isEditing, toast);
+	}, [isEditing]);
 
 	const handleRequestLocation = async () => {
 		try {
 			setIsResolvingLocation(true);
 
-			resolveLatLong(form, attending, isEditing, toast);
+			resolveLatLong(form, isEditing, toast);
 
 		} finally {
 			setIsResolvingLocation(false);
@@ -799,20 +803,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
 			values.pob_given === "Yes"
 		) {
-			const doctorId = values?.doctor[0]?.value;
+			// const doctorId = values?.doctor[0]?.value;
 
-			const quotationDoc =
-				mapDoctorVisitToQuotation({
-					values,
-					doctorId,
-					existingName: quotationName,
-				});
+			// const quotationDoc =
+			// 	mapDoctorVisitToQuotation({
+			// 		values,
+			// 		doctorId,
+			// 		existingName: quotationName,
+			// 	});
 
-			const savedQuotation =
-				await saveDocToQuotation(quotationDoc);
+			// const savedQuotation =
+			// 	await saveDocToQuotation(quotationDoc);
 
-			quotationName = savedQuotation.name;
-			// quotationName = "SAL-QTN-2026-00001"
+			// quotationName = savedQuotation.name;
+			quotationName = "SAL-QTN-2026-00001"
 		}
 
 		const erpDoc = mapFormToErpEvent(values, {
