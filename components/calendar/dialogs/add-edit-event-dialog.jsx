@@ -115,7 +115,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		const doctorLat = parseFloat(doctor.custom_latitude);
 		const doctorLng = parseFloat(doctor.custom_longitude);
-		console.log("DOCTOR LANG", doctorLat, doctorLng)
 		const visitLat = parseFloat(currentLatitude);
 		const visitLng = parseFloat(currentLongitude);
 
@@ -830,7 +829,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpDoc.reference_docname = quotationName;
 		}
 		const savedEvent = await saveEvent(erpDoc);
-		console.log("ERP DOC DR Visit",erpDoc)
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,

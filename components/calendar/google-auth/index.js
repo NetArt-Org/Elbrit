@@ -8,7 +8,6 @@ import { Button } from "@calendar/components/ui/button";
 
 export default function GoogleCalendarConnect() {
   const { me, googleClientId, googleRedirectUri, } = useAuth();
-
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
 

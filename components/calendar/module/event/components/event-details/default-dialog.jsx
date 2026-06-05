@@ -15,7 +15,6 @@ import { useDeleteEvent } from "@calendar/components/calendar/hooks";
 export function EventDefaultDialog({
   event, setOpen
 }) {
-  console.log("EVENT", event)
   const { use24HourFormat, removeEvent, employeeOptions, doctorOptions } = useCalendar();
   const { handleDelete } = useDeleteEvent({
     removeEvent,
