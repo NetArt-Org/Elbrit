@@ -16,27 +16,32 @@ const PAGE_SIZE = 50;
 export async function fetchQuotationsByNames(names) {
   if (!names?.length) return {};
 
-  const filters = [
-    {
-      fieldname: "name",
-      operator: "IN",
-      value: names.join(","),
-    },
-  ];
-
-  const data = await graphqlRequest(
-    QUOTATIONS_BY_NAMES_QUERY,
-    {
-      first: names.length, // or 50
-      filters,
-    }
-  );
-
   const map = {};
 
-  data?.Quotations?.edges?.forEach(({ node }) => {
-    map[node.name] = node;
-  });
+  await Promise.all(
+    names.map(async (name) => {
+      const data = await graphqlRequest(
+        QUOTATIONS_BY_NAMES_QUERY,
+        {
+          first: 1,
+          filters: [
+            {
+              fieldname: "name",
+              operator: "EQ",
+              value: name,
+            },
+          ],
+        }
+      );
+
+      const node =
+        data?.Quotations?.edges?.[0]?.node;
+
+      if (node) {
+        map[node.name] = node;
+      }
+    })
+  );
 
   return map;
 }
@@ -241,6 +246,13 @@ export async function fetchEventsByRange(startDate, endDate, view) {
   // --------------------------------------------
   // 2️⃣ COLLECT QUOTATION REFERENCES
   // --------------------------------------------
+  console.log(
+    rawEventNodes.map((n) => ({
+      event: n.name,
+      refType: n.reference_doctype?.name,
+      refDoc: n.reference_docname__name,
+    }))
+  );
   const quotationNames = rawEventNodes
     .filter(
       (node) =>
@@ -248,7 +260,7 @@ export async function fetchEventsByRange(startDate, endDate, view) {
         node.reference_docname__name
     )
     .map((node) => node.reference_docname__name);
-
+    console.log("quotationNames", quotationNames);
   const uniqueQuotationNames = [
     ...new Set(quotationNames),
   ];
@@ -258,7 +270,7 @@ export async function fetchEventsByRange(startDate, endDate, view) {
   // --------------------------------------------
   const quotationMap =
     await fetchQuotationsByNames(uniqueQuotationNames);
-
+    console.log("quotationMap", quotationMap,uniqueQuotationNames);
   // --------------------------------------------
   // 4️⃣ INJECT QUOTATION ITEMS INTO RAW NODES
   // --------------------------------------------
@@ -267,6 +279,11 @@ export async function fetchEventsByRange(startDate, endDate, view) {
       node.reference_doctype?.name === "Quotation" &&
       quotationMap[node.reference_docname__name]
     ) {
+      console.log(
+        "ENRICHING",
+        node.name,
+        node.reference_docname__name
+      );
       const quotation =
         quotationMap[node.reference_docname__name];
       node.fsl_doctor_item =
@@ -284,6 +301,14 @@ export async function fetchEventsByRange(startDate, endDate, view) {
    
     return node;
   });
+
+  console.log(
+    enrichedNodes.map((n) => ({
+      event: n.name,
+      pob: n.pob_given,
+      items: n.fsl_doctor_item?.length,
+    }))
+  );
 
   // --------------------------------------------
   // 5️⃣ NOW MAP TO CALENDAR
