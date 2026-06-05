@@ -5,14 +5,9 @@ import { fetchGoogleCalendarStatus } from "@calendar/components/calendar/module/
 import { useAuth } from "@calendar/components/auth/auth-context";
 import { Button } from "@calendar/components/ui/button";
 
-const GOOGLE_CLIENT_ID =
-  "509894256351-tisqk3jtvv14majfi3l8gigi0mq8ndhd.apps.googleusercontent.com";
-
-const REDIRECT_URI =
-  "https://erp.elbrit.org?cmd=frappe.integrations.doctype.google_calendar.google_calendar.google_callback";
 
 export default function GoogleCalendarConnect() {
-  const { me } = useAuth();
+  const { me, googleClientId, googleRedirectUri, } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -41,8 +36,8 @@ export default function GoogleCalendarConnect() {
     const authUrl =
       "https://accounts.google.com/o/oauth2/v2/auth?" +
       new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        redirect_uri: REDIRECT_URI,
+        client_id: googleClientId,
+        redirect_uri: googleRedirectUri,
         response_type: "code",
         scope:
           "https://www.googleapis.com/auth/calendar",
