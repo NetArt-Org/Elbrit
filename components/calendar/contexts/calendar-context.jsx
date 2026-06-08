@@ -7,8 +7,9 @@ import { ELBRIT_ROLEID, EMPLOYEES_QUERY, normalizeRoleProfiles } from "@calendar
 import { mapEmployeesToCalendarUsers } from "@calendar/components/calendar/module/event/services/employee-to-calendar-user";
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { resolveVisibleEmployeeIds, resolveVisibleRoleIds } from "@calendar/lib/employeeHeirachy";
-import { TAG_IDS, TAGS } from "../constants";
+import { STATUS, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 
 const DEFAULT_SETTINGS = {
 	badgeVariant: "colored",
@@ -41,6 +42,7 @@ export function CalendarProvider({
 	const [selectedStatuses, setSelectedStatuses] = useState([]);
 	const [allEvents, setAllEvents] = useState(events || []);
 	// const [filteredEvents, setFilteredEvents] = useState(events || []);
+	const [notifications, setNotifications] = useState([]);
 	const [users, setUsers] = useState([]);
 	const [usersLoading, setUsersLoading] = useState(true);
 	const [employeeOptions, setEmployeeOptions] = useState([]);
@@ -415,7 +417,29 @@ export function CalendarProvider({
 		selectedUserId,
 		selectedColors,selectedStatuses
 	]);
-
+	const employeeResolvers = useEmployeeResolvers(employeeOptions);
+	useEffect(() => {
+		const leaveNotifications = filteredEvents
+		  .filter(
+			(event) =>
+			  event.tags === TAG_IDS.LEAVE &&
+			  event.status?.toLowerCase() === STATUS.OPEN.toLowerCase() &&
+			  event.leave_approver === LOGGED_IN_USER.email
+		  )
+		  .map((leave) => ({
+			id: leave.erpName,
+			title: "Leave Approval Pending",
+			message: `${
+			  employeeResolvers.getEmployeeNameById(leave.employee) ??
+			  leave.employee
+			} applied for ${leave.leaveType}`,
+			createdAt: leave.startDate,
+			isRead: false,
+			leave,
+		  }));
+	  
+		setNotifications(leaveNotifications);
+	  }, [filteredEvents, employeeResolvers]);
 	const value = {
 		selectedDate,
 		setSelectedDate: handleSelectDate,
@@ -426,6 +450,8 @@ export function CalendarProvider({
 		users,
 		usersLoading,
 		selectedColors,
+		notifications,
+		setNotifications,
 		filterEventsBySelectedColors,
 		selectedStatuses,
 		filterEventsBySelectedStatus,

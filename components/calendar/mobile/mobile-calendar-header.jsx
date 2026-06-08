@@ -18,6 +18,7 @@ import { cn } from "@calendar/lib/utils";
 import { tabs } from "@calendar/components/calendar/header/view-tabs";
 import { DateNavigator } from "@calendar/components/calendar/header/date-navigator";
 import FilterEvents from "@calendar/components/calendar/header/filter";
+import { NotificationBell } from "@calendar/components/calendar/notification/NotificationBell";
 
 const MOBILE_LAYER_MAP = {
   month: "month-expanded",
@@ -140,6 +141,7 @@ export function MobileCalendarHeader() {
             />
           </Button>
           <FilterEvents />
+          <NotificationBell />
           <Button variant="ghost" size="icon"><House /></Button>
         </div>
       </header>
