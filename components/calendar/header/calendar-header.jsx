@@ -63,7 +63,7 @@ const startDateForDialog = isPast ? undefined : candidateDate;
 						</AddEditEventDialog>
 					</div>
 				<div className="flex gap-2 flex-row lg:items-center lg:gap-1.5">
-					<FilterEvents />
+					<FilterEvents variant={true} />
 					<Settings />
 				</div>
 				</div>

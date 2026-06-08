@@ -9,7 +9,7 @@ import { Separator } from "@calendar/components/ui/separator";
 import { Toggle } from "@calendar/components/ui/toggle";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 
-export default function FilterEvents() {
+export default function FilterEvents({variant}) {
 	const { selectedColors, filterEventsBySelectedColors, clearFilter, selectedStatuses, filterEventsBySelectedStatus } =
 		useCalendar();
 
@@ -29,7 +29,7 @@ export default function FilterEvents() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Toggle variant="outline" className="cursor-pointer w-fit">
+				<Toggle variant={variant ? "outline":""} className="cursor-pointer w-fit">
 					<Filter className="h-4 w-4" />
 				</Toggle>
 			</DropdownMenuTrigger>

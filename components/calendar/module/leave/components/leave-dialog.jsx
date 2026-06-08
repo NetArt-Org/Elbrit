@@ -83,6 +83,7 @@ export function EventLeaveDialog({
 	const permissions = useMemo(() => {
 		return resolveLeavePermissions({ event });
 	}, [event]);
+	console.log("events",permissions,event)
 	const handleStatusChange = async (newStatus) => {
 		try {
 			await updateLeaveStatus(event.erpName, newStatus);
