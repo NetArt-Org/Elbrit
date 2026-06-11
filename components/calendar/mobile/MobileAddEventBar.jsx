@@ -27,14 +27,10 @@ export default function MobileAddEventBar({ date: propDate }) {
   const { selectedDate, events } = useCalendar();
   const [showTags, setShowTags] = useState(false);
 
-  const date = propDate || selectedDate || new Date();
-
-  const isPastDate = isBefore(
-    startOfDay(date),
-    startOfDay(new Date())
+  const date = useMemo(
+    () => propDate ?? selectedDate ?? new Date(),
+    [propDate, selectedDate]
   );
-
-  if (isPastDate) return null;
   const matchedHqEvent = useMemo(() => {
     if (!date || !events?.length) return null;
 
@@ -58,6 +54,13 @@ export default function MobileAddEventBar({ date: propDate }) {
       );
     });
   }, [events, date]);
+
+  const isPastDate = isBefore(
+    startOfDay(date),
+    startOfDay(new Date())
+  );
+
+  if (isPastDate) return null;
 
   const hasValidHqTourPlan = !!matchedHqEvent;
   return (
