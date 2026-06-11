@@ -81,7 +81,10 @@ export default function FilterEvents({ variant }) {
 				))}
 				<Separator className="my-2" />
 				<DropdownMenuItem
-					disabled={selectedColors.length === 0}
+					 disabled={
+						selectedColors.length === 0 &&
+						selectedStatuses.length === 0
+					  }
 					className="flex gap-2 cursor-pointer"
 					onClick={(e) => {
 						e.preventDefault();
