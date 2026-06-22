@@ -10,15 +10,16 @@ export default function GoogleCallbackContent() {
   const router = useRouter();
   const searchParams =
     useSearchParams();
+  const stateData = JSON.parse(
+    decodeURIComponent(searchParams.get("state"))
+  );
 
+  const { email, erpUrl, authToken } = stateData;
   useEffect(() => {
     const code =
       searchParams.get("code");
 
     if (!code) return;
-
-    const email =
-      searchParams.get("state");
 
     async function connect() {
       try {
@@ -27,12 +28,13 @@ export default function GoogleCallbackContent() {
           {
             method: "POST",
             headers: {
-              "Content-Type":
-                "application/json",
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               code,
               email,
+              authToken,
+              erpUrl,
             }),
           }
         );
@@ -48,7 +50,7 @@ export default function GoogleCallbackContent() {
         if (!response.ok) {
           throw new Error(
             data?.message ||
-              "Google connection failed"
+            "Google connection failed"
           );
         }
 
