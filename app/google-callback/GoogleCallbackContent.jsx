@@ -42,11 +42,6 @@ export default function GoogleCallbackContent() {
         const data =
           await response.json();
 
-        console.log(
-          "Google connect response",
-          data
-        );
-
         if (!response.ok) {
           throw new Error(
             data?.message ||
