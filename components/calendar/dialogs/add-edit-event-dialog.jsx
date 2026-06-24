@@ -25,7 +25,7 @@ import { mapErpTodoToCalendar, mapFormToErpTodo } from "@calendar/components/cal
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
-import { fetchItems } from "@calendar/components/calendar/module/event/services/master-data.service";
+import { fetchDoctorsByTerritory, fetchItems } from "@calendar/components/calendar/module/event/services/master-data.service";
 import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
@@ -46,7 +46,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const { addEvent, updateEvent, employeeOptions,
 		doctorOptions, events,
 		hqTerritoryOptions,
-		setEmployeeOptions,
+		setEmployeeOptions,territoryDoctors,setTerritoryDoctors,
 		setDoctorOptions, customerOptions, selectedDate, allowedEmployeeIds,
 		setHqTerritoryOptions, } = useCalendar();
 	const isEditing = !!event;
@@ -734,27 +734,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			return selectedDay >= planStart && selectedDay <= planEnd;
 		});
 	}, [events, startDate]);
-	// ----------------------------------------------------
-	// Show only those doctor whose territory matches with the hq 
-	// ----------------------------------------------------
-	const filteredDoctorOptions = useMemo(() => {
-		if (
-			selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN ||
-			!hqTerritory
-		) {
-			return doctorOptions;
-		}
-
-		return doctorOptions.filter(
-			(doctor) =>
-				doctor.territory__name?.trim() ===
-				hqTerritory?.trim()
-		);
-	}, [
-		doctorOptions,
-		selectedTag,
-		hqTerritory,
-	]);
+	
 	const hasValidHqTourPlan = !!matchedHqEvent;
 	useEffect(() => {
 		if (selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN) return;
@@ -768,7 +748,21 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			shouldValidate: true,
 		});
 	}, [selectedTag, matchedHqEvent]);
-
+// ----------------------------------------------------
+	// Show only those doctor whose territory matches with the hq 
+	// ----------------------------------------------------
+	useEffect(() => {
+		if (
+		  selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN ||
+		  !hqTerritory
+		) {
+		  setTerritoryDoctors([]);
+		  return;
+		}
+	  console.log("HQ TERIRROT",hqTerritory)
+		fetchDoctorsByTerritory(hqTerritory)
+		  .then(setTerritoryDoctors);
+	  }, [hqTerritory, selectedTag]);
 	// ----------------------------------------------------
 	// Disabled dates for HQ Tour Plan (logged-in user only)
 	// Prevent selecting dates where HQ already exists
@@ -1338,7 +1332,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											{selectedTag == TAG_IDS.DOCTOR_VISIT_PLAN ? <RHFDoctorCardSelector
 												value={field.value}
 												onChange={field.onChange}
-												options={filteredDoctorOptions}
+												options={territoryDoctors}
+												hqTerritory={hqTerritory}
 												multiple={isDoctorMulti}
 											/> :
 												<RHFComboboxField

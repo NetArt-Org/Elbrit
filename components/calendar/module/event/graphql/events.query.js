@@ -139,8 +139,8 @@ query Items(
 }
 `;
 export const DOCTOR_QUERY = `
-query Doctors($first: Int) {
-  Leads(first: $first) {
+query Doctors($first: Int,$filter: [DBFilterInput]) {
+  Leads(first: $first,filter: $filter) {
     edges {
       node {
         name

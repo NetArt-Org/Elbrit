@@ -5,6 +5,7 @@ import {
   useRouter,
   useSearchParams,
 } from "next/navigation";
+import { clearCached } from "@calendar/lib/data-cache";
 
 export default function GoogleCallbackContent() {
   const router = useRouter();
@@ -49,6 +50,9 @@ export default function GoogleCallbackContent() {
           );
         }
 
+        clearCached([
+          `GOOGLE_CALENDAR_STATUS:${email.toLowerCase()}`,
+        ]);
         router.push("/");
       } catch (error) {
         console.error(
@@ -59,7 +63,7 @@ export default function GoogleCallbackContent() {
     }
 
     connect();
-  }, [router, searchParams]);
+  }, [authToken, email, erpUrl, router, searchParams]);
 
   return (
     <div className="p-4">
