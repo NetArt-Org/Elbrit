@@ -3,6 +3,7 @@ import {
   EMPLOYEES_QUERY, DOCTOR_QUERY, HQ_TERRITORIES_QUERY,
   ITEMS_QUERY
 } from "@calendar/components/calendar/module/event/graphql/events.query";
+import { ERP_DOCTOR_FIELDS } from "@calendar/components/calendar/module/event/graphql/field-config";
 import { getCached } from "@calendar/lib/data-cache";
 import { mapDoctors } from "@calendar/lib/helper";
 
@@ -23,6 +24,36 @@ export async function fetchEmployees() {
 
   return (
     employees.map((node) => ({
+      doctype: "Employee",
+      value: node.name,
+      label: node.employee_name,
+      email: node.company_email,
+      role: node.designation?.name ?? null,
+      roleId: node.role_id,
+      leave_approver: node.leave_approver?.name ?? null,
+    })) || []
+  );
+}
+
+export async function searchEmployees(search) {
+  const filters = [];
+
+  if (search?.trim()) {
+    const term = `%${search.trim()}%`;
+    filters.push({
+      fieldname: "employee_name",
+      operator: "LIKE",
+      value: term,
+    });
+  }
+
+  const data = await graphqlRequest(EMPLOYEES_QUERY, {
+    first: MAX_ROWS,
+    filters,
+  });
+
+  return (
+    data?.Employees?.edges?.map(({ node }) => ({
       doctype: "Employee",
       value: node.name,
       label: node.employee_name,
@@ -64,6 +95,7 @@ export async function fetchItems() {
 }
 
 export async function fetchDoctors() {
+  console.log(DOCTOR_QUERY);
   const data = await graphqlRequest(DOCTOR_QUERY, {
     first: MAX_ROWS,
   });
@@ -92,7 +124,7 @@ export async function searchDoctors({
 
   if (territory) {
     filter.push({
-      fieldname: "territory__name",
+      fieldname: ERP_DOCTOR_FIELDS.territory,
       operator: "EQ",
       value: territory,
     });
@@ -100,7 +132,7 @@ export async function searchDoctors({
 
   if (search?.trim()) {
     filter.push({
-      fieldname: "lead_name",
+      fieldname: ERP_DOCTOR_FIELDS.searchName,
       operator: "LIKE",
       value: `%${search}%`,
     });

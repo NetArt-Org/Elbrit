@@ -35,11 +35,14 @@ export function mapErpGraphqlEventToCalendar(node) {
       attending: p.attending,
       custom_latitude: p.custom_latitude ?? null,
       custom_longitude: p.custom_longitude ?? null,
+      custom_distance: p.custom_distance ?? null,
+      custom_is_force_visit: Boolean(p.custom_is_force_visit),
+      custom_force_visit_reason:
+        p.custom_force_visit_reason ?? "",
       email: p.email ?? null,
-      // ✅ Only meaningful for Employee
-      kly_role_id:
+      role_profile:
         p.reference_doctype__name === "Employee"
-          ? p.kly_role_id?.name ?? null
+          ? p.role_profile?.name ?? null
           : null,
     })) ?? [];
 
@@ -49,10 +52,12 @@ export function mapErpGraphqlEventToCalendar(node) {
     attending: p.attending,
     custom_latitude: p.custom_latitude,
     custom_longitude: p.custom_longitude,
+    custom_distance: p.custom_distance,
+    custom_is_force_visit: p.custom_is_force_visit,
+    custom_force_visit_reason: p.custom_force_visit_reason,
     email: p.email,
-    // ✅ Only Employee gets roleId
     ...(p.reference_doctype === "Employee" && {
-      kly_role_id: p.kly_role_id,
+      role_profile: p.role_profile,
     }),
   }));
 
@@ -63,9 +68,9 @@ export function mapErpGraphqlEventToCalendar(node) {
     .filter((p) => p.type === "Employee")
     .map((p) => p.id);
 
-  const doctors = participants
-    .filter((p) => p.type === "Lead")
-    .map((p) => p.id);
+  const employeeVisitParticipant = participants.find(
+    (participant) => participant.type === "Employee"
+  );
 
   /* ---------------------------------------------
      DATE HANDLING
@@ -102,33 +107,38 @@ export function mapErpGraphqlEventToCalendar(node) {
     description: node.description ?? "",
     status: normalizeStatus(node.status),
     allDay: Boolean(node.all_day),
-    forceVisit: Boolean(node.fsl_is_force_visit),
+    forceVisit: Boolean(
+      employeeVisitParticipant?.custom_is_force_visit
+    ),
     startDate: startDate ? startDate.toISOString() : null,
     endDate: endDate ? endDate.toISOString() : null,
     attending,
-    roleId: node.fsl_role_id?.name ?? undefined,
+    roleId: node.role_profile ?? undefined,
     tags: tag,
-    custom_force_visit_reason: node.custom_force_visit_reason ?? "",
+    custom_force_visit_reason:
+      employeeVisitParticipant?.custom_force_visit_reason ?? "",
+    distanceKm:
+      employeeVisitParticipant?.custom_distance ?? null,
 
     // ✅ REQUIRED BY eventSchema
     employees: tagConfig.employee?.multiselect
       ? employees
       : employees[0] ?? undefined,
 
-    doctor: tagConfig.doctor?.multiselect
-      ? doctors
-      : doctors[0] ?? undefined,
+    doctor: node.custom_doctor__name
+      ? tagConfig.doctor?.multiselect
+        ? [node.custom_doctor__name]
+        : node.custom_doctor__name
+      : undefined,
+    doctorLatitude: node.doctor_latitude ?? null,
+    doctorLongitude: node.doctor_longitude ?? null,
+    ownerEmployeeId: node.custom_employee_id?.name ?? undefined,
+    owner: node.custom_employee_id?.name
+      ? { id: node.custom_employee_id.name }
+      : undefined,
 
     color,
-    hqTerritory: node.fsl_territory__name ?? "",
-
-    owner: node.owner
-      ? {
-        id: node.owner.name,
-        name: node.owner.full_name || node.owner.name,
-        email: node.owner.email,
-      }
-      : undefined,
+    hqTerritory: node.custom_hq__name ?? "",
 
     isMultiDay:
       startDate &&

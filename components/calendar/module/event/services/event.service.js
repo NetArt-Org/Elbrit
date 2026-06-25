@@ -1,12 +1,20 @@
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { serializeEventDoc } from "../mappers/event-to-erp";
-import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, SAVE_EVENT_MUTATION,SAVE_EVENT_QUOTATION } from "@calendar/components/calendar/module/event/graphql/events.query";
+import {
+  CUSTOMER_QUERY,
+  DOC_SHARES_BY_EVENT_QUERY,
+  EVENTS_BY_RANGE_QUERY,
+  SAVE_DOC_SHARE_MUTATION,
+  SAVE_EVENT_MUTATION,
+  SAVE_EVENT_QUOTATION,
+} from "@calendar/components/calendar/module/event/graphql/events.query";
+import { ERP_DOC_SHARE_FIELDS } from "@calendar/components/calendar/module/event/graphql/field-config";
 import { mapErpGraphqlEventToCalendar } from "@calendar/components/calendar/module/event/mappers/erp-to-event";
 import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
 import { clearEventCache } from "@calendar/lib/calendar/event-cache";
 import { format } from "date-fns";
-import { getCached } from "@calendar/lib/data-cache";
+import { clearCached, getCached } from "@calendar/lib/data-cache";
 import { GOOGLE_CALENDAR_BY_USER } from "@calendar/components/calendar/google-auth/queries";
 import { fetchAllTodoList } from "@calendar/components/calendar/module/todo/services/todo.service";
 import { fetchAllLeaveApplications } from "@calendar/components/calendar/module/leave/services/leave.service";
@@ -77,7 +85,7 @@ export async function fetchQuotationsByNames(names) {
 
   return map;
 }
-export async function saveEvent(doc) {
+export async function saveEvent(doc, options = {}) {
   const data = await graphqlRequest(SAVE_EVENT_MUTATION, {
     doc: serializeEventDoc(doc),
   });
@@ -87,6 +95,13 @@ export async function saveEvent(doc) {
   }
   // invalidate cache only after successful write
   clearEventCache();
+
+  if (options.shareWithUserIds?.length) {
+    await syncEventDocShares(
+      data.saveDoc.doc.name,
+      options.shareWithUserIds
+    );
+  }
 
   return data.saveDoc.doc;
 }
@@ -198,6 +213,69 @@ export async function saveDocToQuotation(doc) {
   clearEventCache();
   return data.saveDoc.doc;
 }
+async function fetchDocSharesByEvent(eventName) {
+  const data = await graphqlRequest(DOC_SHARES_BY_EVENT_QUERY, {
+    first: 500,
+    filters: [
+      {
+        fieldname: ERP_DOC_SHARE_FIELDS.shareDoctype,
+        operator: "EQ",
+        value: "Event",
+      },
+      {
+        fieldname: ERP_DOC_SHARE_FIELDS.shareName,
+        operator: "EQ",
+        value: eventName,
+      },
+    ],
+  });
+
+  return data?.DocShares?.edges?.map(({ node }) => node) ?? [];
+}
+
+export async function syncEventDocShares(
+  eventName,
+  userIds = []
+) {
+  const targetUserIds = [...new Set(userIds.filter(Boolean))];
+
+  if (!eventName || !targetUserIds.length) {
+    return [];
+  }
+
+  const existingShares = await fetchDocSharesByEvent(eventName);
+  const existingUserIds = new Set(
+    existingShares
+      .map((share) => share?.user?.name)
+      .filter(Boolean)
+  );
+
+  const missingUserIds = targetUserIds.filter(
+    (userId) => !existingUserIds.has(userId)
+  );
+
+  if (!missingUserIds.length) {
+    return existingShares;
+  }
+
+  await Promise.all(
+    missingUserIds.map((userId) =>
+      graphqlRequest(SAVE_DOC_SHARE_MUTATION, {
+        doc: JSON.stringify({
+          [ERP_DOC_SHARE_FIELDS.user]: userId,
+          [ERP_DOC_SHARE_FIELDS.shareDoctype]: "Event",
+          [ERP_DOC_SHARE_FIELDS.shareName]: eventName,
+          read: 1,
+          write: 1,
+          share: 0,
+          notify_by_email: 0,
+        }),
+      })
+    )
+  );
+
+  return fetchDocSharesByEvent(eventName);
+}
 export async function fetchAllCustomers() {
   return getCached("CUSTOMERS", async () => {
     const data = await graphqlRequest(CUSTOMER_QUERY, {
@@ -232,6 +310,11 @@ export async function fetchGoogleCalendarStatus(email) {
       null
     );
   });
+}
+
+export function clearGoogleCalendarStatusCache(email) {
+  if (!email) return;
+  clearCached([`GOOGLE_CALENDAR_STATUS:${email.toLowerCase()}`]);
 }
 
 export async function fetchEventsByRange(startDate, endDate, view) {

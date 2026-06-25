@@ -25,7 +25,12 @@ import { mapErpTodoToCalendar, mapFormToErpTodo } from "@calendar/components/cal
 import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
-import { fetchDoctorsByTerritory, fetchItems } from "@calendar/components/calendar/module/event/services/master-data.service";
+import {
+	fetchDoctorsByTerritory,
+	fetchItems,
+	searchDoctors,
+	searchEmployees,
+} from "@calendar/components/calendar/module/event/services/master-data.service";
 import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
 import { Button } from "@calendar/components/ui/button";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
@@ -39,6 +44,7 @@ import TodoComments from "@calendar/components/calendar/module/todo/components/T
 import { Textarea } from "@calendar/components/ui/textarea";
 import { fetchEmployeeLeaveBalance, saveLeaveApplication, updateLeaveAttachment } from "@calendar/components/calendar/module/leave/services/leave.service";
 import { saveDocToErp } from "@calendar/components/calendar/module/todo/services/todo.service";
+import { resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
@@ -48,7 +54,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		hqTerritoryOptions,
 		setEmployeeOptions,territoryDoctors,setTerritoryDoctors,
 		setDoctorOptions, customerOptions, selectedDate, allowedEmployeeIds,
-		setHqTerritoryOptions, } = useCalendar();
+		setHqTerritoryOptions, users, elbritRoleEdges } = useCalendar();
 	const isEditing = !!event;
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
@@ -60,6 +66,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const endDateTouchedRef = useRef(false); // existing
 	const [showReason, setShowReason] = useState(false);
 	const [googleCalendarEnabled, setGoogleCalendarEnabled] = useState(false);
+	const [employeeSearchLoading, setEmployeeSearchLoading] = useState(false);
+	const [doctorSearchLoading, setDoctorSearchLoading] = useState(false);
 	const form = useForm({
 		resolver: zodResolver(eventSchema),
 		mode: "onChange",
@@ -93,7 +101,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	};
 	useEffect(() => {
 		if (!isEditing) return;
-		if (!event?.participants?.length) return;
+		const doctorId = Array.isArray(event?.doctor)
+			? event.doctor[0]
+			: event?.doctor;
+		if (!doctorId) return;
 
 		if (!currentLatitude || !currentLongitude) {
 			setDistanceKm(null);
@@ -101,7 +112,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			return;
 		}
 
-		const doctor = event.participants.find((p) => p.type === "Lead");
+		const doctor = {
+			custom_latitude:
+				event?.doctorLatitude ??
+				doctorResolvers.getDoctorFieldById(
+					doctorId,
+					"custom_latitude"
+				),
+			custom_longitude:
+				event?.doctorLongitude ??
+				doctorResolvers.getDoctorFieldById(
+					doctorId,
+					"custom_longitude"
+				),
+		};
 
 		if (!doctor?.custom_latitude || !doctor?.custom_longitude) {
 			setDistanceKm(null);
@@ -133,6 +157,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		);
 
 		setDistanceKm(dist);
+		form.setValue("distanceKm", dist, {
+			shouldDirty: true,
+			shouldValidate: false,
+		});
 
 		// 🔴 FORCE VISIT when outside 500m
 		const isForceVisit = dist > 0.5;
@@ -150,7 +178,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			);
 		}
 
-	}, [currentLatitude, currentLongitude, event?.participants, isEditing]);
+	}, [currentLatitude, currentLongitude, doctorResolvers, event?.doctor, isEditing]);
 	const hasValidLocation =
 		Number(currentLatitude) !== 0 &&
 		Number(currentLongitude) !== 0 &&
@@ -216,11 +244,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		return differenceInCalendarDays(endDate, startDate) + 1;
 	}, [selectedTag, startDate, endDate, leavePeriod]);
 	const doctorDetails = useMemo(() => {
-		const doctorRef = event?.participants?.find(
-			(p) => p.type === "Lead"
-		);
-
-		const doctorId = doctorRef?.id;
+		const doctorId = Array.isArray(event?.doctor)
+			? event.doctor[0]
+			: event?.doctor;
 		if (!doctorId) return null;
 
 		return {
@@ -230,8 +256,57 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 					doctorId,
 					"notes"
 				) ?? [],
-		};
-	}, [event?.participants, doctorResolvers]);
+			};
+	}, [event?.doctor, doctorResolvers]);
+	const mergeOptionsByValue = (currentOptions, nextOptions) => {
+		const optionMap = new Map();
+
+		[...(currentOptions ?? []), ...(nextOptions ?? [])].forEach((option) => {
+			if (option?.value) {
+				optionMap.set(option.value, option);
+			}
+		});
+
+		return Array.from(optionMap.values());
+	};
+	const handleEmployeeSearch = async (search) => {
+		if (!search?.trim()) return;
+
+		setEmployeeSearchLoading(true);
+		try {
+			const results = await searchEmployees(search);
+			setEmployeeOptions((currentOptions) =>
+				mergeOptionsByValue(currentOptions, results)
+			);
+		} finally {
+			setEmployeeSearchLoading(false);
+		}
+	};
+	const handleDoctorSearch = async (search) => {
+		if (!search?.trim()) return;
+
+		setDoctorSearchLoading(true);
+		try {
+			const results = await searchDoctors({
+				search,
+				territory: hqTerritory,
+			});
+			setDoctorOptions((currentOptions) =>
+				mergeOptionsByValue(currentOptions, results)
+			);
+		} finally {
+			setDoctorSearchLoading(false);
+		}
+	};
+	const superiorUserIds = useMemo(() => {
+		if (isEditing) return [];
+
+		return resolveSuperiorShareUserIds(
+			elbritRoleEdges,
+			users,
+			LOGGED_IN_USER.roleId
+		).filter((userId) => userId !== LOGGED_IN_USER.email);
+	}, [elbritRoleEdges, isEditing, users]);
 	useEffect(() => {
 		if (!startDate || !endDate) return;
 
@@ -423,9 +498,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			.filter(p => p.type === "Employee")
 			.map(p => String(p.id));
 
-		const doctorIds = event.participants
-			.filter(p => p.type === "Lead")
-			.map(p => String(p.id));
+		const doctorIds = event?.doctor
+			? (Array.isArray(event.doctor) ? event.doctor : [event.doctor]).map((id) => String(id))
+			: [];
 
 		/* ---------- Employees ---------- */
 		if (employeeIds.length) {
@@ -640,7 +715,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		tagConfig,
 		employeeOptions,
 		doctorOptions,
-		ownerOverride,
+		ownerEmployeeIdOverride,
 	}) => {
 		const shouldBeGreen =
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
@@ -655,8 +730,19 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			endDate: erpDoc.ends_on,
 			color: shouldBeGreen ? "green" : tagConfig.fixedColor,
 			tags: values.tags,
-			owner: ownerOverride,
+			ownerEmployeeId: ownerEmployeeIdOverride,
+			owner: ownerEmployeeIdOverride
+				? { id: ownerEmployeeIdOverride }
+				: undefined,
 			hqTerritory: values.hqTerritory || "",
+			doctor: values.doctor,
+			doctorLatitude: event?.doctorLatitude ?? null,
+			doctorLongitude: event?.doctorLongitude ?? null,
+			roleId: values.roleId,
+			forceVisit: values.forceVisit ?? false,
+			custom_force_visit_reason:
+				values.custom_force_visit_reason ?? "",
+			distanceKm: values.distanceKm ?? null,
 			event_participants: erpDoc.event_participants,
 			attending: values.attending,
 			participants: buildParticipantsWithDetails(
@@ -822,7 +908,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpDoc.reference_docname = quotationName;
 		}
 		// console.log("ERP DOC",erpDoc)
-		const savedEvent = await saveEvent(erpDoc);
+		const savedEvent = await saveEvent(erpDoc, {
+			shareWithUserIds: superiorUserIds,
+		});
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,
@@ -831,8 +919,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			tagConfig,
 			employeeOptions,
 			doctorOptions,
-			ownerOverride:
-				event?.owner || LOGGED_IN_USER.id,
+			ownerEmployeeIdOverride:
+				event?.ownerEmployeeId || LOGGED_IN_USER.id,
 		});
 		upsertCalendarEvent(calendarEvent);
 
@@ -867,7 +955,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 						: "IT Elbrit"
 			});
 
-			const savedEvent = await saveEvent(erpDoc);
+			const savedEvent = await saveEvent(erpDoc, {
+				shareWithUserIds: superiorUserIds,
+			});
 
 			const calendarEvent = buildCalendarEvent({
 				values: enrichedValues,
@@ -876,7 +966,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				tagConfig,
 				employeeOptions,
 				doctorOptions,
-				ownerOverride: LOGGED_IN_USER.id,
+				ownerEmployeeIdOverride: LOGGED_IN_USER.id,
 			});
 			addEvent(calendarEvent);
 
@@ -1340,6 +1430,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 													{...field}
 													options={doctorOptions}
 													multiple={isDoctorMulti}
+													placeholder="Select doctors"
+													searchPlaceholder="Search doctor"
+													onSearch={handleDoctorSearch}
+													loading={doctorSearchLoading}
 												/>}
 
 										</RHFFieldWrapper>
@@ -1358,6 +1452,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									render={({ field }) => (
 										<RHFFieldWrapper label={"Employees"}>
 											<RHFComboboxField {...field} options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
+												onSearch={handleEmployeeSearch}
+												loading={employeeSearchLoading}
 											/>
 										</RHFFieldWrapper>
 									)}
@@ -1374,6 +1470,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									render={({ field }) => (
 										<RHFFieldWrapper label={"Assigned To"}>
 											<RHFComboboxField {...field} options={employeeOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
+												onSearch={handleEmployeeSearch}
+												loading={employeeSearchLoading}
 											/>
 										</RHFFieldWrapper>
 									)}
@@ -1388,6 +1486,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								render={({ field }) => (
 									<RHFFieldWrapper label="Visible To">
 										<RHFComboboxField {...field} options={employeeOptions} multiple placeholder="Select employees" searchPlaceholder="Search employee"
+											onSearch={handleEmployeeSearch}
+											loading={employeeSearchLoading}
 										/>
 									</RHFFieldWrapper>
 								)}

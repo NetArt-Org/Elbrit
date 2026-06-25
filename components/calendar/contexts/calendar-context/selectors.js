@@ -187,6 +187,7 @@ export function buildLeaveNotifications(
       id: leave.erpName,
       title: "Leave Approval Pending",
       message: `${
+        leave.employeeName ??
         employeeResolvers.getEmployeeNameById(leave.employee) ??
         leave.employee
       } applied for ${leave.leaveType}`,
