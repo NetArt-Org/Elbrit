@@ -672,8 +672,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		return `${doctorName}-${employeeName}`;
 	};
-	const finalize = (message) => {
-		toast.success(message);
+	const resetAndCloseDialog = () => {
 		reset({
 			title: "", description: "", employees: undefined,
 			doctor: isDoctorMulti ? [] : undefined,
@@ -690,6 +689,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			allDay: false,
 		});
 		onClose();
+	};
+	const finalize = (message) => {
+		toast.success(message);
+		resetAndCloseDialog();
 	};
 	function normalizePobItemsForUI(items = []) {
 		return items.map(row => ({
@@ -910,6 +913,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		// console.log("ERP DOC",erpDoc)
 		const savedEvent = await saveEvent(erpDoc, {
 			shareWithUserIds: superiorUserIds,
+			deferShareSync: true,
+			skipExistingShareCheck: !event?.erpName,
 		});
 		const calendarEvent = buildCalendarEvent({
 			event,
@@ -936,42 +941,69 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				: doctorOptions.find((o) => o.value === d) ?? d
 		);
 
-		for (const doctor of normalizedDoctors) {
-			const doctorId =
-				typeof doctor === "object" ? doctor.value : doctor;
-			const computedTitle = buildDoctorVisitTitle(doctorId, values);
+		const totalDoctors = normalizedDoctors.length;
+		resetAndCloseDialog();
 
-			const enrichedValues = {
-				...values,
-				title: computedTitle,
-				doctor,
-			};
-			const erpDoc = mapFormToErpEvent(enrichedValues, {
-				employeeResolvers,
-				doctorResolvers,
-				googleCalendar:
-					googleCalendarEnabled
-						? LOGGED_IN_USER.email
-						: "IT Elbrit"
-			});
+		void (async () => {
+			const results = await Promise.allSettled(
+				normalizedDoctors.map(async (doctor) => {
+					const doctorId =
+						typeof doctor === "object" ? doctor.value : doctor;
+					const computedTitle = buildDoctorVisitTitle(doctorId, values);
 
-			const savedEvent = await saveEvent(erpDoc, {
-				shareWithUserIds: superiorUserIds,
-			});
+					const enrichedValues = {
+						...values,
+						title: computedTitle,
+						doctor,
+					};
+					const erpDoc = mapFormToErpEvent(enrichedValues, {
+						employeeResolvers,
+						doctorResolvers,
+						googleCalendar:
+							googleCalendarEnabled
+								? LOGGED_IN_USER.email
+								: "IT Elbrit"
+					});
 
-			const calendarEvent = buildCalendarEvent({
-				values: enrichedValues,
-				erpDoc,
-				savedName: savedEvent.name,
-				tagConfig,
-				employeeOptions,
-				doctorOptions,
-				ownerEmployeeIdOverride: LOGGED_IN_USER.id,
-			});
-			addEvent(calendarEvent);
+					const savedEvent = await saveEvent(erpDoc, {
+						shareWithUserIds: superiorUserIds,
+						deferShareSync: true,
+						skipExistingShareCheck: true,
+					});
 
-		}
-		finalize(`Created ${values.doctor.length} Doctor Visit events`);
+					const calendarEvent = buildCalendarEvent({
+						values: enrichedValues,
+						erpDoc,
+						savedName: savedEvent.name,
+						tagConfig,
+						employeeOptions,
+						doctorOptions,
+						ownerEmployeeIdOverride: LOGGED_IN_USER.id,
+					});
+					addEvent(calendarEvent);
+					return savedEvent;
+				})
+			);
+
+			const successCount = results.filter(
+				(result) => result.status === "fulfilled"
+			).length;
+			const failedCount = totalDoctors - successCount;
+
+			if (failedCount === 0) {
+				toast.success(`Created ${successCount} Doctor Visit events`);
+				return;
+			}
+
+			if (successCount > 0) {
+				toast.error(
+					`Created ${successCount} of ${totalDoctors} Doctor Visit events`
+				);
+				return;
+			}
+
+			toast.error("Failed to create Doctor Visit events");
+		})();
 	};
 
 	const handleLeave = async (values) => {
@@ -986,6 +1018,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 			const savedLeave = await saveLeaveApplication(leaveDoc, {
 				erpName: event?.erpName,
+				shareWithUserIds: superiorUserIds,
+				deferShareSync: true,
+				skipExistingShareCheck: !event?.erpName,
 			});
 
 			// 🚨 If backend returned null (GraphQL validation error case)
@@ -1036,7 +1071,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpName: event?.erpName,
 		});
 
-		const savedTodo = await saveDocToErp(todoDoc);
+		const savedTodo = await saveDocToErp(todoDoc, {
+			shareWithUserIds: superiorUserIds,
+			deferShareSync: true,
+			skipExistingShareCheck: !event?.erpName,
+		});
 
 		const calendarTodo = mapErpTodoToCalendar({
 			...todoDoc,

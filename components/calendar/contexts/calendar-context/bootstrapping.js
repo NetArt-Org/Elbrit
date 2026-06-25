@@ -2,6 +2,7 @@ import { fetchAllCustomers } from "@calendar/components/calendar/module/event/se
 import { ELBRIT_ROLEID, normalizeRoleProfiles } from "@calendar/components/calendar/module/event/graphql/events.query";
 import { fetchEmployeeNodes } from "@calendar/components/calendar/module/event/services/master-data.service";
 import { mapEmployeesToCalendarUsers } from "@calendar/components/calendar/module/event/services/employee-to-calendar-user";
+import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { getCached } from "@calendar/lib/data-cache";
 import { graphqlRequest } from "@calendar/lib/graphql-client";
 
@@ -37,6 +38,40 @@ function mapCustomersToOptions(customers = []) {
   }));
 }
 
+function buildLoggedInUserFallback() {
+  if (!LOGGED_IN_USER?.id) {
+    return {
+      users: [],
+      employeeOptions: [],
+    };
+  }
+
+  return {
+    users: [
+      {
+        id: LOGGED_IN_USER.id,
+        name: LOGGED_IN_USER.name ?? LOGGED_IN_USER.id,
+        email: LOGGED_IN_USER.email ?? null,
+        role: LOGGED_IN_USER.role ?? null,
+        status: LOGGED_IN_USER.status ?? "Active",
+        leave_approver: LOGGED_IN_USER.leave_approver ?? null,
+        roleId: LOGGED_IN_USER.roleId ?? null,
+      },
+    ],
+    employeeOptions: [
+      {
+        doctype: "Employee",
+        value: LOGGED_IN_USER.id,
+        label: LOGGED_IN_USER.name ?? LOGGED_IN_USER.id,
+        email: LOGGED_IN_USER.email ?? null,
+        role: LOGGED_IN_USER.role ?? null,
+        roleId: LOGGED_IN_USER.roleId ?? null,
+        leave_approver: LOGGED_IN_USER.leave_approver ?? null,
+      },
+    ],
+  };
+}
+
 export async function fetchCalendarBootstrapData() {
   const [employeesResult, rolesResult, customersResult] =
     await Promise.allSettled([
@@ -45,15 +80,25 @@ export async function fetchCalendarBootstrapData() {
       fetchAllCustomers(),
     ]);
 
+  const employeeUsers =
+    employeesResult.status === "fulfilled"
+      ? mapEmployeesToCalendarUsers(employeesResult.value)
+      : [];
+  const employeeOptions =
+    employeesResult.status === "fulfilled"
+      ? mapEmployeesToOptions(employeesResult.value)
+      : [];
+  const fallback = buildLoggedInUserFallback();
+
   return {
     users:
-      employeesResult.status === "fulfilled"
-        ? mapEmployeesToCalendarUsers(employeesResult.value)
-        : [],
+      employeeUsers.length > 0
+        ? employeeUsers
+        : fallback.users,
     employeeOptions:
-      employeesResult.status === "fulfilled"
-        ? mapEmployeesToOptions(employeesResult.value)
-        : [],
+      employeeOptions.length > 0
+        ? employeeOptions
+        : fallback.employeeOptions,
     elbritRoleEdges:
       rolesResult.status === "fulfilled"
         ? rolesResult.value

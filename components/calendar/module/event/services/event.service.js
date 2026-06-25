@@ -2,13 +2,10 @@ import { graphqlRequest } from "@calendar/lib/graphql-client";
 import { serializeEventDoc } from "../mappers/event-to-erp";
 import {
   CUSTOMER_QUERY,
-  DOC_SHARES_BY_EVENT_QUERY,
   EVENTS_BY_RANGE_QUERY,
-  SAVE_DOC_SHARE_MUTATION,
   SAVE_EVENT_MUTATION,
   SAVE_EVENT_QUOTATION,
 } from "@calendar/components/calendar/module/event/graphql/events.query";
-import { ERP_DOC_SHARE_FIELDS } from "@calendar/components/calendar/module/event/graphql/field-config";
 import { mapErpGraphqlEventToCalendar } from "@calendar/components/calendar/module/event/mappers/erp-to-event";
 import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
 import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
@@ -18,6 +15,10 @@ import { clearCached, getCached } from "@calendar/lib/data-cache";
 import { GOOGLE_CALENDAR_BY_USER } from "@calendar/components/calendar/google-auth/queries";
 import { fetchAllTodoList } from "@calendar/components/calendar/module/todo/services/todo.service";
 import { fetchAllLeaveApplications } from "@calendar/components/calendar/module/leave/services/leave.service";
+import {
+  enqueueDocShareSync,
+  syncEventDocShares,
+} from "@calendar/components/calendar/module/event/services/docshare.service";
 const PAGE_SIZE = 50;
 const QUOTATION_BATCH_SIZE = 25;
 const pendingEventRequests = new Map();
@@ -97,10 +98,24 @@ export async function saveEvent(doc, options = {}) {
   clearEventCache();
 
   if (options.shareWithUserIds?.length) {
-    await syncEventDocShares(
-      data.saveDoc.doc.name,
-      options.shareWithUserIds
-    );
+    const shareOptions = {
+      skipExistingCheck: options.skipExistingShareCheck,
+    };
+
+    if (options.deferShareSync !== false) {
+      void enqueueDocShareSync(
+        "Event",
+        data.saveDoc.doc.name,
+        options.shareWithUserIds,
+        shareOptions
+      );
+    } else {
+      await syncEventDocShares(
+        data.saveDoc.doc.name,
+        options.shareWithUserIds,
+        shareOptions
+      );
+    }
   }
 
   return data.saveDoc.doc;
@@ -213,69 +228,6 @@ export async function saveDocToQuotation(doc) {
   clearEventCache();
   return data.saveDoc.doc;
 }
-async function fetchDocSharesByEvent(eventName) {
-  const data = await graphqlRequest(DOC_SHARES_BY_EVENT_QUERY, {
-    first: 500,
-    filters: [
-      {
-        fieldname: ERP_DOC_SHARE_FIELDS.shareDoctype,
-        operator: "EQ",
-        value: "Event",
-      },
-      {
-        fieldname: ERP_DOC_SHARE_FIELDS.shareName,
-        operator: "EQ",
-        value: eventName,
-      },
-    ],
-  });
-
-  return data?.DocShares?.edges?.map(({ node }) => node) ?? [];
-}
-
-export async function syncEventDocShares(
-  eventName,
-  userIds = []
-) {
-  const targetUserIds = [...new Set(userIds.filter(Boolean))];
-
-  if (!eventName || !targetUserIds.length) {
-    return [];
-  }
-
-  const existingShares = await fetchDocSharesByEvent(eventName);
-  const existingUserIds = new Set(
-    existingShares
-      .map((share) => share?.user?.name)
-      .filter(Boolean)
-  );
-
-  const missingUserIds = targetUserIds.filter(
-    (userId) => !existingUserIds.has(userId)
-  );
-
-  if (!missingUserIds.length) {
-    return existingShares;
-  }
-
-  await Promise.all(
-    missingUserIds.map((userId) =>
-      graphqlRequest(SAVE_DOC_SHARE_MUTATION, {
-        doc: JSON.stringify({
-          [ERP_DOC_SHARE_FIELDS.user]: userId,
-          [ERP_DOC_SHARE_FIELDS.shareDoctype]: "Event",
-          [ERP_DOC_SHARE_FIELDS.shareName]: eventName,
-          read: 1,
-          write: 1,
-          share: 0,
-          notify_by_email: 0,
-        }),
-      })
-    )
-  );
-
-  return fetchDocSharesByEvent(eventName);
-}
 export async function fetchAllCustomers() {
   return getCached("CUSTOMERS", async () => {
     const data = await graphqlRequest(CUSTOMER_QUERY, {
@@ -354,11 +306,6 @@ async function fetchEventsByRangeUncached(
       operator: "LTE",
       value: endDate.toISOString(),
     },
-    {
-      fieldname: "ends_on",
-      operator: "GTE",
-      value: startDate.toISOString(),
-    },
   ];
 
   // --------------------------------------------
@@ -382,6 +329,10 @@ async function fetchEventsByRangeUncached(
     after = connection.pageInfo.endCursor;
   }
 
+  rawEventNodes = rawEventNodes.filter((node) =>
+    doesEventOverlapRange(node, startDate, endDate)
+  );
+
   // --------------------------------------------
   // 2️⃣ COLLECT QUOTATION REFERENCES
   // --------------------------------------------
@@ -400,14 +351,47 @@ async function fetchEventsByRangeUncached(
   // 3️⃣ FETCH QUOTATIONS IN BATCH
   // --------------------------------------------
   const [
-    quotationMap,
-    leaves,
-    todolist,
-  ] = await Promise.all([
+    quotationResult,
+    leavesResult,
+    todoResult,
+  ] = await Promise.allSettled([
     fetchQuotationsByNames(uniqueQuotationNames),
     fetchAllLeaveApplications(),
     fetchAllTodoList(),
   ]);
+  const quotationMap =
+    quotationResult.status === "fulfilled"
+      ? quotationResult.value
+      : {};
+  const leaves =
+    leavesResult.status === "fulfilled"
+      ? leavesResult.value
+      : [];
+  const todolist =
+    todoResult.status === "fulfilled"
+      ? todoResult.value
+      : [];
+
+  if (quotationResult.status === "rejected") {
+    console.error(
+      "Failed to fetch quotation references",
+      quotationResult.reason
+    );
+  }
+
+  if (leavesResult.status === "rejected") {
+    console.error(
+      "Failed to fetch leave applications",
+      leavesResult.reason
+    );
+  }
+
+  if (todoResult.status === "rejected") {
+    console.error(
+      "Failed to fetch todo list",
+      todoResult.reason
+    );
+  }
   // --------------------------------------------
   // 4️⃣ INJECT QUOTATION ITEMS INTO RAW NODES
   // --------------------------------------------
@@ -451,6 +435,29 @@ async function fetchEventsByRangeUncached(
   setCachedEvents(cacheKey, merged);
 
   return merged;
+}
+
+function doesEventOverlapRange(node, rangeStart, rangeEnd) {
+  const eventStart = parseErpDateValue(node?.starts_on);
+  if (!eventStart) {
+    return false;
+  }
+
+  const eventEnd =
+    parseErpDateValue(node?.ends_on) ?? eventStart;
+
+  return eventStart <= rangeEnd && eventEnd >= rangeStart;
+}
+
+function parseErpDateValue(value) {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+
+  const isoLike = value.replace(" ", "T");
+  const date = new Date(isoLike);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 const DELETE_EVENT_MUTATION = `

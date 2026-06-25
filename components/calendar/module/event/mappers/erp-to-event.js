@@ -20,7 +20,7 @@ function normalizeAttending(value) {
 
 export function mapErpGraphqlEventToCalendar(node) {
   if (!node) return null;
-  const tag = TAG_IDS[node.event_category] ?? TAG_IDS.OTHER;
+  const tag = normalizeEventTag(node.event_category);
   const tagConfig = TAG_FORM_CONFIG[tag] ?? TAG_FORM_CONFIG.DEFAULT;
   const isBirthday = tag === "Birthday";
 
@@ -182,6 +182,27 @@ export function mapErpGraphqlEventToCalendar(node) {
   }
 
   return event;
+}
+
+function normalizeEventTag(value) {
+  if (!value || typeof value !== "string") {
+    return TAG_IDS.OTHER;
+  }
+
+  if (Object.values(TAG_IDS).includes(value)) {
+    return value;
+  }
+
+  if (TAG_IDS[value]) {
+    return TAG_IDS[value];
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  const matchedTag = Object.values(TAG_IDS).find(
+    (tag) => tag.toLowerCase() === normalizedValue
+  );
+
+  return matchedTag ?? TAG_IDS.OTHER;
 }
 
 /* ---------------------------------------------
