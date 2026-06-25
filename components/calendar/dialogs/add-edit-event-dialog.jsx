@@ -47,7 +47,7 @@ import { saveDocToErp } from "@calendar/components/calendar/module/todo/services
 import { resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
-	const { isOpen, onClose, onToggle } = useDisclosure();
+	const { isOpen, onClose, onOpen } = useDisclosure();
 	const { erpUrl, authToken } = useAuth();
 	const { addEvent, updateEvent, removeEvent, employeeOptions,
 		allEmployeeOptions,
@@ -726,16 +726,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		toast.success(message);
 		resetAndCloseDialog();
 	};
-	const closeDialogSoon = (delayMs = 250) => {
-		if (typeof window === "undefined") {
-			resetAndCloseDialog();
-			return;
-		}
-
-		window.setTimeout(() => {
-			resetAndCloseDialog();
-		}, delayMs);
-	};
 	function normalizePobItemsForUI(items = []) {
 		return items.map(row => ({
 			item__name:
@@ -961,6 +951,29 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			form.setValue("fsl_doctor_item", [], { shouldDirty: true });
 		}
 	}, [customer]);
+	const isMutationPending = form.formState.isSubmitting;
+	useEffect(() => {
+		if (typeof window === "undefined" || !isMutationPending) return;
+
+		const handleBeforeUnload = (browserEvent) => {
+			browserEvent.preventDefault();
+			browserEvent.returnValue = "";
+		};
+
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		return () => {
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, [isMutationPending]);
+
+	const handleDialogOpenChange = (nextOpen) => {
+		if (!nextOpen && isMutationPending) return;
+		if (nextOpen) {
+			onOpen();
+			return;
+		}
+		onClose();
+	};
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
 			event?.reference_docname || null;
@@ -1057,87 +1070,83 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		);
 
 		const totalDoctors = normalizedDoctors.length;
-		closeDialogSoon(300);
+		const results = await Promise.allSettled(
+			normalizedDoctors.map(async (doctor) => {
+				const doctorId =
+					typeof doctor === "object" ? doctor.value : doctor;
+				const computedTitle = buildDoctorVisitTitle(doctorId, values);
 
-		void (async () => {
-			const results = await Promise.allSettled(
-				normalizedDoctors.map(async (doctor) => {
-					const doctorId =
-						typeof doctor === "object" ? doctor.value : doctor;
-					const computedTitle = buildDoctorVisitTitle(doctorId, values);
+				const enrichedValues = {
+					...values,
+					title: computedTitle,
+					doctor,
+				};
+				ensureDoctorOptionsAvailable(doctor);
+				const erpDoc = mapFormToErpEvent(enrichedValues, {
+					employeeResolvers,
+					doctorResolvers,
+					googleCalendar:
+						googleCalendarEnabled
+							? LOGGED_IN_USER.email
+							: "IT Elbrit"
+				});
 
-					const enrichedValues = {
-						...values,
-						title: computedTitle,
-						doctor,
-					};
-					ensureDoctorOptionsAvailable(doctor);
-					const erpDoc = mapFormToErpEvent(enrichedValues, {
-						employeeResolvers,
-						doctorResolvers,
-						googleCalendar:
-							googleCalendarEnabled
-								? LOGGED_IN_USER.email
-								: "IT Elbrit"
+				const optimisticEventId = `temp-${Date.now()}-${doctorId}`;
+				const optimisticEvent = buildCalendarEvent({
+					values: enrichedValues,
+					erpDoc,
+					savedName: optimisticEventId,
+					tagConfig,
+					employeeOptions,
+					doctorOptions,
+					ownerEmployeeIdOverride: LOGGED_IN_USER.id,
+				});
+				addEvent(optimisticEvent);
+
+				try {
+					const savedEvent = await saveEvent(erpDoc, {
+						shareWithUserIds: superiorUserIds,
+						deferShareSync: true,
+						skipExistingShareCheck: true,
 					});
 
-					const optimisticEventId = `temp-${Date.now()}-${doctorId}`;
-					const optimisticEvent = buildCalendarEvent({
+					const calendarEvent = buildCalendarEvent({
 						values: enrichedValues,
 						erpDoc,
-						savedName: optimisticEventId,
+						savedName: savedEvent.name,
 						tagConfig,
 						employeeOptions,
 						doctorOptions,
 						ownerEmployeeIdOverride: LOGGED_IN_USER.id,
 					});
-					addEvent(optimisticEvent);
+					removeEvent(optimisticEventId);
+					addEvent(calendarEvent);
+					return savedEvent;
+				} catch (error) {
+					removeEvent(optimisticEventId);
+					throw error;
+				}
+			})
+		);
 
-					try {
-						const savedEvent = await saveEvent(erpDoc, {
-							shareWithUserIds: superiorUserIds,
-							deferShareSync: true,
-							skipExistingShareCheck: true,
-						});
+		const successCount = results.filter(
+			(result) => result.status === "fulfilled"
+		).length;
+		const failedCount = totalDoctors - successCount;
 
-						const calendarEvent = buildCalendarEvent({
-							values: enrichedValues,
-							erpDoc,
-							savedName: savedEvent.name,
-							tagConfig,
-							employeeOptions,
-							doctorOptions,
-							ownerEmployeeIdOverride: LOGGED_IN_USER.id,
-						});
-						removeEvent(optimisticEventId);
-						addEvent(calendarEvent);
-						return savedEvent;
-					} catch (error) {
-						removeEvent(optimisticEventId);
-						throw error;
-					}
-				})
+		if (failedCount === 0) {
+			finalize(`Created ${successCount} Doctor Visit events`);
+			return;
+		}
+
+		if (successCount > 0) {
+			toast.error(
+				`Created ${successCount} of ${totalDoctors} Doctor Visit events`
 			);
+			return;
+		}
 
-			const successCount = results.filter(
-				(result) => result.status === "fulfilled"
-			).length;
-			const failedCount = totalDoctors - successCount;
-
-			if (failedCount === 0) {
-				toast.success(`Created ${successCount} Doctor Visit events`);
-				return;
-			}
-
-			if (successCount > 0) {
-				toast.error(
-					`Created ${successCount} of ${totalDoctors} Doctor Visit events`
-				);
-				return;
-			}
-
-			toast.error("Failed to create Doctor Visit events");
-		})();
+		toast.error("Failed to create Doctor Visit events");
 	};
 
 	const handleLeave = async (values) => {
@@ -1293,10 +1302,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	}, [event, employeeOptions, doctorOptions]);
 	const shouldHideDateGrid =
 		isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN;
-	const isSubmitDisabled = form.formState.isSubmitting;
+	const isSubmitDisabled = isMutationPending;
 
 	return (
-		<Modal open={isOpen} onOpenChange={onToggle}>
+		<Modal open={isOpen} onOpenChange={handleDialogOpenChange}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
 
 			<ModalContent className=" max-h-[90vh] min-h-[70vh] flex flex-col overflow-scroll">
