@@ -50,6 +50,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { erpUrl, authToken } = useAuth();
 	const { addEvent, updateEvent, employeeOptions,
+		allEmployeeOptions,
 		doctorOptions, events,
 		hqTerritoryOptions,
 		setEmployeeOptions,territoryDoctors,setTerritoryDoctors,
@@ -58,7 +59,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const isEditing = !!event;
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
-	const employeeResolvers = useEmployeeResolvers(employeeOptions);
+	const employeeResolvers = useEmployeeResolvers(allEmployeeOptions);
 	const doctorResolvers = useDoctorResolvers(doctorOptions);
 	const [itemOptions, setItemOptions] = useState([]);
 	const [isResolvingLocation, setIsResolvingLocation] = useState(false);
@@ -275,8 +276,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		setEmployeeSearchLoading(true);
 		try {
 			const results = await searchEmployees(search);
+			const allowedIds = new Set(allowedEmployeeIds);
+			const filteredResults =
+				allowedIds.size > 0
+					? results.filter((employee) =>
+						allowedIds.has(employee.value)
+					)
+					: results;
 			setEmployeeOptions((currentOptions) =>
-				mergeOptionsByValue(currentOptions, results)
+				mergeOptionsByValue(currentOptions, filteredResults)
 			);
 		} finally {
 			setEmployeeSearchLoading(false);
@@ -875,13 +883,21 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const handleDefaultEvent = async (values) => {
 		let quotationName =
 			event?.reference_docname || null;
+		let savedQuotation = null;
+		let quotationSavePromise = null;
 
 		// Only for Doctor Visit Plan
 		if (
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
 			values.pob_given === "Yes"
 		) {
-			const doctorId = values?.doctor[0]?.value;
+			const selectedDoctor = Array.isArray(values.doctor)
+				? values.doctor[0]
+				: values.doctor;
+			const doctorId =
+				typeof selectedDoctor === "object"
+					? selectedDoctor?.value
+					: selectedDoctor;
 
 			const quotationDoc =
 				mapDoctorVisitToQuotation({
@@ -890,11 +906,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 					existingName: quotationName,
 				});
 
-			const savedQuotation =
-				await saveDocToQuotation(quotationDoc);
-
-			quotationName = savedQuotation.name;
-			// quotationName = "SAL-QTN-2026-00001"
+			if (quotationName) {
+				quotationSavePromise =
+					saveDocToQuotation(quotationDoc);
+			} else {
+				savedQuotation =
+					await saveDocToQuotation(quotationDoc);
+				quotationName = savedQuotation.name;
+			}
 		}
 		const erpDoc = mapFormToErpEvent(values, {
 			erpName: event?.erpName,
@@ -910,12 +929,26 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpDoc.reference_doctype = "Quotation";
 			erpDoc.reference_docname = quotationName;
 		}
-		// console.log("ERP DOC",erpDoc)
-		const savedEvent = await saveEvent(erpDoc, {
+
+		const eventSavePromise = saveEvent(erpDoc, {
 			shareWithUserIds: superiorUserIds,
 			deferShareSync: true,
 			skipExistingShareCheck: !event?.erpName,
 		});
+
+		let savedEvent;
+		if (quotationSavePromise) {
+			[savedQuotation, savedEvent] = await Promise.all([
+				quotationSavePromise,
+				eventSavePromise,
+			]);
+		} else {
+			savedEvent = await eventSavePromise;
+		}
+
+		if (savedQuotation?.name && !quotationName) {
+			quotationName = savedQuotation.name;
+		}
 		const calendarEvent = buildCalendarEvent({
 			event,
 			values,

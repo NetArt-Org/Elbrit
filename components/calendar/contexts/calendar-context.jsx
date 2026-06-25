@@ -253,6 +253,15 @@ export function CalendarProvider({
 		if (usersLoading || elbritRoleLoading) return [];
 		return resolveVisibleEmployeeIds(elbritRoleEdges, users);
 	}, [users, usersLoading, elbritRoleEdges, elbritRoleLoading]);
+	const visibleEmployeeOptions = useMemo(() => {
+		if (!employeeOptions.length) return [];
+		if (!allowedEmployeeIds.length) return employeeOptions;
+
+		const allowedIds = new Set(allowedEmployeeIds);
+		return employeeOptions.filter((employee) =>
+			allowedIds.has(employee.value)
+		);
+	}, [employeeOptions, allowedEmployeeIds]);
 
 	const filteredEvents = useMemo(() => {
 		return filterCalendarEvents({
@@ -323,7 +332,8 @@ export function CalendarProvider({
 		isEventListOpen,
 		activeDate, setActiveDate, mobileLayer,
 		setMobileLayer,
-		employeeOptions,
+		employeeOptions: visibleEmployeeOptions,
+		allEmployeeOptions: employeeOptions,
 		doctorOptions,
 		hqTerritoryOptions,
 		setEmployeeOptions,
