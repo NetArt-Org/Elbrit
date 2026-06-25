@@ -49,7 +49,7 @@ import { resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 export function AddEditEventDialog({ children, event, defaultTag, forceValues, startDate: initialStartDate }) {
 	const { isOpen, onClose, onToggle } = useDisclosure();
 	const { erpUrl, authToken } = useAuth();
-	const { addEvent, updateEvent, employeeOptions,
+	const { addEvent, updateEvent, removeEvent, employeeOptions,
 		allEmployeeOptions,
 		doctorOptions, events,
 		hqTerritoryOptions,
@@ -269,6 +269,30 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		});
 
 		return Array.from(optionMap.values());
+	};
+	const ensureDoctorOptionsAvailable = (doctorValue) => {
+		if (!doctorValue) return;
+
+		const normalizedDoctors = Array.isArray(doctorValue)
+			? doctorValue
+			: [doctorValue];
+		const doctorRecords = normalizedDoctors
+			.map((doctor) => {
+				if (typeof doctor === "object" && doctor?.value) {
+					return doctor;
+				}
+
+				return doctorOptions.find(
+					(option) => option.value === doctor
+				);
+			})
+			.filter(Boolean);
+
+		if (!doctorRecords.length) return;
+
+		setDoctorOptions((currentOptions) =>
+			mergeOptionsByValue(currentOptions, doctorRecords)
+		);
 	};
 	const handleEmployeeSearch = async (search) => {
 		if (!search?.trim()) return;
@@ -702,6 +726,16 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		toast.success(message);
 		resetAndCloseDialog();
 	};
+	const closeDialogSoon = (delayMs = 250) => {
+		if (typeof window === "undefined") {
+			resetAndCloseDialog();
+			return;
+		}
+
+		window.setTimeout(() => {
+			resetAndCloseDialog();
+		}, delayMs);
+	};
 	function normalizePobItemsForUI(items = []) {
 		return items.map(row => ({
 			item__name:
@@ -717,6 +751,47 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 	const upsertCalendarEvent = (calendarEvent) => {
 		event ? updateEvent(calendarEvent) : addEvent(calendarEvent);
+	};
+	const normalizeDoctorValueForEvent = (doctorValue, tagConfig) => {
+		if (!doctorValue) return undefined;
+
+		const normalizeOne = (value) => {
+			if (typeof value === "object" && value !== null) {
+				return value.value ?? value.code ?? value.name ?? undefined;
+			}
+			return value;
+		};
+
+		if (tagConfig.doctor?.multiselect) {
+			const values = (Array.isArray(doctorValue)
+				? doctorValue
+				: [doctorValue])
+				.map(normalizeOne)
+				.filter(Boolean);
+			return values.length ? values : undefined;
+		}
+
+		return normalizeOne(
+			Array.isArray(doctorValue) ? doctorValue[0] : doctorValue
+		);
+	};
+	const resolveDoctorCoordinateValue = (doctorValue, field) => {
+		if (!doctorValue) return null;
+
+		const oneDoctor = Array.isArray(doctorValue)
+			? doctorValue[0]
+			: doctorValue;
+
+		if (typeof oneDoctor === "object" && oneDoctor !== null) {
+			const value = oneDoctor[field];
+			const numericValue = Number(value);
+			return Number.isNaN(numericValue) ? null : numericValue;
+		}
+
+		const numericValue = Number(
+			doctorResolvers.getDoctorFieldById(oneDoctor, field)
+		);
+		return Number.isNaN(numericValue) ? null : numericValue;
 	};
 	const buildCalendarEvent = ({
 		event,
@@ -746,9 +821,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				? { id: ownerEmployeeIdOverride }
 				: undefined,
 			hqTerritory: values.hqTerritory || "",
-			doctor: values.doctor,
-			doctorLatitude: event?.doctorLatitude ?? null,
-			doctorLongitude: event?.doctorLongitude ?? null,
+			doctor: normalizeDoctorValueForEvent(values.doctor, tagConfig),
+			doctorLatitude:
+				resolveDoctorCoordinateValue(values.doctor, "custom_latitude") ??
+				event?.doctorLatitude ??
+				null,
+			doctorLongitude:
+				resolveDoctorCoordinateValue(values.doctor, "custom_longitude") ??
+				event?.doctorLongitude ??
+				null,
 			roleId: values.roleId,
 			forceVisit: values.forceVisit ?? false,
 			custom_force_visit_reason:
@@ -960,6 +1041,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			ownerEmployeeIdOverride:
 				event?.ownerEmployeeId || LOGGED_IN_USER.id,
 		});
+		ensureDoctorOptionsAvailable(values.doctor);
 		upsertCalendarEvent(calendarEvent);
 
 		finalize("Event updated");
@@ -975,7 +1057,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		);
 
 		const totalDoctors = normalizedDoctors.length;
-		resetAndCloseDialog();
+		closeDialogSoon(300);
 
 		void (async () => {
 			const results = await Promise.allSettled(
@@ -989,6 +1071,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 						title: computedTitle,
 						doctor,
 					};
+					ensureDoctorOptionsAvailable(doctor);
 					const erpDoc = mapFormToErpEvent(enrichedValues, {
 						employeeResolvers,
 						doctorResolvers,
@@ -998,23 +1081,41 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								: "IT Elbrit"
 					});
 
-					const savedEvent = await saveEvent(erpDoc, {
-						shareWithUserIds: superiorUserIds,
-						deferShareSync: true,
-						skipExistingShareCheck: true,
-					});
-
-					const calendarEvent = buildCalendarEvent({
+					const optimisticEventId = `temp-${Date.now()}-${doctorId}`;
+					const optimisticEvent = buildCalendarEvent({
 						values: enrichedValues,
 						erpDoc,
-						savedName: savedEvent.name,
+						savedName: optimisticEventId,
 						tagConfig,
 						employeeOptions,
 						doctorOptions,
 						ownerEmployeeIdOverride: LOGGED_IN_USER.id,
 					});
-					addEvent(calendarEvent);
-					return savedEvent;
+					addEvent(optimisticEvent);
+
+					try {
+						const savedEvent = await saveEvent(erpDoc, {
+							shareWithUserIds: superiorUserIds,
+							deferShareSync: true,
+							skipExistingShareCheck: true,
+						});
+
+						const calendarEvent = buildCalendarEvent({
+							values: enrichedValues,
+							erpDoc,
+							savedName: savedEvent.name,
+							tagConfig,
+							employeeOptions,
+							doctorOptions,
+							ownerEmployeeIdOverride: LOGGED_IN_USER.id,
+						});
+						removeEvent(optimisticEventId);
+						addEvent(calendarEvent);
+						return savedEvent;
+					} catch (error) {
+						removeEvent(optimisticEventId);
+						throw error;
+					}
 				})
 			);
 
