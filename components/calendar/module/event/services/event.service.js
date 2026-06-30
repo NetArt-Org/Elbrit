@@ -239,6 +239,27 @@ export async function fetchAllCustomers() {
   });
 }
 
+export async function fetchCustomersByTerritory(territory) {
+  if (!territory) return [];
+
+  return getCached(`CUSTOMERS:${territory}`, async () => {
+    const data = await graphqlRequest(CUSTOMER_QUERY, {
+      first: 500,
+      filters: [
+        {
+          fieldname: "territory",
+          operator: "EQ",
+          value: territory,
+        },
+      ],
+    });
+
+    return (
+      data?.Customers?.edges?.map((edge) => edge.node?.name).filter(Boolean) ?? []
+    );
+  });
+}
+
 export async function fetchGoogleCalendarStatus(email) {
   if (!email) return null;
 
