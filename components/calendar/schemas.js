@@ -52,6 +52,7 @@ export const eventSchema = z
     employees: z.any().optional(),
     doctor: z.any().optional(),
     allocated_to:z.any().optional(),
+    shareEmployees: z.any().optional(),
     hqTerritory: z.string().optional(),
     customer: z.string().optional(),
     allDay: z.boolean().optional(),

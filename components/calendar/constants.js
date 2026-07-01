@@ -140,6 +140,7 @@ export function buildEventDefaultValues({ event, defaultTag }) {
     customer: event?.customer ?? "",
     custom_force_visit_reason:event?.custom_force_visit_reason ?? "",
     allocated_to: event?.allocated_to ?? "",
+    shareEmployees: [],
     leaveType: event?.leaveType ?? "Casual Leave",
     reportTo: event?.reportTo ?? "",
     medicalAttachment: event?.medicalAttachment ?? "",

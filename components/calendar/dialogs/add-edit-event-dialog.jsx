@@ -499,10 +499,39 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		});
 		return [...emails];
 	};
+	const collectManualShareEmails = (values) => {
+		const emails = new Set();
+		const value = values.shareEmployees;
+		if (!value) return [];
+
+		(Array.isArray(value) ? value : [value]).forEach((employee) => {
+			if (!employee) return;
+			const email =
+				typeof employee === "object"
+					? employee.email
+					: allEmployeeOptions.find((opt) => opt.value === employee)?.email;
+			if (email && email !== LOGGED_IN_USER.email) {
+				emails.add(email);
+			}
+		});
+
+		return [...emails];
+	};
 	const getShareUserIds = (values) =>
-		[TAG_IDS.HQ_TOUR_PLAN, TAG_IDS.DOCTOR_VISIT_PLAN].includes(values.tags)
-			? superiorUserIds
-			: collectParticipantShareEmails(values);
+		Array.from(
+			new Set(
+				[
+					...[TAG_IDS.HQ_TOUR_PLAN, TAG_IDS.DOCTOR_VISIT_PLAN].includes(
+						values.tags
+					)
+						? superiorUserIds
+						: collectParticipantShareEmails(values),
+					...(values.tags === TAG_IDS.HQ_TOUR_PLAN
+						? collectManualShareEmails(values)
+						: []),
+				].filter(Boolean)
+			)
+		);
 	useEffect(() => {
 		if (!startDate || !endDate) return;
 
@@ -1920,6 +1949,26 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 												name="hqTerritory"
 												options={hqTerritoryOptions}
 											// label="HQ"
+											/>
+										</RHFFieldWrapper>
+									)}
+								/>
+							)}
+						{isEditing &&
+							selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
+								<FormField
+									control={form.control}
+									name="shareEmployees"
+									render={({ field }) => (
+										<RHFFieldWrapper label="Share with">
+											<RHFComboboxField
+												{...field}
+												options={employeePickerOptions}
+												multiple
+												placeholder="Select employees"
+												searchPlaceholder="Search employee"
+												onSearch={handleEmployeeSearch}
+												loading={employeeSearchLoading}
 											/>
 										</RHFFieldWrapper>
 									)}
