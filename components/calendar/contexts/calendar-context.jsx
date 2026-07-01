@@ -14,9 +14,9 @@ import {
 } from "@calendar/components/calendar/contexts/calendar-context/selectors";
 import {
 	discardQueuedSubmission,
-	getSubmissionQueue,
 	mergeServerEventsWithQueuedEvents,
 	processSubmissionQueue,
+	pruneSubmissionQueueOnStartup,
 	subscribeSubmissionQueue,
 } from "@calendar/lib/calendar/submission-queue";
 import { useAuth } from "@calendar/components/auth/auth-context";
@@ -214,7 +214,7 @@ export function CalendarProvider({
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
-		setQueueEvents(getSubmissionQueue());
+		setQueueEvents(pruneSubmissionQueueOnStartup());
 
 		const unsubscribe = subscribeSubmissionQueue((queue) => {
 			setQueueEvents(queue);
