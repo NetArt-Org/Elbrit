@@ -130,7 +130,7 @@ export function buildEventDefaultValues({ event, defaultTag }) {
     description: event?.description ?? "",
     startDate,
     endDate,
-    tags: event?.tags ?? defaultTag ?? "Other",
+    tags: event?.tags ?? defaultTag ?? "Leave",
     hqTerritory: event?.hqTerritory ?? "",
     employees: event?.employees,
     doctor: event?.doctor,

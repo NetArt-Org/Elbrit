@@ -270,6 +270,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		return differenceInCalendarDays(endDate, startDate) + 1;
 	}, [selectedTag, startDate, endDate, leavePeriod]);
+	const selectedLeaveBalance = useMemo(() => {
+		if (!leaveType) return null;
+		return leaveBalance?.[leaveType] ?? null;
+	}, [leaveBalance, leaveType]);
+	const isLeaveWithoutPaySelected =
+		selectedLeaveBalance?.isLeaveWithoutPay === true;
+	const hasInsufficientLeaveBalance =
+		selectedTag === TAG_IDS.LEAVE &&
+		!isLeaveWithoutPaySelected &&
+		Boolean(selectedLeaveBalance) &&
+		leaveDays > 0 &&
+		Number(selectedLeaveBalance.available ?? 0) < leaveDays;
 	const doctorDetails = useMemo(() => {
 		const doctorId = Array.isArray(event?.doctor)
 			? event.doctor[0]
@@ -1340,6 +1352,36 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 	const handleLeave = async (values) => {
 		try {
+			const currentLeaveBalance =
+				leaveBalance?.[values.leaveType] ?? null;
+			const isLeaveWithoutPay =
+				currentLeaveBalance?.isLeaveWithoutPay === true;
+			const availableLeaveBalance = Number(
+				currentLeaveBalance?.available ?? 0
+			);
+
+			if (
+				!isLeaveWithoutPay &&
+				currentLeaveBalance &&
+				availableLeaveBalance <= 0
+			) {
+				toast.error(
+					`${values.leaveType} balance is zero. Leave cannot be applied.`
+				);
+				return;
+			}
+
+			if (
+				!isLeaveWithoutPay &&
+				currentLeaveBalance &&
+				leaveDays > availableLeaveBalance
+			) {
+				toast.error(
+					`${values.leaveType} balance is insufficient for ${leaveDays} day${leaveDays === 1 ? "" : "s"}.`
+				);
+				return;
+			}
+
 			if (requiresMedical && !values.medicalAttachment) {
 				toast.error("Medical certificate required");
 				return;
@@ -1618,14 +1660,28 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											onChange={field.onChange}
 										/>
 										{field.value && leaveBalance?.[field.value] && (
-											<div className="mt-2 text-sm text-muted-foreground">
-												{leaveBalance[field.value].isLeaveWithoutPay ? (
-													"Leave Without Pay is always selectable."
-												) : (
-													<>
-														Balance: {leaveBalance[field.value].available} /{" "}
-														{leaveBalance[field.value].allocated}
-													</>
+											<div className="mt-2 space-y-1 text-sm text-muted-foreground">
+												<div>
+													{leaveBalance[field.value].isLeaveWithoutPay ? (
+														"Leave Without Pay is always selectable."
+													) : (
+														<>
+															Balance: {leaveBalance[field.value].available} /{" "}
+															{leaveBalance[field.value].allocated}
+														</>
+													)}
+												</div>
+												{field.value && leaveDays > 0 && (
+													<div
+														className={
+															hasInsufficientLeaveBalance
+																? "text-destructive"
+																: undefined
+														}
+													>
+														{field.value} applied for {leaveDays} day
+														{leaveDays === 1 ? "" : "s"}
+													</div>
 												)}
 											</div>
 										)}
