@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addMinutes, differenceInCalendarDays, startOfDay, endOfDay } from "date-fns";
+import { addMinutes, differenceInCalendarDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -282,6 +282,25 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		Boolean(selectedLeaveBalance) &&
 		leaveDays > 0 &&
 		Number(selectedLeaveBalance.available ?? 0) < leaveDays;
+	const currentEmployeeParticipant = useMemo(
+		() =>
+			event?.participants?.find(
+				(participant) =>
+					participant.type === "Employee" &&
+					String(participant.id) === String(LOGGED_IN_USER.id)
+			) ?? null,
+		[event?.participants]
+	);
+	const hasExistingPobItems =
+		Array.isArray(event?.fsl_doctor_item) &&
+		event.fsl_doctor_item.length > 0;
+	const hasExistingPobDecision =
+		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+		isEditing &&
+		(Number(event?.pob_given) === 1 ||
+			hasExistingPobItems);
+	const canCurrentParticipantEditPob =
+		!hasExistingPobDecision;
 	const doctorDetails = useMemo(() => {
 		const doctorId = Array.isArray(event?.doctor)
 			? event.doctor[0]
@@ -534,7 +553,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	useEffect(() => {
 		if (!isEditing) return;
 		if (selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN) return;
-		if (pobGiven !== "Yes") return;
+		if (Number(pobGiven) !== 1) return;
 		if (itemOptions.length) return;
 
 		fetchItems().then(setItemOptions);
@@ -544,7 +563,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	  RESET POB ITEMS
 	--------------------------------------------- */
 	useEffect(() => {
-		if (pobGiven !== "Yes") {
+		if (Number(pobGiven) !== 1) {
 			form.setValue("fsl_doctor_item", [], {
 				shouldDirty: true,
 			});
@@ -955,7 +974,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	}) => {
 		const shouldBeGreen =
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			values.attending === "Yes";
+			erpDoc.status === "Completed";
 
 		const calendarEvent = {
 			...(event ?? {}),
@@ -998,16 +1017,23 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 				erpDoc.event_participants,
 				{ employeeOptions, doctorOptions }
 			),
+			status:
+				values.tags === TAG_IDS.DOCTOR_VISIT_PLAN
+					? erpDoc.status
+					: event?.status,
 		};
 
 		if (values.tags === TAG_IDS.DOCTOR_VISIT_PLAN) {
-			if (values.pob_given === "Yes" && Array.isArray(values.fsl_doctor_item)) {
+			if (Number(values.pob_given) === 1 && Array.isArray(values.fsl_doctor_item)) {
 				calendarEvent.fsl_doctor_item =
 					normalizePobItemsForUI(values.fsl_doctor_item);
-				calendarEvent.pob_given = "Yes";
-			} else {
+				calendarEvent.pob_given = 1;
+			} else if (Number(values.pob_given) === 0) {
 				calendarEvent.fsl_doctor_item = [];
-				calendarEvent.pob_given = "No";
+				calendarEvent.pob_given = 0;
+			} else {
+				calendarEvent.fsl_doctor_item = event?.fsl_doctor_item ?? [];
+				calendarEvent.pob_given = event?.pob_given;
 			}
 		}
 		return calendarEvent;
@@ -1121,7 +1147,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		if (
 			!isEditing ||
 			selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN ||
-			pobGiven !== "Yes"
+			Number(pobGiven) !== 1
 		) {
 			return;
 		}
@@ -1216,6 +1242,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpName: event?.erpName,
 			employeeResolvers,
 			doctorResolvers,
+			existingEventParticipants: event?.event_participants ?? [],
 			googleCalendar:
 				googleCalendarEnabled
 					? LOGGED_IN_USER.email
@@ -1577,7 +1604,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const shouldHideDateGrid =
 		isEditing && selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN;
 	const isSubmitDisabled = isMutationPending;
-
 	return (
 		<Modal open={isOpen} onOpenChange={handleDialogOpenChange}>
 			<ModalTrigger asChild>{children}</ModalTrigger>
@@ -2115,6 +2141,13 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 						{/* ================= POB QUESTION ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
+								<>
+									{hasExistingPobDecision &&
+										!canCurrentParticipantEditPob && (
+											<p className="text-sm text-muted-foreground">
+												POB has already been captured for this visit. Remaining participants can only mark Visit.
+											</p>
+										)}
 								<FormField
 									control={form.control}
 									name="pob_given"
@@ -2124,9 +2157,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 												<label className="flex items-center gap-2">
 													<input
 														type="radio"
-														value="Yes"
-														checked={field.value === "Yes"}
-														onChange={() => field.onChange("Yes")}
+														value="1"
+														checked={Number(field.value) === 1}
+														disabled={!canCurrentParticipantEditPob}
+														onChange={() => field.onChange(1)}
 													/>
 													<span>Yes</span>
 												</label>
@@ -2134,9 +2168,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 												<label className="flex items-center gap-2">
 													<input
 														type="radio"
-														value="No"
-														checked={field.value === "No"}
-														onChange={() => field.onChange("No")}
+														value="0"
+														checked={Number(field.value) === 0}
+														disabled={!canCurrentParticipantEditPob}
+														onChange={() => field.onChange(0)}
 													/>
 													<span>No</span>
 												</label>
@@ -2144,11 +2179,13 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 										</RHFFieldWrapper>
 									)}
 								/>
+								</>
 							)}
 						{/* ================= CUSTOMER ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-							pobGiven === "Yes" && (
+							Number(pobGiven) === 1 &&
+							canCurrentParticipantEditPob && (
 								<FormField
 									control={form.control}
 									name="customer"
@@ -2168,7 +2205,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 						{/* ================= POB ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-							pobGiven === "Yes" && customer && (
+							Number(pobGiven) === 1 &&
+							customer &&
+							canCurrentParticipantEditPob && (
 								<div className="space-y-4">
 									<h4 className="font-medium">POB Details</h4>
 
