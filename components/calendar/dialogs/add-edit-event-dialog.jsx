@@ -47,6 +47,7 @@ import { Textarea } from "@calendar/components/ui/textarea";
 import { fetchEmployeeLeaveBalance } from "@calendar/components/calendar/module/leave/services/leave.service";
 import { resolveDepartmentRoleIds, resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 import { enqueueSubmission } from "@calendar/lib/calendar/submission-queue";
+import { fetchDocSharesByDocument } from "@calendar/components/calendar/module/event/services/docshare.service";
 
 // Head-office teams that are allowed to apply for Half Day leave. Field-sales
 // users (BE/ABM/RBM/SM role profiles) do not get Half Day. Matched as a whole
@@ -76,6 +77,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const [leaveBalance, setLeaveBalance] = useState(null);
 	const [leaveLoading, setLeaveLoading] = useState(false);
 	const employeeResolvers = useEmployeeResolvers(allEmployeeOptions);
+	const { getEmployeeIdByEmail } = useEmployeeResolvers(allEmployeeOptions);
 	const doctorResolvers = useDoctorResolvers(doctorOptions);
 	const [itemOptions, setItemOptions] = useState([]);
 	const [isResolvingLocation, setIsResolvingLocation] = useState(false);
@@ -282,15 +284,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		Boolean(selectedLeaveBalance) &&
 		leaveDays > 0 &&
 		Number(selectedLeaveBalance.available ?? 0) < leaveDays;
-	const currentEmployeeParticipant = useMemo(
-		() =>
-			event?.participants?.find(
-				(participant) =>
-					participant.type === "Employee" &&
-					String(participant.id) === String(LOGGED_IN_USER.id)
-			) ?? null,
-		[event?.participants]
-	);
 	const hasExistingPobItems =
 		Array.isArray(event?.fsl_doctor_item) &&
 		event.fsl_doctor_item.length > 0;
@@ -430,18 +423,18 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			!currentUserRoleId || currentUserRoleId === "Admin"
 				? allEmployeeOptions
 				: (() => {
-						const departmentRoleIds = resolveDepartmentRoleIds(
-							elbritRoleEdges,
-							currentUserRoleId
-						);
-						if (!departmentRoleIds.length) return allEmployeeOptions;
-						const allowedRoleIds = new Set(departmentRoleIds);
-						return allEmployeeOptions.filter(
-							(option) =>
-								option.value === LOGGED_IN_USER.id ||
-								(option.roleId && allowedRoleIds.has(option.roleId))
-						);
-				  })();
+					const departmentRoleIds = resolveDepartmentRoleIds(
+						elbritRoleEdges,
+						currentUserRoleId
+					);
+					if (!departmentRoleIds.length) return allEmployeeOptions;
+					const allowedRoleIds = new Set(departmentRoleIds);
+					return allEmployeeOptions.filter(
+						(option) =>
+							option.value === LOGGED_IN_USER.id ||
+							(option.roleId && allowedRoleIds.has(option.roleId))
+					);
+				})();
 
 		// On edit, keep already-attached participants selectable/visible even if
 		// they fall outside the user's department (older or cross-team events) —
@@ -471,6 +464,25 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			roleId: employee.roleId ?? null,
 		}));
 	}, [allEmployeeOptions, users]);
+	useEffect(() => {
+		const isHQTourPlan = event?.tags === TAG_IDS.HQ_TOUR_PLAN;
+		if (!isEditing) return;
+		if (!event?.erpName) return;
+		if (!isHQTourPlan) return;
+
+		const fetchShares = async () => {
+			const shares = await fetchDocSharesByDocument("Event", event.erpName);
+			const shareEmployeeEmail = shares.map(x => x?.user?.name)
+			const shareEmployeeIds = shareEmployeeEmail
+				.map((x) => getEmployeeIdByEmail(x))
+			form.setValue("shareEmployees", shareEmployeeIds, {
+				shouldDirty: false,
+				shouldValidate: true,
+			});
+		};
+
+		fetchShares();
+	}, [event?.erpName, event?.tags, isEditing]);
 	const superiorUserIds = useMemo(() => {
 		if (isEditing) return [];
 		if (!currentUserRoleId) return [];
@@ -1246,8 +1258,8 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const handleDefaultEvent = async (values) => {
 		const normalizedDoctorValue =
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			(!values.doctor ||
-				(Array.isArray(values.doctor) && !values.doctor.length))
+				(!values.doctor ||
+					(Array.isArray(values.doctor) && !values.doctor.length))
 				? event?.doctor
 				: values.doctor;
 		const normalizedValues = {
@@ -1257,7 +1269,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		let quotationName =
 			event?.reference_docname || null;
 		let quotationDoc = null;
-		console.log("Quotation Name", quotationName);
 
 		// Only for Doctor Visit Plan
 		if (
@@ -1281,7 +1292,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 					eventName: event?.erpName,
 				});
 			quotationName = quotationDoc.name ?? quotationName;
-			console.log("Quotation Doc", quotationDoc);
 		}
 		const erpDoc = mapFormToErpEvent(normalizedValues, {
 			erpName: event?.erpName,
@@ -1299,15 +1309,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			erpDoc.reference_docname = quotationName;
 		}
 		const calendarEvent = buildCalendarEvent({
-				event,
-				values: normalizedValues,
-				erpDoc,
-				savedName: event?.erpName ?? createLocalEventId("local-event"),
-				tagConfig,
-				employeeOptions: employeePickerOptions,
-				doctorOptions,
-				ownerEmployeeIdOverride:
-					event?.ownerEmployeeId || LOGGED_IN_USER.id,
+			event,
+			values: normalizedValues,
+			erpDoc,
+			savedName: event?.erpName ?? createLocalEventId("local-event"),
+			tagConfig,
+			employeeOptions: employeePickerOptions,
+			doctorOptions,
+			ownerEmployeeIdOverride:
+				event?.ownerEmployeeId || LOGGED_IN_USER.id,
 			ownerEmailOverride:
 				event?.ownerEmail || LOGGED_IN_USER.email,
 			ownerFullNameOverride:
@@ -1390,9 +1400,9 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 						erpDoc,
 						quotationDoc: null,
 						saveOptions: {
-						shareWithUserIds: superiorUserIds,
-						deferShareSync: false,
-						skipExistingShareCheck: true,
+							shareWithUserIds: superiorUserIds,
+							deferShareSync: false,
+							skipExistingShareCheck: true,
 						},
 					},
 				});
@@ -1952,6 +1962,26 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								)}
 							</div>
 						)}
+						{/* ================= Share with Other Participants ================= */}
+						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
+							<FormField
+								control={form.control}
+								name="shareEmployees"
+								render={({ field }) => (
+									<RHFFieldWrapper label="Share with">
+										<RHFComboboxField
+											{...field}
+											options={employeePickerOptions}
+											multiple
+											placeholder="Select employees"
+											searchPlaceholder="Search employee"
+											onSearch={handleEmployeeSearch}
+											loading={employeeSearchLoading}
+										/>
+									</RHFFieldWrapper>
+								)}
+							/>
+						)}
 						{/* ================= HQ TERRITORY ================= */}
 						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
 							!isEditReadOnlyField("hqTerritory") && (
@@ -1970,26 +2000,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									)}
 								/>
 							)}
-						{isEditing &&
-							selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
-								<FormField
-									control={form.control}
-									name="shareEmployees"
-									render={({ field }) => (
-										<RHFFieldWrapper label="Share with">
-											<RHFComboboxField
-												{...field}
-												options={employeePickerOptions}
-												multiple
-												placeholder="Select employees"
-												searchPlaceholder="Search employee"
-												onSearch={handleEmployeeSearch}
-												loading={employeeSearchLoading}
-											/>
-										</RHFFieldWrapper>
-									)}
-								/>
-							)}
+
 						{/* ================= DOCTOR ================= */}
 						{!tagConfig.hide?.includes("doctor") &&
 							!isEditReadOnlyField("doctor") && (
@@ -2213,37 +2224,37 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 												POB has already been captured for this visit. Remaining participants can only mark Visit.
 											</p>
 										)}
-								<FormField
-									control={form.control}
-									name="pob_given"
-									render={({ field }) => (
-										<RHFFieldWrapper label="Did POB Given ?">
-											<div className="flex gap-6">
-												<label className="flex items-center gap-2">
-													<input
-														type="radio"
-														value="1"
-														checked={Number(field.value) === 1}
-														disabled={!canCurrentParticipantEditPob}
-														onChange={() => field.onChange(1)}
-													/>
-													<span>Yes</span>
-												</label>
+									<FormField
+										control={form.control}
+										name="pob_given"
+										render={({ field }) => (
+											<RHFFieldWrapper label="Did POB Given ?">
+												<div className="flex gap-6">
+													<label className="flex items-center gap-2">
+														<input
+															type="radio"
+															value="1"
+															checked={Number(field.value) === 1}
+															disabled={!canCurrentParticipantEditPob}
+															onChange={() => field.onChange(1)}
+														/>
+														<span>Yes</span>
+													</label>
 
-												<label className="flex items-center gap-2">
-													<input
-														type="radio"
-														value="0"
-														checked={Number(field.value) === 0}
-														disabled={!canCurrentParticipantEditPob}
-														onChange={() => field.onChange(0)}
-													/>
-													<span>No</span>
-												</label>
-											</div>
-										</RHFFieldWrapper>
-									)}
-								/>
+													<label className="flex items-center gap-2">
+														<input
+															type="radio"
+															value="0"
+															checked={Number(field.value) === 0}
+															disabled={!canCurrentParticipantEditPob}
+															onChange={() => field.onChange(0)}
+														/>
+														<span>No</span>
+													</label>
+												</div>
+											</RHFFieldWrapper>
+										)}
+									/>
 								</>
 							)}
 						{/* ================= CUSTOMER ================= */}
