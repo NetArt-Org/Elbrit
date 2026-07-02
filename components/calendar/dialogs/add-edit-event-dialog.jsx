@@ -25,7 +25,7 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { loadParticipantOptionsByTag } from "@calendar/lib/participants";
 import { TimePicker } from "@calendar/components/ui/TimePicker";
 import { enrichTodoOwner, mapErpTodoToCalendar, mapFormToErpTodo } from "@calendar/components/calendar/module/todo/mappers/todo.mapper";
-import { mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
+import { calculateTotalLeaveDays, mapErpLeaveToCalendar, mapFormToErpLeave } from "@calendar/components/calendar/module/leave/mappers/leave.mapper";
 import { useEmployeeResolvers } from "@calendar/lib/employeeResolver";
 import {
 	fetchDoctorsByTerritory,
@@ -262,15 +262,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		if (selectedTag !== TAG_IDS.LEAVE) return 0;
 		if (!startDate || !endDate) return 0;
 
-		// Half day is always 1 day logically
-		if (leavePeriod === "Half") {
-			const total =
-				differenceInCalendarDays(endDate, startDate) + 1;
-			return total - 0.5;
-		}
-
-
-		return differenceInCalendarDays(endDate, startDate) + 1;
+		return calculateTotalLeaveDays(
+			startDate,
+			endDate,
+			leavePeriod === "Half"
+		);
 	}, [selectedTag, startDate, endDate, leavePeriod]);
 	const selectedLeaveBalance = useMemo(() => {
 		if (!leaveType) return null;
