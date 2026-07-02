@@ -19,7 +19,7 @@ import {
   enqueueDocShareSync,
   syncEventDocShares,
 } from "@calendar/components/calendar/module/event/services/docshare.service";
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 200;
 const QUOTATION_BATCH_SIZE = 25;
 const pendingEventRequests = new Map();
 

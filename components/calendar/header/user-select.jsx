@@ -105,7 +105,7 @@ export function UserSelect() {
     <Popover>
       {/* 🔒 Trigger */}
       <PopoverTrigger asChild>
-        <div className="w-full inline-flex items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm cursor-pointer">
+        <div className="w-full inline-flex items-center justify-between rounded-md border border-input bg-background bg-white px-3 py-1 text-sm shadow-sm cursor-pointer">
           <AvatarGroup className="flex items-center" max={4}>
             {triggerUsers.map((user) => (
               <Avatar key={user.id} className="size-5 text-xxs">
@@ -144,7 +144,7 @@ export function UserSelect() {
         className="p-2 w-[var(--radix-popover-trigger-width)] md:w-[250px]"
       >
         {/* 🔍 Search (sticky) */}
-        <div className="sticky top-0 z-10 bg-background pb-2">
+        <div className="sticky top-0 z-10 bg-background bg-white pb-2">
           <input
             type="text"
             value={search}

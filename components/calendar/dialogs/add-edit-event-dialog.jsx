@@ -748,9 +748,12 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		/* ---------- Doctors ---------- */
 		if (doctorIds.length) {
-			const doctorValues = doctorIds
-				.map(id => doctorOptions.find(o => o.value === id))
-				.filter(Boolean);
+			const doctorValues = doctorIds.map((id) => {
+				return (
+					doctorOptions.find((option) => option.value === id) ??
+					id
+				);
+			});
 
 			form.setValue(
 				"doctor",
@@ -1241,18 +1244,30 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		onClose();
 	};
 	const handleDefaultEvent = async (values) => {
+		const normalizedDoctorValue =
+			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			(!values.doctor ||
+				(Array.isArray(values.doctor) && !values.doctor.length))
+				? event?.doctor
+				: values.doctor;
+		const normalizedValues = {
+			...values,
+			doctor: normalizedDoctorValue,
+		};
 		let quotationName =
 			event?.reference_docname || null;
 		let quotationDoc = null;
+		console.log("Quotation Name", quotationName);
 
 		// Only for Doctor Visit Plan
 		if (
-			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			values.pob_given === "Yes"
+			normalizedValues.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			canCurrentParticipantEditPob &&
+			Number(normalizedValues.pob_given) === 1
 		) {
-			const selectedDoctor = Array.isArray(values.doctor)
-				? values.doctor[0]
-				: values.doctor;
+			const selectedDoctor = Array.isArray(normalizedValues.doctor)
+				? normalizedValues.doctor[0]
+				: normalizedValues.doctor;
 			const doctorId =
 				typeof selectedDoctor === "object"
 					? selectedDoctor?.value
@@ -1260,14 +1275,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 			quotationDoc =
 				mapDoctorVisitToQuotation({
-					values,
+					values: normalizedValues,
 					doctorId,
 					existingName: quotationName,
 					eventName: event?.erpName,
 				});
 			quotationName = quotationDoc.name ?? quotationName;
+			console.log("Quotation Doc", quotationDoc);
 		}
-		const erpDoc = mapFormToErpEvent(values, {
+		const erpDoc = mapFormToErpEvent(normalizedValues, {
 			erpName: event?.erpName,
 			employeeResolvers,
 			doctorResolvers,
@@ -1284,7 +1300,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		}
 		const calendarEvent = buildCalendarEvent({
 				event,
-				values,
+				values: normalizedValues,
 				erpDoc,
 				savedName: event?.erpName ?? createLocalEventId("local-event"),
 				tagConfig,
@@ -1297,7 +1313,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			ownerFullNameOverride:
 				event?.ownerFullName || LOGGED_IN_USER.name,
 		});
-		ensureDoctorOptionsAvailable(values.doctor);
+		ensureDoctorOptionsAvailable(normalizedValues.doctor);
 		await enqueueSubmission({
 			kind: "event",
 			replaceQueueId: event?.__localQueueId ?? null,
