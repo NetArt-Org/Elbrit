@@ -174,7 +174,7 @@ export function UserSelect({ mode = "popover" }) {
   if (mode === "inline") {
     return (
       <div className="w-full rounded-lg bg-background">
-        <div className="max-h-[42vh] overflow-y-auto p-2">
+        <div className="max-h-[90vh] hide-scrollbar overflow-y-auto p-2">
           <EmployeeFilterList
             users={visibleUsers}
             checkedIds={checkedIds}

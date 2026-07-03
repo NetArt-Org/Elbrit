@@ -90,7 +90,7 @@ export function CalendarSidebar({ open, onOpenChange }) {
             )}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden px-2 pb-3 pt-3">
+          <div className="min-h-0 flex-1 overflow-hidden px-0 pb-3 pt-3">
             <UserSelect mode="inline" />
           </div>
         </div>
