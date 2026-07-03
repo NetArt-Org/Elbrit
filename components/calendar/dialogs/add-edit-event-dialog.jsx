@@ -48,6 +48,7 @@ import { fetchEmployeeLeaveBalance } from "@calendar/components/calendar/module/
 import { resolveDepartmentRoleIds, resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 import { enqueueSubmission } from "@calendar/lib/calendar/submission-queue";
 import { fetchDocSharesByDocument } from "@calendar/components/calendar/module/event/services/docshare.service";
+import { cn } from "@calendar/lib/utils";
 
 // Head-office teams that are allowed to apply for Half Day leave. Field-sales
 // users (BE/ABM/RBM/SM role profiles) do not get Half Day. Matched as a whole
@@ -632,22 +633,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		// (closed) behind the event-details popup, and we must not fetch device
 		// location then or it spams a geolocation toast on every detail open.
 		if (!isOpen) return;
-		endDateTouchedRef.current = true;
-
-		// 📍 Doctor Visit Plan: capture endDate ONCE
-		if (
-			selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			attending === "Yes" &&
-			!endDateTouchedRef.current
-		) {
-			form.setValue("endDate", new Date(), {
-				shouldDirty: true,
-				shouldValidate: true,
-			});
-
-			endDateTouchedRef.current = true;
-		}
-
 		// Location is only relevant to Doctor Visit Plans (force-visit distance).
 		if (selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN) {
 			resolveLatLong(form, isEditing, toast);
@@ -1015,16 +1000,33 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		const shouldBeGreen =
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
 			erpDoc.status === "Completed";
+		const normalizedStartDate = new Date(
+			values.startDate ?? event?.startDate ?? new Date()
+		);
+		const fallbackEndDate = new Date(
+			event?.endDate ?? values.endDate ?? values.startDate ?? new Date()
+		);
+		const resolvedEndDate =
+			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
+			erpDoc.status === "Completed"
+				? new Date(String(erpDoc.ends_on).replace(" ", "T"))
+				: fallbackEndDate;
+		const normalizedEndDate =
+			resolvedEndDate < normalizedStartDate
+				? normalizedStartDate
+				: resolvedEndDate;
 
 		const calendarEvent = {
 			...(event ?? {}),
 			erpName: savedName,
+			id: event?.id ?? savedName,
 			title: values.title,
 			description: values.description,
-			startDate: (values.startDate ?? new Date()).toISOString(),
-			endDate: (values.endDate ?? values.startDate ?? new Date()).toISOString(),
+			startDate: normalizedStartDate.toISOString(),
+			endDate: normalizedEndDate.toISOString(),
 			color: shouldBeGreen ? "green" : tagConfig.fixedColor,
 			tags: values.tags,
+			allDay: values.allDay ?? event?.allDay ?? false,
 			ownerEmployeeId: ownerEmployeeIdOverride,
 			ownerEmail: ownerEmailOverride,
 			ownerFullName: ownerFullNameOverride,
@@ -1294,6 +1296,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			employeeResolvers,
 			doctorResolvers,
 			existingEventParticipants: event?.event_participants ?? [],
+			existingEndDate: event?.endDate ?? null,
 			googleCalendar:
 				googleCalendarEnabled
 					? LOGGED_IN_USER.email
@@ -1787,37 +1790,46 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 						{/* ================= MEETING ================= */}
 						{selectedTag === TAG_IDS.MEETING ? (
 							<>
-								<RHFDateTimeField
-									control={form.control}
-									form={form}
-									name="startDate"
-									label="Date"
-									hideTime
-								/>
+									<RHFDateTimeField
+										control={form.control}
+										form={form}
+										name="startDate"
+										label="Date"
+										hideTime
+									/>
 
-								<FormField
-									control={form.control}
-									name="allDay"
-									render={({ field }) => (
-										<InlineCheckboxField
-											label="All day"
-											checked={field.value}
-											onChange={field.onChange}
+									<div
+										className={cn(
+											"grid gap-3",
+											!isEditing ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+										)}
+									>
+										<FormField
+											control={form.control}
+											name="allDay"
+											render={({ field }) => (
+												<InlineCheckboxField
+													label="All day"
+													checked={field.value}
+													onChange={field.onChange}
+												/>
+											)}
 										/>
-									)}
-								/>
 
-								<FormField
-									control={form.control}
-									name="enableGoogleMeet"
-									render={({ field }) => (
-										<InlineCheckboxField
-											label="Enable Google Meet"
-											checked={Boolean(field.value)}
-											onChange={field.onChange}
-										/>
-									)}
-								/>
+										{!isEditing && (
+											<FormField
+												control={form.control}
+												name="enableGoogleMeet"
+												render={({ field }) => (
+													<InlineCheckboxField
+														label="Enable Google Meet"
+														checked={Boolean(field.value)}
+														onChange={field.onChange}
+													/>
+												)}
+											/>
+										)}
+									</div>
 
 								{!allDay && (
 									<div className="grid grid-cols-2 gap-3">

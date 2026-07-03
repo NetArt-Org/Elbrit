@@ -17,6 +17,7 @@ export function mapFormToErpEvent(values, options = {}) {
     doctorResolvers,
     googleCalendar,
     existingEventParticipants = [],
+    existingEndDate = null,
   } = options;
   const isDoctorVisitPlan =
     values.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
@@ -263,6 +264,14 @@ export function mapFormToErpEvent(values, options = {}) {
   const resolvedColor = hasEmployeeAttendingYes
     ? DEFAULT_COLORS.EVENT_COMPLETED
     : values.color;
+  const fallbackEndDate =
+    existingEndDate != null
+      ? new Date(existingEndDate)
+      : values.endDate;
+  const resolvedEndDate =
+    isDoctorVisitPlan && allEmployeeParticipantsVisited && currentVisitTimestamp
+      ? new Date(currentVisitTimestamp.replace(" ", "T"))
+      : fallbackEndDate;
 
   const isBirthday = values.tags === "Birthday";
   const doctorId = resolveDoctorLinkId(values.doctor);
@@ -280,7 +289,7 @@ export function mapFormToErpEvent(values, options = {}) {
     description: values.description,
     attending: values.attending,
     starts_on: format(values.startDate, "yyyy-MM-dd HH:mm:ss"),
-    ends_on: format(values.endDate, "yyyy-MM-dd HH:mm:ss"),
+    ends_on: format(resolvedEndDate, "yyyy-MM-dd HH:mm:ss"),
     [ERP_EVENT_FIELDS.roleProfileWrite]:
       values.roleId ?? LOGGED_IN_USER.roleId,
     event_category: values.tags,

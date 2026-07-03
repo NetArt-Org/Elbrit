@@ -53,6 +53,26 @@ function mergeFetchedEventsWithRecent(existingEvents = [], fetchedEvents = []) {
 	return [...fetchedEvents, ...recentSyncedEvents];
 }
 
+function normalizeCalendarEventState(event) {
+	if (!event) return event;
+
+	const startDate = new Date(event.startDate);
+	const endDate = new Date(event.endDate ?? event.startDate);
+	const safeEndDate =
+		Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())
+			? endDate
+			: endDate < startDate
+				? startDate
+				: endDate;
+
+	return {
+		...event,
+		id: event.id ?? event.erpName,
+		startDate: startDate.toISOString(),
+		endDate: safeEndDate.toISOString(),
+	};
+}
+
 const CalendarContext = createContext({});
 
 export function CalendarProvider({
@@ -161,11 +181,7 @@ export function CalendarProvider({
 	};
 
 	const addEvent = (event) => {
-		const normalized = {
-			...event,
-			startDate: new Date(event.startDate).toISOString(),
-			endDate: new Date(event.endDate).toISOString(),
-		};
+		const normalized = normalizeCalendarEventState(event);
 		setServerEvents((prev) => [...prev, normalized]);
 		// setFilteredEvents((prev) => [...prev, normalized]);
 	};
@@ -176,11 +192,7 @@ export function CalendarProvider({
 			return;
 		}
 
-		const normalized = {
-			...updatedEvent,
-			startDate: new Date(updatedEvent.startDate).toISOString(),
-			endDate: new Date(updatedEvent.endDate).toISOString(),
-		};
+		const normalized = normalizeCalendarEventState(updatedEvent);
 
 		setServerEvents((prev) =>
 			prev.map((e) =>
@@ -346,7 +358,7 @@ export function CalendarProvider({
 		);
 	}, [queueEvents, serverEvents]);
 
-
+console.log("ALL EVENTS",allEvents)
 	useEffect(() => {
 		let cancelled = false;
 

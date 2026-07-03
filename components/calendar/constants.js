@@ -110,6 +110,19 @@ export const PARTICIPANT_SOURCE_BY_TAG = {
   [TAG_IDS.TODO_LIST]: ["EMPLOYEE"],
   // [TAG_IDS.OTHER]: ["EMPLOYEE", "DOCTOR"],
 };
+
+function normalizeAttendingChoice(value) {
+  if (typeof value !== "string") return "";
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "yes") return "Yes";
+  if (normalized === "no") return "No";
+  if (normalized === "maybe") return "Maybe";
+
+  return "";
+}
+
 export function buildEventDefaultValues({ event, defaultTag }) {
   const now = new Date();
 
@@ -169,7 +182,7 @@ export function buildEventDefaultValues({ event, defaultTag }) {
         ? "LAST_DAY"
         : "FIRST_DAY",
     approvedBy: event?.approvedBy ?? "",
-    attending: employeeParticipant?.attending ?? "",
+    attending: normalizeAttendingChoice(employeeParticipant?.attending),
     custom_latitude: employeeParticipant?.custom_latitude ?? undefined,
     custom_longitude: employeeParticipant?.custom_longitude ?? undefined,
     pob_given: event?.pob_given ?? undefined,
