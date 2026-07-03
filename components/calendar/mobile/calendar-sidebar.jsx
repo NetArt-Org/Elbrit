@@ -35,30 +35,38 @@ export function CalendarSidebar({ open, onOpenChange }) {
           <SheetTitle>Scheduler</SheetTitle>
         </SheetHeader>
 
-        <nav className="flex flex-col gap-3 p-2">
-          {tabs
-            .filter((tab) => tab.value !== "day")
-            .map(({ name, value, icon: Icon }) => {
-              const isActive = view === value;
+        <div className="flex h-full flex-col overflow-hidden">
+          <nav className="flex flex-col gap-3 p-2">
+            {tabs
+              .filter((tab) => tab.value !== "day")
+              .map(({ name, value, icon: Icon }) => {
+                const isActive = view === value;
 
-              return (
-                <Button
-                  key={value}
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={cn(
-                    "justify-start gap-2",
-                    isActive && "font-medium"
-                  )}
-                  onClick={() => handleViewChange(value)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {name}
-                </Button>
-              );
-            })}
-        <UserSelect/>
-        <GoogleCalendarConnect/>
-        </nav>
+                return (
+                  <Button
+                    key={value}
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "justify-start gap-2",
+                      isActive && "font-medium"
+                    )}
+                    onClick={() => handleViewChange(value)}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {name}
+                  </Button>
+                );
+              })}
+          </nav>
+
+          <div className="border-t px-2 pt-3">
+            <GoogleCalendarConnect />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-hidden px-2 pb-3 pt-3">
+            <UserSelect mode="inline" />
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -1433,6 +1433,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 	const handleLeave = async (values) => {
 		try {
+			const totalLeaveDays = calculateTotalLeaveDays(
+				values.startDate,
+				values.endDate,
+				values.leavePeriod === "Half"
+			);
+
+			if (
+				values.leaveType === "Casual Leave" &&
+				totalLeaveDays > 3
+			) {
+				toast.error("Casual Leave cannot be longer than 3");
+				return;
+			}
+
 			const currentLeaveBalance =
 				leaveBalance?.[values.leaveType] ?? null;
 			const isLeaveWithoutPay =
@@ -1970,26 +1984,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								)}
 							</div>
 						)}
-						{/* ================= Share with Other Participants ================= */}
-						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && (
-							<FormField
-								control={form.control}
-								name="shareEmployees"
-								render={({ field }) => (
-									<RHFFieldWrapper label="Share with">
-										<RHFComboboxField
-											{...field}
-											options={employeePickerOptions}
-											multiple
-											placeholder="Select employees"
-											searchPlaceholder="Search employee"
-											onSearch={handleEmployeeSearch}
-											loading={employeeSearchLoading}
-										/>
-									</RHFFieldWrapper>
-								)}
-							/>
-						)}
 						{/* ================= HQ TERRITORY ================= */}
 						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
 							!isEditReadOnlyField("hqTerritory") && (
@@ -2246,7 +2240,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 															disabled={!canCurrentParticipantEditPob}
 															onChange={() => field.onChange(1)}
 														/>
-														<span>Yes</span>
+														<span>1</span>
 													</label>
 
 													<label className="flex items-center gap-2">
@@ -2257,7 +2251,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 															disabled={!canCurrentParticipantEditPob}
 															onChange={() => field.onChange(0)}
 														/>
-														<span>No</span>
+														<span>0</span>
 													</label>
 												</div>
 											</RHFFieldWrapper>

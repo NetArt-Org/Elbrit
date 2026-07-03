@@ -17,6 +17,7 @@ import {
 	mergeServerEventsWithQueuedEvents,
 	processSubmissionQueue,
 	pruneSubmissionQueueOnStartup,
+	requeueFailedSubmissions,
 	subscribeSubmissionQueue,
 } from "@calendar/lib/calendar/submission-queue";
 import { useAuth } from "@calendar/components/auth/auth-context";
@@ -115,6 +116,7 @@ export function CalendarProvider({
 	const [showOnlyApprovedLeaves, setShowOnlyApprovedLeaves] = useState(false);
 	const [showOnlyTodoList, setShowOnlyTodoList] = useState(false);
 	const [territoryDoctors, setTerritoryDoctors] = useState([]);
+	const [isRetryingSync, setIsRetryingSync] = useState(false);
 	const updateSettings = (newPartialSettings) => {
 		setSettings({
 			...settings,
@@ -259,83 +261,103 @@ export function CalendarProvider({
 		return unsubscribe;
 	}, []);
 
+	const syncPendingSubmissions = useCallback(async () => {
+		const { processedCount } = await processSubmissionQueue({
+			erpUrl,
+			authToken,
+			onSuccess: async (queueItem, result) => {
+				if (result?.removed) {
+					setServerEvents((prev) =>
+						prev.filter(
+							(event) =>
+								event.erpName !== result.name &&
+								event.erpName !== queueItem.targetErpName
+						)
+					);
+					return;
+				}
+
+				const syncedEvent =
+					result?.calendarEvent ?? queueItem.optimisticEvent;
+				const syncedEventWithMeta = syncedEvent
+					? {
+						...syncedEvent,
+						__justSyncedAt: Date.now(),
+					}
+					: syncedEvent;
+
+				setServerEvents((prev) => {
+					const matchId =
+						queueItem.targetErpName ??
+						queueItem.optimisticEvent?.erpName ??
+						syncedEventWithMeta?.erpName;
+					const next = prev.filter(
+						(event) =>
+							event.erpName !== matchId &&
+							event.erpName !== syncedEventWithMeta?.erpName
+					);
+					return syncedEventWithMeta
+						? [...next, syncedEventWithMeta]
+						: next;
+				});
+			},
+			onError: async (queueItem, error, meta) => {
+				if (meta?.retryable) return;
+
+				if (queueItem.targetErpName) {
+					discardQueuedSubmission({
+						queueId: queueItem.id,
+						erpName: queueItem.targetErpName,
+					});
+				}
+
+				toast.error(
+					error?.message ||
+					`${queueItem.kind} sync failed. Item is still local and not saved to ERP.`
+				);
+			},
+		});
+
+		if (processedCount > 0) {
+			try {
+				const nextEvents = await refreshEvents();
+				setServerEvents((prev) =>
+					mergeFetchedEventsWithRecent(prev, nextEvents)
+				);
+			} catch (error) {
+				console.error("Failed to refresh after queue sync", error);
+			}
+		}
+
+		return processedCount;
+	}, [authToken, erpUrl, refreshEvents]);
+
+	const retryPendingSync = useCallback(async () => {
+		setIsRetryingSync(true);
+
+		try {
+			requeueFailedSubmissions();
+			const processedCount = await syncPendingSubmissions();
+
+			if (processedCount > 0) {
+				toast.success(`Retried sync for ${processedCount} item${processedCount === 1 ? "" : "s"}.`);
+			} else {
+				toast.info("No pending sync items found.");
+			}
+		} finally {
+			setIsRetryingSync(false);
+		}
+	}, [syncPendingSubmissions]);
+
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 
 		let cancelled = false;
 
 		const runQueue = async () => {
-			const { processedCount } = await processSubmissionQueue({
-				erpUrl,
-				authToken,
-				onSuccess: async (queueItem, result) => {
-					if (cancelled) return;
-
-					if (result?.removed) {
-						setServerEvents((prev) =>
-							prev.filter(
-								(event) =>
-									event.erpName !== result.name &&
-									event.erpName !== queueItem.targetErpName
-							)
-						);
-						return;
-					}
-
-					const syncedEvent =
-						result?.calendarEvent ?? queueItem.optimisticEvent;
-					const syncedEventWithMeta = syncedEvent
-						? {
-							...syncedEvent,
-							__justSyncedAt: Date.now(),
-						}
-						: syncedEvent;
-
-					setServerEvents((prev) => {
-						const matchId =
-							queueItem.targetErpName ??
-							queueItem.optimisticEvent?.erpName ??
-							syncedEventWithMeta?.erpName;
-						const next = prev.filter(
-							(event) =>
-								event.erpName !== matchId &&
-								event.erpName !== syncedEventWithMeta?.erpName
-						);
-						return syncedEventWithMeta
-							? [...next, syncedEventWithMeta]
-							: next;
-					});
-				},
-				onError: async (queueItem, error, meta) => {
-					if (cancelled) return;
-					if (meta?.retryable) return;
-
-					if (queueItem.targetErpName) {
-						discardQueuedSubmission({
-							queueId: queueItem.id,
-							erpName: queueItem.targetErpName,
-						});
-					}
-
-					toast.error(
-						error?.message ||
-						`${queueItem.kind} sync failed. Item is still local and not saved to ERP.`
-					);
-				},
-			});
-
-			if (!cancelled && processedCount > 0) {
-				try {
-					const nextEvents = await refreshEvents();
-					if (!cancelled) {
-						setServerEvents((prev) =>
-							mergeFetchedEventsWithRecent(prev, nextEvents)
-						);
-					}
-				} catch (error) {
-					console.error("Failed to refresh after queue sync", error);
-				}
-			}
+			const processedCount = await syncPendingSubmissions();
+			if (cancelled) return;
+			return processedCount;
 		};
 
 		runQueue();
@@ -349,7 +371,7 @@ export function CalendarProvider({
 			cancelled = true;
 			window.removeEventListener("online", handleOnline);
 		};
-	}, [authToken, erpUrl, queueEvents, refreshEvents]);
+	}, [queueEvents, syncPendingSubmissions]);
 
 	const allEvents = useMemo(() => {
 		return mergeServerEventsWithQueuedEvents(
@@ -357,8 +379,13 @@ export function CalendarProvider({
 			queueEvents
 		);
 	}, [queueEvents, serverEvents]);
-
-console.log("ALL EVENTS",allEvents)
+	const pendingSyncCount = useMemo(() => {
+		return queueEvents.filter(
+			(item) =>
+				item.kind !== "delete" &&
+				["pending", "syncing", "failed"].includes(item.status)
+		).length;
+	}, [queueEvents]);
 	useEffect(() => {
 		let cancelled = false;
 
@@ -488,9 +515,12 @@ console.log("ALL EVENTS",allEvents)
 		removeEvent,
 		refreshEvents: async () => {
 			const nextEvents = await refreshEvents();
-			setAllEvents(nextEvents);
+			setServerEvents(nextEvents);
 			return nextEvents;
 		},
+		pendingSyncCount,
+		retryPendingSync,
+		isRetryingSync,
 		clearFilter,
 		mobileMode,
 		setMobileMode,

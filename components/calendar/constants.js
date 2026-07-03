@@ -134,9 +134,13 @@ export function buildEventDefaultValues({ event, defaultTag }) {
     ? new Date(event.endDate)
     : addMinutes(now, 60);
 
-  const employeeParticipant = event?.participants?.find(
-    (p) => p.type === "Employee"
-  );
+  const employeeParticipant =
+    event?.participants?.find(
+      (p) =>
+        p.type === "Employee" &&
+        String(p.id) === String(LOGGED_IN_USER.id)
+    ) ??
+    event?.participants?.find((p) => p.type === "Employee");
 
   return {
     title: event?.title ?? "",

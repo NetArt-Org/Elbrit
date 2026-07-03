@@ -150,12 +150,14 @@ export function mapErpGraphqlEventToCalendar(node) {
     (p) => p.type === "Employee"
   );
   const hasEmployeeAttendingYes =
-    employeeParticipants.some((p) => p.attending === "YES");
+    employeeParticipants.some(
+      (p) => String(p.attending).toLowerCase() === "yes"
+    );
   const allEmployeeParticipantsVisited =
     employeeParticipants.length > 0 &&
     employeeParticipants.every(
       (p) =>
-        p.attending === "YES" &&
+        String(p.attending).toLowerCase() === "yes" &&
         Boolean(p.custom_visit_time)
     );
   const color =
