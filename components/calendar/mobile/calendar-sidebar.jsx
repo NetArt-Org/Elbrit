@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@calendar/components/ui/button";
+import { RotateCw } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +21,14 @@ const MOBILE_LAYER_MAP = {
 };
 
 export function CalendarSidebar({ open, onOpenChange }) {
-  const { view, setView, setMobileLayer } = useCalendar();
+  const {
+    view,
+    setView,
+    setMobileLayer,
+    pendingSyncCount,
+    retryPendingSync,
+    isRetryingSync,
+  } = useCalendar();
 
   const handleViewChange = (value) => {
     setView(value);
@@ -59,8 +67,27 @@ export function CalendarSidebar({ open, onOpenChange }) {
               })}
           </nav>
 
-          <div className="border-t px-2 pt-3">
-            <GoogleCalendarConnect />
+          <div className="border-t space-y-2 px-2 pt-3">
+            <GoogleCalendarConnect className="w-full" />
+            {pendingSyncCount > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={retryPendingSync}
+                disabled={isRetryingSync}
+              >
+                <RotateCw
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    isRetryingSync && "animate-spin"
+                  )}
+                />
+                {isRetryingSync
+                  ? "Retrying..."
+                  : `Retry Sync(${pendingSyncCount})`}
+              </Button>
+            )}
           </div>
 
           <div className="min-h-0 flex-1 overflow-hidden px-2 pb-3 pt-3">
