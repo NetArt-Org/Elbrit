@@ -142,6 +142,10 @@ query Items(
         item_code
         item_name
         custom_last_mrp
+        custom_department_details {
+          valid_to
+          elbrit_department__name
+        }
       }
     }
     pageInfo {
@@ -217,6 +221,7 @@ query Quotations(
     edges {
       node {
         name
+        creation
         items {
           item_code { name }
           qty
