@@ -135,17 +135,48 @@ function departmentsMatch(left, right) {
   );
 }
 
+function parseBoundaryDate(value, boundary = "start") {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  if (boundary === "end") {
+    parsed.setHours(23, 59, 59, 999);
+  } else {
+    parsed.setHours(0, 0, 0, 0);
+  }
+
+  return parsed;
+}
+
 function isActiveDepartmentMapping(detail) {
-  if (!detail?.valid_to) return false;
-
-  const validTo = new Date(detail.valid_to);
-  if (Number.isNaN(validTo.getTime())) return false;
-
-  validTo.setHours(23, 59, 59, 999);
+  const validFrom = parseBoundaryDate(detail?.valid_from, "start");
+  const validTo = parseBoundaryDate(detail?.valid_to, "end");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return validTo >= today;
+  if (!detail?.valid_from && !detail?.valid_to) {
+    return true;
+  }
+
+  if (detail?.valid_from && !validFrom) {
+    return false;
+  }
+
+  if (detail?.valid_to && !validTo) {
+    return false;
+  }
+
+  if (validFrom && !validTo) {
+    return today >= validFrom;
+  }
+
+  if (!validFrom && validTo) {
+    return today <= validTo;
+  }
+
+  return today >= validFrom && today <= validTo;
 }
 
 export async function fetchItemsByDepartment(departmentName) {

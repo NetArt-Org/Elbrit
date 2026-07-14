@@ -143,6 +143,7 @@ query Items(
         item_name
         custom_last_mrp
         custom_department_details {
+          valid_from
           valid_to
           elbrit_department__name
         }
