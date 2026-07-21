@@ -33,9 +33,6 @@ const DEFAULT_SETTINGS = {
 	use24HourFormat: true,
 	agendaModeGroupBy: "date",
 };
-const DEFAULT_SELECTED_USER_IDS = LOGGED_IN_USER?.id
-	? [LOGGED_IN_USER.id]
-	: [];
 const RECENT_SYNC_GRACE_MS = 30 * 1000;
 
 function mergeFetchedEventsWithRecent(existingEvents = [], fetchedEvents = []) {
@@ -101,7 +98,8 @@ export function CalendarProvider({
 	const [use24HourFormat, setUse24HourFormatState] = useState(settings.use24HourFormat);
 	const [agendaModeGroupBy, setAgendaModeGroupByState] = useState(settings.agendaModeGroupBy);
 	const [selectedDate, setSelectedDate] = useState(new Date());
-	const [selectedUserId, setSelectedUserId] =  useState(DEFAULT_SELECTED_USER_IDS);
+	const [selectedUserId, setSelectedUserIdState] =  useState([]);
+	const [hasInitializedUserFilter, setHasInitializedUserFilter] = useState(false);
 	const [selectedColors, setSelectedColors] = useState([]);
 	const [selectedStatuses, setSelectedStatuses] = useState([]);
 	const [serverEvents, setServerEvents] = useState(events || []);
@@ -179,9 +177,13 @@ export function CalendarProvider({
 
 		setSelectedStatuses(newStatuses);
 	};
-	const filterEventsBySelectedUser = (userIds) => {
+	const setSelectedUserId = useCallback((userIds) => {
+		setSelectedUserIdState(userIds);
+		setHasInitializedUserFilter(true);
+	}, []);
+	const filterEventsBySelectedUser = useCallback((userIds) => {
 		setSelectedUserId(userIds);
-	};
+	}, [setSelectedUserId]);
 
 
 	const handleSelectDate = (date) => {
@@ -461,7 +463,7 @@ export function CalendarProvider({
 	}, [users, usersLoading, elbritRoleEdges, elbritRoleLoading]);
 	useEffect(() => {
 		if (usersLoading || elbritRoleLoading) return;
-		if (selectedUserId.length > 0) return;
+		if (hasInitializedUserFilter) return;
 
 		const loggedInUserId =
 			LOGGED_IN_USER.id ??
@@ -473,10 +475,19 @@ export function CalendarProvider({
 			)?.id ??
 			null;
 
-		if (!loggedInUserId) return;
+		if (!loggedInUserId) {
+			setHasInitializedUserFilter(true);
+			return;
+		}
 
 		setSelectedUserId([loggedInUserId]);
-	}, [elbritRoleLoading, selectedUserId.length, users, usersLoading]);
+	}, [
+		elbritRoleLoading,
+		hasInitializedUserFilter,
+		setSelectedUserId,
+		users,
+		usersLoading,
+	]);
 	// Leaf-role users (e.g. BEs) have no subordinates; ERP already scopes the
 	// events they receive (own + DocShare-shared), so the hierarchy filter must
 	// not narrow further and hide events shared down to them.

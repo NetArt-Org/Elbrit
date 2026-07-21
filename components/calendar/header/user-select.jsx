@@ -130,8 +130,9 @@ export function UserSelect({ mode = "popover" }) {
   const isAllChecked = checkedIds.length === 0;
 
   const toggleAll = () => {
-    setCheckedIds([]);
-    filterEventsBySelectedUser([]);
+    const next = isAllChecked ? [LOGGED_IN_USER.id] : [];
+    setCheckedIds(next);
+    filterEventsBySelectedUser(next);
   };
 
   const toggleUser = (id) => {
@@ -144,7 +145,7 @@ export function UserSelect({ mode = "popover" }) {
         next = [...prev, id];
       }
 
-      if (shouldForceSingleFallback && next.length === 0) {
+      if (next.length === 0) {
         next = [LOGGED_IN_USER.id];
       }
 
@@ -265,6 +266,7 @@ export function UserSelect({ mode = "popover" }) {
     const selectedIds = new Set(checkedIds);
     return enrichedVisibleUsers.filter((user) => selectedIds.has(user.id));
   }, [checkedIds, enrichedVisibleUsers]);
+  const shouldShowAllOption = enrichedVisibleUsers.length > 1;
 
   const effectiveViewedCount = checkedIds.length || enrichedVisibleUsers.length;
   const isViewerMode = mode === "mobile-viewer";
@@ -335,7 +337,7 @@ export function UserSelect({ mode = "popover" }) {
             checkedIds={checkedIds}
             onToggleUser={toggleUser}
             showEmail
-            showAllOption={false}
+            showAllOption={shouldShowAllOption}
           />
 
           {filteredUsers.length === 0 && (
@@ -520,7 +522,7 @@ export function UserSelect({ mode = "popover" }) {
             onToggleAll={toggleAll}
             onToggleUser={toggleUser}
             showAvatar
-            showAllOption
+            showAllOption={shouldShowAllOption}
           />
 
           {filteredUsers.length === 0 && (
