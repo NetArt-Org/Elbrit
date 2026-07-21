@@ -421,8 +421,61 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	// made the picker a smaller list than Share's. The employee query itself is
 	// already unrestricted (active employees only), so no client filter is needed.
 	const employeePickerOptions = useMemo(
-		() => allEmployeeOptions,
-		[allEmployeeOptions]
+		() => {
+			const departmentByRoleId = new Map();
+
+			elbritRoleEdges?.forEach(({ node }) => {
+				if (!node?.role_id) return;
+				departmentByRoleId.set(node.role_id, node.sales_team__name ?? null);
+			});
+
+			return allEmployeeOptions.map((employee) => ({
+				...employee,
+				department: departmentByRoleId.get(employee.roleId) ?? null,
+			}));
+		},
+		[allEmployeeOptions, elbritRoleEdges]
+	);
+	const employeeDesignationOptions = useMemo(
+		() =>
+			[
+				...new Set(
+					employeePickerOptions
+						.map((employee) => employee.role)
+						.filter(Boolean)
+				),
+			].sort((left, right) => left.localeCompare(right)),
+		[employeePickerOptions]
+	);
+	const employeeDepartmentOptions = useMemo(
+		() =>
+			[
+				...new Set(
+					employeePickerOptions
+						.map((employee) => employee.department)
+						.filter(Boolean)
+				),
+			].sort((left, right) => left.localeCompare(right)),
+		[employeePickerOptions]
+	);
+	const employeePickerFilters = useMemo(
+		() => ({
+			facets: [
+				{
+					id: "role",
+					label: "Designation",
+					options: employeeDesignationOptions,
+					getValue: (option) => option.role,
+				},
+				{
+					id: "department",
+					label: "Department",
+					options: employeeDepartmentOptions,
+					getValue: (option) => option.department,
+				},
+			].filter((facet) => facet.options.length > 0),
+		}),
+		[employeeDepartmentOptions, employeeDesignationOptions]
 	);
 	const shareUsers = useMemo(() => {
 		if (users.length) {
@@ -2002,6 +2055,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											searchPlaceholder="Search employee"
 											onSearch={handleEmployeeSearch}
 											loading={employeeSearchLoading}
+											filters={employeePickerFilters}
 										/>
 									</RHFFieldWrapper>
 								)}
@@ -2069,6 +2123,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											<RHFComboboxField {...field} options={employeePickerOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
 												onSearch={handleEmployeeSearch}
 												loading={employeeSearchLoading}
+												filters={employeePickerFilters}
 											/>
 										</RHFFieldWrapper>
 									)}
@@ -2087,6 +2142,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											<RHFComboboxField {...field} options={employeePickerOptions} multiple={isMulti} placeholder="Select employees" searchPlaceholder="Search employee"
 												onSearch={handleEmployeeSearch}
 												loading={employeeSearchLoading}
+												filters={employeePickerFilters}
 											/>
 										</RHFFieldWrapper>
 									)}
@@ -2103,6 +2159,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 										<RHFComboboxField {...field} options={employeePickerOptions} multiple placeholder="Select employees" searchPlaceholder="Search employee"
 											onSearch={handleEmployeeSearch}
 											loading={employeeSearchLoading}
+											filters={employeePickerFilters}
 										/>
 									</RHFFieldWrapper>
 								)}
