@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { isEmployeeOnApprovedLeave } from "@calendar/lib/calendar/leaveDay";
 import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/components/calendar/module/event/mappers/event-to-erp";
 import {
@@ -45,7 +46,7 @@ import TodoComments from "@calendar/components/calendar/module/todo/components/T
 import { ErrorBoundary } from "@calendar/components/ui/error-boundary";
 import { Textarea } from "@calendar/components/ui/textarea";
 import { fetchEmployeeLeaveBalance } from "@calendar/components/calendar/module/leave/services/leave.service";
-import { resolveDepartmentRoleIds, resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
+import { resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 import { enqueueSubmission } from "@calendar/lib/calendar/submission-queue";
 import { fetchDocSharesByDocument } from "@calendar/components/calendar/module/event/services/docshare.service";
 import { cn } from "@calendar/lib/utils";
@@ -69,7 +70,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const { isOpen, onClose, onOpen } = useDisclosure();
 	const { employeeOptions,
 		allEmployeeOptions,
-		doctorOptions, events,
+		doctorOptions, events, allEvents,
 		hqTerritoryOptions,
 		setEmployeeOptions, territoryDoctors, setTerritoryDoctors,
 		setDoctorOptions, customerOptions, setCustomerOptions, selectedDate, allowedEmployeeIds,
@@ -414,42 +415,15 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		() => isHeadOfficeRole(resolveLoggedInRoleId(users)),
 		[users]
 	);
-	// Event form picker: all employees under the user's department (not the role hierarchy).
-	const employeePickerOptions = useMemo(() => {
-		const deptOptions =
-			!currentUserRoleId || currentUserRoleId === "Admin"
-				? allEmployeeOptions
-				: (() => {
-					const departmentRoleIds = resolveDepartmentRoleIds(
-						elbritRoleEdges,
-						currentUserRoleId
-					);
-					if (!departmentRoleIds.length) return allEmployeeOptions;
-					const allowedRoleIds = new Set(departmentRoleIds);
-					return allEmployeeOptions.filter(
-						(option) =>
-							option.value === LOGGED_IN_USER.id ||
-							(option.roleId && allowedRoleIds.has(option.roleId))
-					);
-				})();
-
-		// On edit, keep already-attached participants selectable/visible even if
-		// they fall outside the user's department (older or cross-team events) —
-		// otherwise a required `employees`/`allocated_to` empties out and silently
-		// blocks the Update.
-		if (!isEditing || deptOptions === allEmployeeOptions) return deptOptions;
-
-		const present = new Set(deptOptions.map((option) => option.value));
-		const existingIds = new Set(
-			(event?.participants ?? [])
-				.filter((participant) => participant?.type === "Employee" && participant?.id)
-				.map((participant) => String(participant.id))
-		);
-		const extras = allEmployeeOptions.filter(
-			(option) => existingIds.has(option.value) && !present.has(option.value)
-		);
-		return extras.length ? [...deptOptions, ...extras] : deptOptions;
-	}, [allEmployeeOptions, currentUserRoleId, elbritRoleEdges, isEditing, event?.participants]);
+	// Meeting/Todo employee picker: show ALL employees, exactly like the Share
+	// dialog (which uses `allEmployeeOptions`). This was previously scoped to the
+	// logged-in user's department subtree via `resolveDepartmentRoleIds`, which
+	// made the picker a smaller list than Share's. The employee query itself is
+	// already unrestricted (active employees only), so no client filter is needed.
+	const employeePickerOptions = useMemo(
+		() => allEmployeeOptions,
+		[allEmployeeOptions]
+	);
 	const shareUsers = useMemo(() => {
 		if (users.length) {
 			return users;
@@ -1260,6 +1234,20 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const handleDialogOpenChange = (nextOpen) => {
 		if (!nextOpen && isMutationPending) return;
 		if (nextOpen) {
+			// Central guard for EVERY entry point that opens this form (header,
+			// day-cell click, mobile add): if the user is on an APPROVED leave on
+			// the target day, don't open — creating an event is pointless then.
+			if (
+				!isEditing &&
+				isEmployeeOnApprovedLeave(
+					allEvents,
+					LOGGED_IN_USER.id,
+					initialStartDate ?? selectedDate
+				)
+			) {
+				toast.error("You're on leave on this day");
+				return;
+			}
 			onOpen();
 			return;
 		}
