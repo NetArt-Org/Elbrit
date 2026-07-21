@@ -1,7 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { format, parseISO, isValid } from "date-fns";
-import { Crown, Eye, Text, UserCog, Users, Video } from "lucide-react";
+import { Crown, Eye, MapPin, Text, UserCog, Users, Video } from "lucide-react";
 import { Button } from "@calendar/components/ui/button";
 import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { ScrollArea } from "@calendar/components/ui/scroll-area";
@@ -198,6 +198,12 @@ export function EventMeetingDialog({ event, setOpen }) {
             {viewerRole !== "creator" ? (
               <DetailItem icon={UserCog} label="Created by">
                 {creatorName}
+              </DetailItem>
+            ) : null}
+
+            {event.meetingLocation ? (
+              <DetailItem icon={MapPin} label="Location / venue">
+                {event.meetingLocation}
               </DetailItem>
             ) : null}
 

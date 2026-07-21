@@ -36,6 +36,7 @@ import {
 } from "@calendar/components/calendar/module/event/services/master-data.service";
 import { buildParticipantsWithDetails, getAvailableItems, normalizeMeetingTimes, normalizeNonMeetingDates, resolveLatLong, showFirstFormErrorAsToast, syncPobItemRates, updatePobRow } from "@calendar/lib/helper";
 import { Button } from "@calendar/components/ui/button";
+import { MapPin, Video } from "lucide-react";
 import { resolveDisplayValueFromEvent } from "@calendar/lib/calendar/resolveDisplay";
 import Tiptap from "@calendar/components/calendar/module/todo/components/TodoWysiwyg";
 import { mapDoctorVisitToQuotation } from "@calendar/components/calendar/module/event/mappers/quotation-to-erp";
@@ -87,6 +88,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const endDateTouchedRef = useRef(false); // existing
 	const [showReason, setShowReason] = useState(false);
 	const [googleCalendarEnabled, setGoogleCalendarEnabled] = useState(false);
+	const [meetingMode, setMeetingMode] = useState("physical");
 	const [employeeSearchLoading, setEmployeeSearchLoading] = useState(false);
 	const [doctorSearchLoading, setDoctorSearchLoading] = useState(false);
 	const lastEmployeeSearchRef = useRef("");
@@ -102,7 +104,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 	const allDay = useWatch({ control: form.control, name: "allDay" });
 	const leaveType = useWatch({ control: form.control, name: "leaveType", });
 	const leavePeriod = useWatch({ control: form.control, name: "leavePeriod", });
-	const { doctor, employees, hqTerritory, tags: selectedTag, attending } = useWatch({ control: form.control });
+	const { doctor, employees, hqTerritory, tags: selectedTag, attending, enableGoogleMeet } = useWatch({ control: form.control });
 	const pobGiven = useWatch({ control: form.control, name: "pob_given", });
 	const customer = useWatch({ control: form.control, name: "customer", });
 	const pobItems = useWatch({ control: form.control, name: "fsl_doctor_item" });
@@ -128,6 +130,29 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		if (tagConfig.hide) return !tagConfig.hide.includes(field);
 		return true;
 	};
+	useEffect(() => {
+		if (!isOpen || selectedTag !== TAG_IDS.MEETING) return;
+
+		const nextMode = isEditing
+			? event?.enableGoogleMeet
+				? "virtual"
+				: "physical"
+			: form.getValues("enableGoogleMeet")
+				? "virtual"
+				: "physical";
+
+		setMeetingMode(nextMode);
+	}, [event?.enableGoogleMeet, form, isEditing, isOpen, selectedTag]);
+	useEffect(() => {
+		if (selectedTag !== TAG_IDS.MEETING) return;
+		if (!allDay || !enableGoogleMeet) return;
+
+		form.setValue("enableGoogleMeet", false, {
+			shouldDirty: true,
+			shouldValidate: true,
+		});
+		toast.error("All-day meetings cannot have Google Meet enabled.");
+	}, [allDay, enableGoogleMeet, form, selectedTag]);
 	useEffect(() => {
 		if (!isEditing) return;
 		const doctorId = Array.isArray(event?.doctor)
@@ -528,58 +553,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			)?.node?.sales_team__name ?? null
 		);
 	}, [currentUserRoleId, elbritRoleEdges, users]);
-	// Share basis by tag:
-	// - HQ Tour Plan / Doctor Visit Plan -> hierarchy (share up to superiors).
-	// - Meeting / Todo / Other -> team-based (share with the selected participants).
-	const collectParticipantShareEmails = (values) => {
-		const emails = new Set();
-		["employees", "allocated_to", "assignedTo"].forEach((field) => {
-			const value = values[field];
-			if (!value) return;
-			(Array.isArray(value) ? value : [value]).forEach((emp) => {
-				if (!emp) return;
-				const email =
-					typeof emp === "object"
-						? emp.email
-						: allEmployeeOptions.find((opt) => opt.value === emp)?.email;
-				if (email && email !== LOGGED_IN_USER.email) emails.add(email);
-			});
-		});
-		return [...emails];
-	};
-	const collectManualShareEmails = (values) => {
-		const emails = new Set();
-		const value = values.shareEmployees;
-		if (!value) return [];
-
-		(Array.isArray(value) ? value : [value]).forEach((employee) => {
-			if (!employee) return;
-			const email =
-				typeof employee === "object"
-					? employee.email
-					: allEmployeeOptions.find((opt) => opt.value === employee)?.email;
-			if (email && email !== LOGGED_IN_USER.email) {
-				emails.add(email);
-			}
-		});
-
-		return [...emails];
-	};
+	const isAutoShareableTag = (tag) => tag !== TAG_IDS.LEAVE;
 	const getShareUserIds = (values) =>
-		Array.from(
-			new Set(
-				[
-					...[TAG_IDS.HQ_TOUR_PLAN, TAG_IDS.DOCTOR_VISIT_PLAN].includes(
-						values.tags
-					)
-						? superiorUserIds
-						: collectParticipantShareEmails(values),
-					...(values.tags === TAG_IDS.HQ_TOUR_PLAN
-						? collectManualShareEmails(values)
-						: []),
-				].filter(Boolean)
-			)
-		);
+		isAutoShareableTag(values.tags)
+			? Array.from(new Set(superiorUserIds.filter(Boolean)))
+			: [];
 	useEffect(() => {
 		if (!startDate || !endDate) return;
 
@@ -1859,8 +1837,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 									<div
 										className={cn(
-											"grid gap-3",
-											!isEditing ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+											"grid gap-3 grid-cols-1"
 										)}
 									>
 										<FormField
@@ -1874,21 +1851,100 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 												/>
 											)}
 										/>
+									</div>
 
-										{!isEditing && (
-											<FormField
-												control={form.control}
-												name="enableGoogleMeet"
-												render={({ field }) => (
+									<div className="space-y-2">
+										<div className="space-y-2">
+											<p className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+												Meeting type
+											</p>
+											<div className="inline-flex rounded-md border border-input bg-background p-1">
+												<button
+													type="button"
+													className={cn(
+														"inline-flex items-center gap-2 rounded-sm px-4 py-2 text-sm font-medium transition",
+														meetingMode === "physical"
+															? "bg-primary text-primary-foreground"
+															: "text-foreground hover:bg-muted"
+													)}
+													onClick={() => {
+														setMeetingMode("physical");
+														form.setValue("enableGoogleMeet", false, {
+															shouldDirty: true,
+															shouldValidate: false,
+														});
+													}}
+												>
+													<MapPin className="size-4" />
+													Physical
+												</button>
+												<button
+													type="button"
+													className={cn(
+														"inline-flex items-center gap-2 rounded-sm px-4 py-2 text-sm font-medium transition",
+														meetingMode === "virtual"
+															? "bg-primary text-primary-foreground"
+															: "text-foreground hover:bg-muted"
+													)}
+													onClick={() => {
+														setMeetingMode("virtual");
+													}}
+												>
+													<Video className="size-4" />
+													Virtual
+												</button>
+											</div>
+										</div>
+									</div>
+
+									{meetingMode === "physical" && (
+										<FormField
+											control={form.control}
+											name="meetingLocation"
+											render={({ field, fieldState }) => (
+												<RHFFieldWrapper
+													label="Location / venue"
+													error={fieldState.error?.message}
+												>
+													<FormControl>
+														<Input
+															placeholder="Enter meeting location"
+															{...field}
+															value={field.value ?? ""}
+														/>
+													</FormControl>
+												</RHFFieldWrapper>
+											)}
+										/>
+									)}
+
+									{meetingMode === "virtual" && !isEditing && (
+										<FormField
+											control={form.control}
+											name="enableGoogleMeet"
+											render={({ field }) => (
+												<div className="space-y-1">
 													<InlineCheckboxField
 														label="Enable Google Meet"
 														checked={Boolean(field.value)}
-														onChange={field.onChange}
+														onChange={(checked) => {
+															if (allDay && checked) {
+																toast.error("All-day meetings cannot have Google Meet enabled.");
+																field.onChange(false);
+																return;
+															}
+															field.onChange(checked);
+														}}
 													/>
-												)}
-											/>
-										)}
-									</div>
+													{allDay && (
+														<p className="text-xs text-red-600">
+															All-day meetings cannot have Google Meet enabled
+														</p>
+													)}
+												</div>
+											)}
+										/>
+									)}
 
 								{!allDay && (
 									<div className="grid grid-cols-2 gap-3">
@@ -2039,27 +2095,6 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									/>
 								)}
 							</div>
-						)}
-						{/* ================= HQ SHARED WITH ================= */}
-						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && !isEditing && (
-							<FormField
-								control={form.control}
-								name="shareEmployees"
-								render={({ field }) => (
-									<RHFFieldWrapper label="Shared With">
-										<RHFComboboxField
-											{...field}
-											options={employeePickerOptions}
-											multiple
-											placeholder="Select employees"
-											searchPlaceholder="Search employee"
-											onSearch={handleEmployeeSearch}
-											loading={employeeSearchLoading}
-											filters={employeePickerFilters}
-										/>
-									</RHFFieldWrapper>
-								)}
-							/>
 						)}
 						{/* ================= HQ TERRITORY ================= */}
 						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&

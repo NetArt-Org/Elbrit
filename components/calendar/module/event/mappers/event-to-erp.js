@@ -315,6 +315,10 @@ export function mapFormToErpEvent(values, options = {}) {
     docstatus: 0,
     event_participants: eventParticipants,
     [ERP_EVENT_FIELDS.hqWrite]: values.hqTerritory || "",
+    [ERP_EVENT_FIELDS.meetingLocationWrite]:
+      values.tags === TAG_IDS.MEETING
+        ? values.meetingLocation || ""
+        : "",
     [ERP_EVENT_FIELDS.doctorWrite]: doctorId,
     [ERP_EVENT_FIELDS.doctorLatitudeWrite]: doctorLatitude,
     [ERP_EVENT_FIELDS.doctorLongitudeWrite]: doctorLongitude,
@@ -327,7 +331,8 @@ export function mapFormToErpEvent(values, options = {}) {
     google_calendar: googleCalendar || "IT Elbrit",
     add_video_conferencing:
       values.tags === TAG_IDS.MEETING &&
-      values.enableGoogleMeet
+      values.enableGoogleMeet &&
+      !values.allDay
         ? 1
         : 0,
   };

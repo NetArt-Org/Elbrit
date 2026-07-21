@@ -149,6 +149,7 @@ export function buildEventDefaultValues({ event, defaultTag }) {
     endDate,
     tags: event?.tags ?? defaultTag ?? "Leave",
     hqTerritory: event?.hqTerritory ?? "",
+    meetingLocation: event?.meetingLocation ?? "",
     employees: event?.employees,
     doctor: event?.doctor,
     assignedTo: event?.assignedTo,
