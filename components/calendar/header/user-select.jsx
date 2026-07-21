@@ -111,12 +111,20 @@ export function UserSelect({ mode = "popover" }) {
   const shouldForceSingleFallback = mode === "inline";
 
   useEffect(() => {
-    if (shouldForceSingleFallback && (!Array.isArray(selectedUserId) || selectedUserId.length === 0)) {
+    if (!Array.isArray(selectedUserId) || selectedUserId.length === 0) {
+      if (shouldForceSingleFallback) {
+        filterEventsBySelectedUser([LOGGED_IN_USER.id]);
+      }
+      setCheckedIds([]);
+      return;
+    }
+
+    if (shouldForceSingleFallback && !selectedUserId.includes(LOGGED_IN_USER.id)) {
       filterEventsBySelectedUser([LOGGED_IN_USER.id]);
       return;
     }
 
-    setCheckedIds(Array.isArray(selectedUserId) ? selectedUserId : []);
+    setCheckedIds(selectedUserId);
   }, [filterEventsBySelectedUser, selectedUserId, shouldForceSingleFallback]);
 
   const isAllChecked = checkedIds.length === 0;
@@ -404,12 +412,19 @@ export function UserSelect({ mode = "popover" }) {
     );
   }
 
-  const triggerUsers = visibleUsers.slice(0, 4);
+  const triggerUsers = (selectedUsers.length ? selectedUsers : visibleUsers).slice(0, 4);
+  const triggerLabel =
+    checkedIds.length === 0
+      ? "All"
+      : checkedIds.length === 1
+      ? selectedUsers[0]?.name ?? "1 selected"
+      : `${checkedIds.length} selected`;
   return (
     <Popover>
       {/* 🔒 Trigger */}
       <PopoverTrigger asChild>
         <div className="w-full inline-flex items-center justify-between rounded-md border border-input bg-background bg-white px-3 py-1 text-sm shadow-sm cursor-pointer">
+          <div className="flex min-w-0 items-center gap-2">
           <AvatarGroup className="flex items-center" max={4}>
             {triggerUsers.map((user) => (
               <Avatar key={user.id} className="size-5 text-xxs">
@@ -423,6 +438,8 @@ export function UserSelect({ mode = "popover" }) {
               </Avatar>
             ))}
           </AvatarGroup>
+            <span className="min-w-0 truncate">{triggerLabel}</span>
+          </div>
 
           {/* caret */}
           <svg

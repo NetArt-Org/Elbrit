@@ -186,6 +186,10 @@ export function RHFCombobox({
     setActiveFilters({});
   };
 
+  const stopWheelPropagation = (event) => {
+    event.stopPropagation();
+  };
+
   /* ---------------------------------------
      UI
   --------------------------------------- */
@@ -239,6 +243,7 @@ export function RHFCombobox({
         <PopoverContent
           className="w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)] max-h-[320px] overflow-hidden p-0"
           align="start"
+          onWheelCapture={stopWheelPropagation}
         >
           <Command className="max-h-[320px] overflow-hidden">
             <div className="flex items-center gap-2 border-b px-3 py-2">
@@ -270,6 +275,7 @@ export function RHFCombobox({
                     align="end"
                     className="w-72 p-0"
                     sideOffset={8}
+                    onWheelCapture={stopWheelPropagation}
                   >
                     <div className="flex items-center justify-between border-b px-3 py-2">
                       <p className="text-sm font-medium">Filters</p>
@@ -283,7 +289,10 @@ export function RHFCombobox({
                         Clear
                       </Button>
                     </div>
-                    <div className="max-h-72 overflow-y-auto px-3 py-2">
+                    <div
+                      className="max-h-72 overflow-y-auto overscroll-contain px-3 py-2"
+                      onWheelCapture={stopWheelPropagation}
+                    >
                       {filterFacets.map((facet) => (
                         <div key={facet.id} className="mb-4 last:mb-0">
                           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -319,7 +328,10 @@ export function RHFCombobox({
                 </Popover>
               )}
             </div>
-            <CommandList className="max-h-[260px] overflow-y-auto overscroll-contain">
+            <CommandList
+              className="max-h-[260px] overflow-y-auto overscroll-contain"
+              onWheelCapture={stopWheelPropagation}
+            >
               {loading && (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
                   Loading...
