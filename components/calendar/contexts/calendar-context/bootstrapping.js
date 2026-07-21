@@ -34,9 +34,10 @@ async function fetchElbritRoleEdges() {
 }
 
 function mapCustomersToOptions(customers = []) {
-  return customers.map((name) => ({
-    label: name,
-    value: name,
+  return customers.map((customer) => ({
+    label: customer.name,
+    value: customer.name,
+    territory: customer.territory ?? null,
   }));
 }
 

@@ -8,6 +8,7 @@ import { isEmployeeOnApprovedLeave } from "@calendar/lib/calendar/leaveDay";
 import { buildEventDefaultValues, TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/components/calendar/module/event/mappers/event-to-erp";
 import {
+	fetchAllCustomers,
 	fetchCustomersByTerritory,
 	fetchGoogleCalendarStatus,
 } from "@calendar/components/calendar/module/event/services/event.service";
@@ -1245,19 +1246,21 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		}
 
 		let cancelled = false;
-
-		fetchCustomersByTerritory(territoryName)
+		fetchAllCustomers()
 			.then((customers) => {
 				if (cancelled) return;
-				setCustomerOptions(
-					customers.map((name) => ({
-						label: name,
-						value: name,
-					}))
-				);
+				const narrowedCustomers = customers
+					.filter((customer) => customer.territory === territoryName)
+					.map((customer) => ({
+						label: customer.name,
+						value: customer.name,
+						territory: customer.territory ?? null,
+					}));
+
+				setCustomerOptions(narrowedCustomers);
 			})
 			.catch((error) => {
-				console.error("Failed to fetch territory customers", error);
+				console.error("Failed to fetch accessible customers", error);
 				if (!cancelled) {
 					setCustomerOptions([]);
 				}
