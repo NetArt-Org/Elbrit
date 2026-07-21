@@ -29,6 +29,7 @@ export const ERP_EVENT_FIELDS = {
 
 export const ERP_EMPLOYEE_FIELDS = {
   roleId: "custom_role_profile__name",
+  hqRead: "custom_hq__name",
 };
 
 export const ERP_ROLE_PROFILE_FIELDS = {

@@ -27,6 +27,11 @@ export function mapFormToErpEvent(values, options = {}) {
     isDoctorVisitPlan && values.attending === "Yes"
       ? format(new Date(), "yyyy-MM-dd HH:mm:ss")
       : null;
+  const meetingAttendanceMap = new Map(
+    (Array.isArray(values.meetingAttendance) ? values.meetingAttendance : [])
+      .filter((entry) => entry?.employeeId)
+      .map((entry) => [String(entry.employeeId), entry.attending ?? ""])
+  );
   function buildParticipants(values) {
     const existingEmployeeParticipants = existingEventParticipants.filter(
       (participant) =>
@@ -183,6 +188,15 @@ export function mapFormToErpEvent(values, options = {}) {
             participant[
               ERP_EVENT_FIELDS.participantForceVisitReasonWrite
             ] = values.custom_force_visit_reason;
+          }
+        }
+
+        if (values.tags === TAG_IDS.MEETING) {
+          const meetingAttending = meetingAttendanceMap.get(String(empId));
+          if (meetingAttending === "Yes" || meetingAttending === "No" || meetingAttending === "Maybe") {
+            participant.attending = meetingAttending;
+          } else if (existingParticipant?.attending) {
+            participant.attending = existingParticipant.attending;
           }
         }
 

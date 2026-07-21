@@ -166,6 +166,13 @@ export function buildEventDefaultValues({ event, defaultTag }) {
     enableGoogleMeet:
       event?.enableGoogleMeet ??
       Boolean(event?.googleMeetLink),
+    meetingAttendance:
+      event?.participants
+        ?.filter((participant) => participant.type === "Employee")
+        .map((participant) => ({
+          employeeId: String(participant.id),
+          attending: normalizeAttendingChoice(participant.attending),
+        })) ?? [],
     status: event?.status,
     priority: event?.priority,
     leavePeriod:

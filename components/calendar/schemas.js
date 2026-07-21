@@ -67,6 +67,7 @@ export const eventSchema = z
     halfDayPosition: z.enum(["FIRST_DAY", "LAST_DAY"]).optional(),
     approvedBy: z.string().optional(),
     assignedTo:z.any().optional(),
+    meetingAttendance: z.any().optional(),
     /* ---------- Todo ---------- */
     status: z.enum(["Open", "Closed", "Cancelled","Completed","Approved","Rejected"]).optional(),
     priority: z.enum(["High", "Medium", "Low"]).optional(),

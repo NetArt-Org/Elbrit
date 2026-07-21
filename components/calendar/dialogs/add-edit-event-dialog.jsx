@@ -48,7 +48,7 @@ import TodoComments from "@calendar/components/calendar/module/todo/components/T
 import { ErrorBoundary } from "@calendar/components/ui/error-boundary";
 import { Textarea } from "@calendar/components/ui/textarea";
 import { fetchEmployeeLeaveBalance } from "@calendar/components/calendar/module/leave/services/leave.service";
-import { resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
+import { isLeafRole, resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
 import { enqueueSubmission } from "@calendar/lib/calendar/submission-queue";
 import { fetchDocSharesByDocument } from "@calendar/components/calendar/module/event/services/docshare.service";
 import { cn } from "@calendar/lib/utils";
@@ -434,12 +434,40 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 			null
 		);
 	}, [allEmployeeOptions, users]);
+	const resolvedLoggedInRoleId = useMemo(
+		() => resolveLoggedInRoleId(users) ?? currentUserRoleId,
+		[currentUserRoleId, users]
+	);
+	const isLeafHierarchyUser = useMemo(
+		() => isLeafRole(elbritRoleEdges, resolvedLoggedInRoleId),
+		[elbritRoleEdges, resolvedLoggedInRoleId]
+	);
+	const loggedInEmployeeHqTerritory = useMemo(() => {
+		const matchById = allEmployeeOptions.find(
+			(employee) => String(employee.value) === String(LOGGED_IN_USER.id)
+		);
+		if (matchById?.hqTerritory) return matchById.hqTerritory;
+
+		const matchByEmail = allEmployeeOptions.find(
+			(employee) =>
+				employee.email &&
+				LOGGED_IN_USER.email &&
+				employee.email.toLowerCase() === LOGGED_IN_USER.email.toLowerCase()
+		);
+		if (matchByEmail?.hqTerritory) return matchByEmail.hqTerritory;
+
+		if (hqTerritoryOptions.length === 1) {
+			return hqTerritoryOptions[0]?.value ?? null;
+		}
+
+		return null;
+	}, [allEmployeeOptions, hqTerritoryOptions]);
 	// Half Day leave is only for head-office teams (IT/MIS/HR/PMT/Design).
 	// Use the reliable role (custom_role_profile via the employee list), not the
 	// host-supplied me.roleId which can be stale.
 	const isHeadOfficeUser = useMemo(
-		() => isHeadOfficeRole(resolveLoggedInRoleId(users)),
-		[users]
+		() => isHeadOfficeRole(resolvedLoggedInRoleId),
+		[resolvedLoggedInRoleId]
 	);
 	// Meeting/Todo employee picker: show ALL employees, exactly like the Share
 	// dialog (which uses `allEmployeeOptions`). This was previously scoped to the
@@ -503,6 +531,39 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		}),
 		[employeeDepartmentOptions, employeeDesignationOptions]
 	);
+	const meetingAttendanceEmployees = useMemo(() => {
+		if (selectedTag !== TAG_IDS.MEETING || !isEditing) return [];
+
+		const selectedEmployeeIds = (
+			Array.isArray(employees) ? employees : employees ? [employees] : []
+		)
+			.map((employee) =>
+				typeof employee === "object"
+					? employee?.value ?? employee?.id ?? null
+					: employee
+			)
+			.filter(Boolean)
+			.map(String);
+
+		const existingParticipants = event?.participants ?? [];
+
+		return selectedEmployeeIds.map((employeeId) => {
+			const employeeOption = employeePickerOptions.find(
+				(option) => String(option.value) === employeeId
+			);
+			const existingParticipant = existingParticipants.find(
+				(participant) =>
+					participant.type === "Employee" &&
+					String(participant.id) === employeeId
+			);
+
+			return {
+				id: employeeId,
+				name: employeeOption?.label ?? existingParticipant?.name ?? employeeId,
+				attending: existingParticipant?.attending ?? "",
+			};
+		});
+	}, [employeePickerOptions, employees, event?.participants, isEditing, selectedTag]);
 	const shareUsers = useMemo(() => {
 		if (users.length) {
 			return users;
@@ -543,17 +604,14 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		).filter((userId) => userId !== LOGGED_IN_USER.email);
 	}, [currentUserRoleId, elbritRoleEdges, isEditing, shareUsers]);
 	const currentUserDepartment = useMemo(() => {
-		const resolvedRoleId =
-			resolveLoggedInRoleId(users) ?? currentUserRoleId;
-
-		if (!resolvedRoleId) return null;
+		if (!resolvedLoggedInRoleId) return null;
 
 		return (
 			elbritRoleEdges?.find(
-				({ node }) => node?.role_id === resolvedRoleId
+				({ node }) => node?.role_id === resolvedLoggedInRoleId
 			)?.node?.sales_team__name ?? null
 		);
-	}, [currentUserRoleId, elbritRoleEdges, users]);
+	}, [elbritRoleEdges, resolvedLoggedInRoleId]);
 	const isAutoShareableTag = (tag) => tag !== TAG_IDS.LEAVE;
 	const collectManualShareEmails = (values) => {
 		const emails = new Set();
@@ -807,6 +865,36 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		employeePickerOptions,
 		doctorOptions,
 	]);
+	useEffect(() => {
+		if (!isOpen || selectedTag !== TAG_IDS.MEETING || !isEditing) return;
+
+		const currentValues = Array.isArray(form.getValues("meetingAttendance"))
+			? form.getValues("meetingAttendance")
+			: [];
+		const currentMap = new Map(
+			currentValues
+				.filter((entry) => entry?.employeeId)
+				.map((entry) => [String(entry.employeeId), entry.attending ?? ""])
+		);
+
+		const nextAttendance = meetingAttendanceEmployees.map((participant) => ({
+			employeeId: participant.id,
+			attending:
+				currentMap.get(String(participant.id)) ??
+				participant.attending ??
+				"",
+		}));
+
+		const hasChanged =
+			JSON.stringify(currentValues) !== JSON.stringify(nextAttendance);
+
+		if (hasChanged) {
+			form.setValue("meetingAttendance", nextAttendance, {
+				shouldDirty: false,
+				shouldValidate: false,
+			});
+		}
+	}, [form, isEditing, isOpen, meetingAttendanceEmployees, selectedTag]);
 
 	/* ---------------------------------------------
 	   FORCE ALL-DAY CHECKBOX ONLY
@@ -1183,19 +1271,52 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		});
 	}, [events, startDate]);
 
+	const doctorVisitHqTerritory =
+		matchedHqEvent?.hqTerritory ??
+		(isLeafHierarchyUser ? loggedInEmployeeHqTerritory : null);
 	const hasValidHqTourPlan = !!matchedHqEvent;
+	const canCreateDoctorVisitDirectly =
+		isLeafHierarchyUser && Boolean(loggedInEmployeeHqTerritory);
+	const canUseDoctorVisitTag =
+		hasValidHqTourPlan || canCreateDoctorVisitDirectly;
+	const shouldHideHqTourPlanTag = canCreateDoctorVisitDirectly;
+	useEffect(() => {
+		if (!isOpen || isEditing) return;
+
+		if (selectedTag === TAG_IDS.HQ_TOUR_PLAN && shouldHideHqTourPlanTag) {
+			form.setValue("tags", TAG_IDS.DOCTOR_VISIT_PLAN, {
+				shouldDirty: false,
+				shouldValidate: true,
+			});
+			return;
+		}
+
+		if (selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && !canUseDoctorVisitTag) {
+			form.setValue("tags", TAG_IDS.LEAVE, {
+				shouldDirty: false,
+				shouldValidate: true,
+			});
+		}
+	}, [
+		canUseDoctorVisitTag,
+		form,
+		isEditing,
+		isOpen,
+		selectedTag,
+		shouldHideHqTourPlanTag,
+	]);
 	useEffect(() => {
 		if (selectedTag !== TAG_IDS.DOCTOR_VISIT_PLAN) return;
-		if (!matchedHqEvent) return;
+		if (!doctorVisitHqTerritory) return;
 
 		const currentHq = form.getValues("hqTerritory");
-		if (currentHq) return;
+		if (currentHq === doctorVisitHqTerritory) return;
 
-		form.setValue("hqTerritory", matchedHqEvent.hqTerritory, {
+		form.setValue("hqTerritory", doctorVisitHqTerritory, {
 			shouldDirty: true,
 			shouldValidate: true,
 		});
-	}, [selectedTag, matchedHqEvent]);
+	}, [doctorVisitHqTerritory, form, selectedTag]);
 	// ----------------------------------------------------
 	// Show only those doctor whose territory matches with the hq 
 	// ----------------------------------------------------
@@ -1761,8 +1882,11 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								render={({ field }) => (
 									<div className="flex flex-wrap gap-2">
 										{TAGS.filter((tag) => {
+											if (tag.id === TAG_IDS.HQ_TOUR_PLAN) {
+												return !shouldHideHqTourPlanTag;
+											}
 											if (tag.id === TAG_IDS.DOCTOR_VISIT_PLAN) {
-												return hasValidHqTourPlan;
+												return canUseDoctorVisitTag;
 											}
 											return true;
 										}).map((tag) => (
@@ -2031,13 +2155,17 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 											hideTime
 											/* Doctor Tour Plan restriction */
 											minDate={
-												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && matchedHqEvent
+												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+												matchedHqEvent &&
+												!canCreateDoctorVisitDirectly
 													? startOfDay(new Date(matchedHqEvent.startDate))
 													: undefined
 											}
 
 											maxDate={
-												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && matchedHqEvent
+												selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
+												matchedHqEvent &&
+												!canCreateDoctorVisitDirectly
 													? endOfDay(new Date(matchedHqEvent.endDate))
 													: undefined
 											}
@@ -2214,6 +2342,65 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									)}
 								/>
 							)}
+						{selectedTag === TAG_IDS.MEETING && isEditing && meetingAttendanceEmployees.length > 0 && (
+							<FormField
+								control={form.control}
+								name="meetingAttendance"
+								render={({ field }) => {
+									const attendanceValues = Array.isArray(field.value) ? field.value : [];
+									const attendanceMap = new Map(
+										attendanceValues
+											.filter((entry) => entry?.employeeId)
+											.map((entry) => [String(entry.employeeId), entry.attending ?? ""])
+									);
+
+									const updateAttendance = (employeeId, attendingValue) => {
+										const nextValue = meetingAttendanceEmployees.map((participant) => ({
+											employeeId: participant.id,
+											attending:
+												String(participant.id) === String(employeeId)
+													? attendingValue
+													: attendanceMap.get(String(participant.id)) ?? "",
+										}));
+										field.onChange(nextValue);
+									};
+
+									return (
+										<RHFFieldWrapper label="Attendance">
+											<div className="space-y-2 rounded-md border p-3">
+												{meetingAttendanceEmployees.map((participant) => (
+													<div
+														key={participant.id}
+														className="flex items-center justify-between gap-3"
+													>
+														<div className="min-w-0">
+															<p className="truncate text-sm font-medium">
+																{participant.name}
+															</p>
+														</div>
+														<Select
+															value={attendanceMap.get(String(participant.id)) ?? ""}
+															onValueChange={(value) =>
+																updateAttendance(participant.id, value)
+															}
+														>
+															<SelectTrigger className="w-[140px]">
+																<SelectValue placeholder="Mark" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="Yes">Present</SelectItem>
+																<SelectItem value="No">Absent</SelectItem>
+																<SelectItem value="Maybe">Maybe</SelectItem>
+															</SelectContent>
+														</Select>
+													</div>
+												))}
+											</div>
+										</RHFFieldWrapper>
+									);
+								}}
+							/>
+						)}
 						{/* ================= Allocated ================= */}
 						{!tagConfig.hide?.includes("allocated_to") &&
 							(!tagConfig.employee?.autoSelectLoggedIn ||
