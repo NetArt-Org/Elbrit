@@ -554,9 +554,36 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 		);
 	}, [currentUserRoleId, elbritRoleEdges, users]);
 	const isAutoShareableTag = (tag) => tag !== TAG_IDS.LEAVE;
+	const collectManualShareEmails = (values) => {
+		const emails = new Set();
+		const value = values.shareEmployees;
+		if (!value) return [];
+
+		(Array.isArray(value) ? value : [value]).forEach((employee) => {
+			if (!employee) return;
+			const email =
+				typeof employee === "object"
+					? employee.email
+					: allEmployeeOptions.find((opt) => opt.value === employee)?.email;
+			if (email && email !== LOGGED_IN_USER.email) {
+				emails.add(email);
+			}
+		});
+
+		return [...emails];
+	};
 	const getShareUserIds = (values) =>
 		isAutoShareableTag(values.tags)
-			? Array.from(new Set(superiorUserIds.filter(Boolean)))
+			? Array.from(
+					new Set(
+						[
+							...superiorUserIds.filter(Boolean),
+							...(values.tags === TAG_IDS.HQ_TOUR_PLAN
+								? collectManualShareEmails(values)
+								: []),
+						].filter(Boolean)
+					)
+				)
 			: [];
 	useEffect(() => {
 		if (!startDate || !endDate) return;
@@ -2065,10 +2092,10 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 										)}
 									/>
 								)}
-								{selectedTag === TAG_IDS.TODO_LIST && isEditing && (
-									<FormField
-										control={form.control}
-										name="status"
+						{selectedTag === TAG_IDS.TODO_LIST && isEditing && (
+							<FormField
+								control={form.control}
+								name="status"
 										render={({ field, fieldState }) => (
 											<RHFFieldWrapper
 												label="Status"
@@ -2095,6 +2122,26 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 									/>
 								)}
 							</div>
+						)}
+						{selectedTag === TAG_IDS.HQ_TOUR_PLAN && !isEditing && (
+							<FormField
+								control={form.control}
+								name="shareEmployees"
+								render={({ field }) => (
+									<RHFFieldWrapper label="Shared With">
+										<RHFComboboxField
+											{...field}
+											options={employeePickerOptions}
+											multiple
+											placeholder="Select employees"
+											searchPlaceholder="Search employee"
+											onSearch={handleEmployeeSearch}
+											loading={employeeSearchLoading}
+											filters={employeePickerFilters}
+										/>
+									</RHFFieldWrapper>
+								)}
+							/>
 						)}
 						{/* ================= HQ TERRITORY ================= */}
 						{selectedTag === TAG_IDS.HQ_TOUR_PLAN &&
@@ -2216,6 +2263,7 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 								)}
 							/>
 						)}
+						
 
 						{selectedTag === TAG_IDS.LEAVE && isHeadOfficeUser && leavePeriod === "Half" && (
 							<FormField
