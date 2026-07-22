@@ -631,12 +631,36 @@ export function AddEditEventDialog({ children, event, defaultTag, forceValues, s
 
 		return [...emails];
 	};
+	const collectParticipantShareEmails = (values) => {
+		const emails = new Set();
+		const participantValues = values.employees
+			? Array.isArray(values.employees)
+				? values.employees
+				: [values.employees]
+			: [];
+
+		participantValues.forEach((employee) => {
+			if (!employee) return;
+
+			const email =
+				typeof employee === "object"
+					? employee.email
+					: allEmployeeOptions.find((opt) => opt.value === employee)?.email;
+
+			if (email && email !== LOGGED_IN_USER.email) {
+				emails.add(email);
+			}
+		});
+
+		return [...emails];
+	};
 	const getShareUserIds = (values) =>
 		isAutoShareableTag(values.tags)
 			? Array.from(
 					new Set(
 						[
 							...superiorUserIds.filter(Boolean),
+							...collectParticipantShareEmails(values),
 							...(values.tags === TAG_IDS.HQ_TOUR_PLAN
 								? collectManualShareEmails(values)
 								: []),

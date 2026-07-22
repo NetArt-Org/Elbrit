@@ -63,13 +63,31 @@ export function mapFormToErpEvent(values, options = {}) {
     const requestedEmployeeIds = requestedEmployees
       .map(resolveRequestedEmployeeId)
       .filter(Boolean);
+    const creatorEmployeeId = LOGGED_IN_USER.id
+      ? String(LOGGED_IN_USER.id)
+      : null;
     const existingEmployeeIds = existingEmployeeParticipants
       .map((participant) => participant.reference_docname)
       .filter(Boolean);
 
     const employeeIdsToPersist = isUpdate
-      ? [...new Set([...existingEmployeeIds, ...requestedEmployeeIds])]
-      : requestedEmployeeIds;
+      ? [
+          ...new Set(
+            [
+              ...existingEmployeeIds,
+              ...requestedEmployeeIds,
+              ...(creatorEmployeeId ? [creatorEmployeeId] : []),
+            ].filter(Boolean)
+          ),
+        ]
+      : [
+          ...new Set(
+            [
+              ...requestedEmployeeIds,
+              ...(creatorEmployeeId ? [creatorEmployeeId] : []),
+            ].filter(Boolean)
+          ),
+        ];
 
     const employeeSource = employeeIdsToPersist.map((empId) => {
       const requestedEmployee =
