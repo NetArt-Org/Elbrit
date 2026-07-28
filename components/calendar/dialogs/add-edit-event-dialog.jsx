@@ -1468,7 +1468,7 @@ export function AddEditEventDialog({
 	const handleDefaultEvent = async (values) => {
 		const shouldSyncGoogleCalendar =
 			values.tags === TAG_IDS.MEETING
-				? Boolean(values.enableGoogleMeet) && !values.allDay
+				? (Boolean(values.enableGoogleMeet) && !values.allDay) || calendarSyncEnabled
 				: calendarSyncEnabled;
 		const normalizedDoctorValue =
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&

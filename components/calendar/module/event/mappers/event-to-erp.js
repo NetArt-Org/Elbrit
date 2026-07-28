@@ -328,7 +328,8 @@ export function mapFormToErpEvent(values, options = {}) {
   );
   const shouldSyncWithGoogleCalendar =
     values.tags === TAG_IDS.MEETING
-      ? Boolean(values.enableGoogleMeet) && !values.allDay
+      ? (Boolean(values.enableGoogleMeet) && !values.allDay) ||
+        Boolean(enableGoogleCalendarSync)
       : Boolean(enableGoogleCalendarSync);
   const doc = {
     // doctype: "Event",
