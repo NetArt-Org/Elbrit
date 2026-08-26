@@ -9,7 +9,9 @@
     "lint": "next lint",
     "k6:app-shell": "node load-tests/k6/run.js --scenario app --env-file load-tests/k6/env/app-shell.env.example",
     "k6:calendar": "node load-tests/k6/run.js --scenario calendar --env-file load-tests/k6/env/calendar-read.env.example",
-    "k6:calendar-write": "node load-tests/k6/run.js --scenario write --env-file load-tests/k6/env/calendar-write.env.example"
+    "k6:calendar-write": "node load-tests/k6/run.js --scenario write --env-file load-tests/k6/env/calendar-write.env.example",
+    "k6:graphql-read": "node load-tests/k6/run.js --scenario graphql-read --env-file load-tests/k6/env/graphql-read.env.example",
+    "k6:graphql-write": "node load-tests/k6/run.js --scenario graphql-write --env-file load-tests/k6/env/graphql-write.env.example"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
