@@ -5,10 +5,11 @@ import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-ed
 import { Button } from "@calendar/components/ui/button";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { isBefore, startOfDay, endOfDay } from "date-fns";
-import { TAG_IDS, TAGS } from "@calendar/components/calendar/constants";
+import { TAG_IDS, getAvailableTags } from "@calendar/components/calendar/constants";
 import { motion, AnimatePresence } from "framer-motion";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { isLeafRole, resolveLoggedInRoleId } from "@calendar/lib/employeeHeirachy";
+import { isEmployeeOnApprovedLeave } from "@calendar/lib/calendar/leaveDay";
 import {
   Plus,
   Building2, Users, Cake, Calendar, Stethoscope, ListChecks, HelpCircle,
@@ -28,10 +29,12 @@ export default function MobileAddEventBar({ date: propDate }) {
   const {
     selectedDate,
     events,
+    allEvents,
     users,
     allEmployeeOptions,
     elbritRoleEdges,
     hqTerritoryOptions,
+    enabledTagIds,
   } = useCalendar();
   const [showTags, setShowTags] = useState(false);
 
@@ -40,11 +43,11 @@ export default function MobileAddEventBar({ date: propDate }) {
     [propDate, selectedDate]
   );
   const matchedHqEvent = useMemo(() => {
-    if (!date || !events?.length) return null;
+    if (!date || !allEvents?.length) return null;
 
     const selectedDay = startOfDay(new Date(date));
 
-    return events.find((ev) => {
+    return allEvents.find((ev) => {
       if (ev.tags !== TAG_IDS.HQ_TOUR_PLAN) return false;
 
       const isParticipant = ev.participants?.some(
@@ -61,7 +64,7 @@ export default function MobileAddEventBar({ date: propDate }) {
         selectedDay <= planEnd
       );
     });
-  }, [events, date]);
+  }, [allEvents, date]);
   const resolvedLoggedInRoleId = useMemo(
     () => resolveLoggedInRoleId(users),
     [users]
@@ -91,6 +94,38 @@ export default function MobileAddEventBar({ date: propDate }) {
     return null;
   }, [allEmployeeOptions, hqTerritoryOptions]);
 
+  // BE is a leaf role in the Elbrit hierarchy with one fixed HQ, so there is
+  // nothing for them to plan: the HQ tag is hidden and they book DR Tour Plans
+  // directly. Every other role plans HQ first and can only book a DR Tour Plan
+  // on a day one of their own HQ Tour Plans covers.
+  //
+  // The territory check is deliberate: a BE with no HQ territory on their
+  // employee record has no HQ to book against, so they fall through to the
+  // normal path and plan HQ first like everyone else.
+  const hasValidHqTourPlan = !!matchedHqEvent;
+  const canCreateDoctorVisitDirectly =
+    isLeafHierarchyUser && Boolean(loggedInEmployeeHqTerritory);
+  const shouldHideHqTourPlanTag = canCreateDoctorVisitDirectly;
+
+  // The "+" tags start from the types this deployment actually offers — the same
+  // enabled/disabled rule (eventTypes / eventTypesMode) the event form applies —
+  // and only then drop the ones this user/day can't create. Iterating raw TAGS
+  // here was leaking disabled types onto the mobile bar.
+  const availableTags = useMemo(() => {
+    return getAvailableTags(enabledTagIds).filter((tag) => {
+      if (tag.id === TAG_IDS.HQ_TOUR_PLAN) return !shouldHideHqTourPlanTag;
+      if (tag.id === TAG_IDS.DOCTOR_VISIT_PLAN) {
+        return hasValidHqTourPlan || canCreateDoctorVisitDirectly;
+      }
+      return true;
+    });
+  }, [
+    enabledTagIds,
+    shouldHideHqTourPlanTag,
+    hasValidHqTourPlan,
+    canCreateDoctorVisitDirectly,
+  ]);
+
   const isPastDate = isBefore(
     startOfDay(date),
     startOfDay(new Date())
@@ -98,10 +133,18 @@ export default function MobileAddEventBar({ date: propDate }) {
 
   if (isPastDate) return null;
 
-  const hasValidHqTourPlan = !!matchedHqEvent;
-  const canCreateDoctorVisitDirectly =
-    isLeafHierarchyUser && Boolean(loggedInEmployeeHqTerritory);
-  const shouldHideHqTourPlanTag = canCreateDoctorVisitDirectly;
+  // Own approved leave on this day - same rule as the desktop header's Add
+  // Event button, applied here to the mobile "+" bar as a whole.
+  const isLeaveDay = isEmployeeOnApprovedLeave(
+    allEvents,
+    LOGGED_IN_USER.id,
+    date
+  );
+
+  // Nothing left to create (every type disabled, or none allowed today) — the
+  // "+" would open an empty menu, so it greys out like the leave-day case.
+  const hasNoCreatableTag = availableTags.length === 0;
+
   return (
     <>
       {/* Blur background (BEHIND tags) */}
@@ -142,17 +185,7 @@ export default function MobileAddEventBar({ date: propDate }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                 >
-                  {TAGS
-                    .filter((tag) => {
-                      if (tag.id === TAG_IDS.HQ_TOUR_PLAN) {
-                        return !shouldHideHqTourPlanTag;
-                      }
-                      if (tag.id === TAG_IDS.DOCTOR_VISIT_PLAN) {
-                        return hasValidHqTourPlan || canCreateDoctorVisitDirectly;
-                      }
-
-                      return true;
-                    }).map((tag, index) => {
+                  {availableTags.map((tag, index) => {
                       const Icon = ICON_MAP[tag.id];
 
                       return (
@@ -183,8 +216,16 @@ export default function MobileAddEventBar({ date: propDate }) {
             </AnimatePresence>
 
             <Button
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
               onClick={() => setShowTags((v) => !v)}
+              disabled={isLeaveDay || hasNoCreatableTag}
+              title={
+                isLeaveDay
+                  ? "You're on leave on this day"
+                  : hasNoCreatableTag
+                    ? "No event types available"
+                    : undefined
+              }
             >
               <Plus className="h-5 w-5" />
             </Button>

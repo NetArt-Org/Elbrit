@@ -1,0 +1,629 @@
+import { graphqlRequest } from "@calendar/lib/graphql-client";
+import { serializeEventDoc } from "./event-to-erp";
+import { CUSTOMER_QUERY, EVENTS_BY_RANGE_QUERY, GET_TODO_COMMENTS, LEAVE_ALLOCATIONS_QUERY, LEAVE_APPLICATIONS_QUERY, LEAVE_QUERY, QUOTATIONS_BY_NAMES_QUERY, TODO_LIST_QUERY } from "@calendar/services/events.query";
+import { mapErpGraphqlEventToCalendar } from "@calendar/services/erp-to-event";
+import { getCachedEvents, setCachedEvents } from "@calendar/lib/calendar/event-cache";
+import { buildRangeCacheKey } from "@calendar/lib/calendar/cache-key";
+import { clearEventCache } from "@calendar/lib/calendar/event-cache";
+import { format } from "date-fns";
+import { getCached } from "@calendar/lib/participants-cache";
+import {
+  getCachedLeaveBalance,
+  setCachedLeaveBalance,
+  getLeaveCacheKey,
+  clearLeaveCache,
+} from "@calendar/lib/calendar/leave-cache";
+import { mapErpLeaveToCalendar } from "./leave-to-erp";
+import { mapErpTodoToCalendar } from "./todo-to-erp-graphql";
+import { normalizeChecklistFromERP } from "@calendar/components/calendar/helpers";
+const PAGE_SIZE = 50;
+
+const SAVE_EVENT_MUTATION = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "Event", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+const SAVE_EVENT_TODO = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "ToDo", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+const SAVE_EVENT_QUOTATION = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "Quotation", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`
+const SAVE_LEAVE_APPLICATION_MUTATION = `
+mutation SaveEvent($doc: String!) {
+  saveDoc(doctype: "Leave Application", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+const UPDATE_LEAVE_STATUS_MUTATION = `
+mutation UpdateLeaveStatus(
+  $name: String!
+  $value: DOCFIELD_VALUE_TYPE!
+) {
+  setValue(
+    doctype: "Leave Application"
+    name: $name
+    fieldname: "status"
+    value: $value
+  ) {
+    name
+  }
+}
+`;
+
+
+const UPDATE_LEAVE_ATTACHMENT_MUTATION = `
+mutation UpdateLeaveAttachment(
+  $name: String!
+  $value: DOCFIELD_VALUE_TYPE!
+) {
+  setValue(
+    doctype: "Leave Application"
+    name: $name
+    fieldname: "custom_attachment"
+    value: $value
+  ) {
+    name
+  }
+}
+`;
+
+export const SAVE_COMMENT = `
+mutation SaveComment($doc: String!) {
+  saveDoc(doctype: "Comment", doc: $doc) {
+    doc {
+      name
+    }
+  }
+}
+`;
+export async function fetchTodoComments(referenceName) {
+  const res = await graphqlRequest(GET_TODO_COMMENTS, {
+    referenceName,
+  });
+
+  const nodes = res?.Comments?.edges?.map(e => e.node) ?? [];
+
+  // convert ERP → Tiptap
+  return nodes.map((c) => ({
+    ...c,
+    content: normalizeChecklistFromERP(c.content),
+  }));
+}
+
+export async function saveTodoComment(doc) {
+  const data = await graphqlRequest(SAVE_COMMENT, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return Comment name");
+  }
+
+  return data.saveDoc.doc;
+}
+export async function fetchQuotationsByNames(names) {
+  if (!names?.length) return {};
+
+  const filters = [
+    {
+      fieldname: "name",
+      operator: "IN",
+      value: names.join(","),
+    },
+  ];
+
+  const data = await graphqlRequest(
+    QUOTATIONS_BY_NAMES_QUERY,
+    {
+      first: names.length, // or 50
+      filters,
+    }
+  );
+
+  const map = {};
+
+  data?.Quotations?.edges?.forEach(({ node }) => {
+    map[node.name] = node;
+  });
+
+  return map;
+}
+export async function updateLeaveAttachment(leaveName, fileUrl) {
+  if (!leaveName || !fileUrl) return;
+
+  const data = await graphqlRequest(
+    UPDATE_LEAVE_ATTACHMENT_MUTATION,
+    {
+      name: leaveName,
+      value: fileUrl,
+    }
+  );
+
+  if (!data?.setValue?.name) {
+    throw new Error("Failed to update leave attachment");
+  }
+  clearLeaveCache();
+  return true;
+}
+
+
+export async function saveEvent(doc) {
+  const data = await graphqlRequest(SAVE_EVENT_MUTATION, {
+    doc: serializeEventDoc(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return Event name");
+  }
+  // invalidate cache only after successful write
+  clearEventCache();
+
+  return data.saveDoc.doc;
+}
+export async function updateLeaveStatus(leaveName, newStatus) {
+  if (!leaveName || !newStatus) {
+    throw new Error("Invalid leave update payload");
+  }
+
+  const data = await graphqlRequest(
+    UPDATE_LEAVE_STATUS_MUTATION,
+    {
+      name: leaveName,
+      value: newStatus,
+    }
+  );
+
+  if (!data?.setValue?.name) {
+    throw new Error("Failed to update leave status");
+  }
+
+  // Clear all relevant caches
+  clearLeaveCache();
+
+  return true;
+}
+async function fetchLeadNotes(leadName) {
+  const res = await graphqlRequest(
+    `
+    query GetLead($name: String!) {
+      Lead(name: $name) {
+        name
+        notes {
+      name
+      note
+      idx
+      parentfield
+      parenttype
+      doctype
+      creation
+      modified
+    }
+      }
+    }
+    `,
+    { name: leadName }
+  );
+
+  if (!res?.Lead) {
+    throw new Error("Lead not found");
+  }
+
+  return res.Lead.notes || [];
+}
+
+async function saveLeadNotes(leadName, notes) {
+  const updatedDoc = {
+    name: leadName,
+    notes,
+  };
+
+  const saveRes = await graphqlRequest(
+    `
+    mutation SaveLead($doc: String!) {
+      saveDoc(doctype: "Lead", doc: $doc) {
+        doc {
+          name
+        }
+      }
+    }
+    `,
+    {
+      doc: JSON.stringify(updatedDoc),
+    }
+  );
+
+  if (!saveRes?.saveDoc?.doc?.name) {
+    throw new Error("Failed to save lead notes");
+  }
+
+  return true;
+}
+
+export async function addLeadNote(leadName, newNoteHtml) {
+  if (!leadName || !newNoteHtml) {
+    throw new Error("Invalid note payload");
+  }
+
+  const existingNotes = await fetchLeadNotes(leadName);
+
+  return saveLeadNotes(leadName, [
+    ...existingNotes,
+    {
+      note: newNoteHtml,
+    },
+  ]);
+}
+export async function deleteLeadNote(
+  leadName,
+  noteName
+) {
+  if (!leadName || !noteName) {
+    throw new Error(
+      "Invalid delete payload"
+    );
+  }
+
+  const existingNotes =
+    await fetchLeadNotes(leadName);
+
+  const filteredNotes =
+    existingNotes.filter(
+      (note) =>
+        note.name !== noteName
+    );
+
+  return saveLeadNotes(
+    leadName,
+    filteredNotes
+  );
+}
+
+export async function saveDocToErp(doc) {
+  const data = await graphqlRequest(SAVE_EVENT_TODO, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return document name");
+  }
+
+  clearEventCache();
+  return data.saveDoc.doc;
+}
+export async function saveDocToQuotation(doc) {
+  const data = await graphqlRequest(SAVE_EVENT_QUOTATION, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("ERP did not return document name");
+  }
+
+  clearEventCache();
+  return data.saveDoc.doc;
+}
+export async function saveLeaveApplication(doc) {
+  const data = await graphqlRequest(SAVE_LEAVE_APPLICATION_MUTATION, {
+    doc: JSON.stringify(doc),
+  });
+
+  if (!data?.saveDoc?.doc?.name) {
+    throw new Error("Failed to create Leave Application");
+  }
+
+  clearLeaveCache();
+  return data.saveDoc.doc;
+}
+export async function fetchAllLeaveApplications() {
+  return getCached("LEAVE_APPLICATIONS", async () => {
+    const data = await graphqlRequest(LEAVE_QUERY, {
+      first: 500,
+    });
+
+    return data.LeaveApplications.edges
+      .map(edge => mapErpLeaveToCalendar(edge.node))
+      .filter(Boolean);
+  });
+}
+export async function fetchAllCustomers() {
+  return getCached("CUSTOMERS", async () => {
+    const data = await graphqlRequest(CUSTOMER_QUERY, {
+      first: 500,
+    });
+
+    return data.Customers.edges
+      .map(edge => edge.node.name)  // return only the name of the customer to the UI to show in the calendar as a customer name to select from the calendar
+  });
+}
+
+export async function fetchAllTodoList() {
+  return getCached("TODO_LIST", async () => {
+    const data = await graphqlRequest(TODO_LIST_QUERY, {
+      first: 500,
+    });
+    return data.ToDoes.edges
+      .map(edge => mapErpTodoToCalendar(edge.node))
+      .filter(Boolean);
+  });
+}
+
+export async function fetchEventsByRange(startDate, endDate, view) {
+  const cacheKey = buildRangeCacheKey(view, startDate, endDate);
+
+  const cached = getCachedEvents(cacheKey);
+  if (cached) return cached;
+
+  let after = null;
+  let rawEventNodes = [];
+
+  const filter = [
+    {
+      fieldname: "starts_on",
+      operator: "LTE",
+      value: endDate.toISOString(),
+    },
+    {
+      fieldname: "ends_on",
+      operator: "GTE",
+      value: startDate.toISOString(),
+    },
+  ];
+
+  // --------------------------------------------
+  // 1️⃣ FETCH RAW EVENT NODES (NO MAPPING YET)
+  // --------------------------------------------
+  while (true) {
+    const data = await graphqlRequest(EVENTS_BY_RANGE_QUERY, {
+      first: PAGE_SIZE,
+      after,
+      filter,
+    });
+
+    const connection = data?.Events;
+    if (!connection) break;
+
+    rawEventNodes.push(
+      ...connection.edges.map((edge) => edge.node)
+    );
+
+    if (!connection.pageInfo?.hasNextPage) break;
+    after = connection.pageInfo.endCursor;
+  }
+
+  // --------------------------------------------
+  // 2️⃣ COLLECT QUOTATION REFERENCES
+  // --------------------------------------------
+  const quotationNames = rawEventNodes
+    .filter(
+      (node) =>
+        node.reference_doctype?.name === "Quotation" &&
+        node.reference_docname__name
+    )
+    .map((node) => node.reference_docname__name);
+
+  const uniqueQuotationNames = [
+    ...new Set(quotationNames),
+  ];
+
+  // --------------------------------------------
+  // 3️⃣ FETCH QUOTATIONS IN BATCH
+  // --------------------------------------------
+  const quotationMap =
+    await fetchQuotationsByNames(uniqueQuotationNames);
+
+  // --------------------------------------------
+  // 4️⃣ INJECT QUOTATION ITEMS INTO RAW NODES
+  // --------------------------------------------
+  const enrichedNodes = rawEventNodes.map((node) => {
+    if (
+      node.reference_doctype?.name === "Quotation" &&
+      quotationMap[node.reference_docname__name]
+    ) {
+      const quotation =
+        quotationMap[node.reference_docname__name];
+
+      node.fsl_doctor_item =
+        quotation.items?.map((row) => ({
+          item__name: row.item_code?.name,
+          qty: Number(row.qty) || 0,
+          rate: Number(row.rate) || 0,
+          amount: Number(row.amount) || 0,
+        })) || [];
+    }
+
+    return node;
+  });
+
+  // --------------------------------------------
+  // 5️⃣ NOW MAP TO CALENDAR
+  // --------------------------------------------
+  const events = enrichedNodes
+    .map((node) =>
+      mapErpGraphqlEventToCalendar(node)
+    )
+    .filter(Boolean);
+
+  // --------------------------------------------
+  // 6️⃣ MERGE LEAVES + TODOS
+  // --------------------------------------------
+  const leaves = await fetchAllLeaveApplications();
+  const todolist = await fetchAllTodoList();
+  const merged = [...events, ...leaves, ...todolist];
+
+  setCachedEvents(cacheKey, merged);
+
+  return merged;
+}
+
+const DELETE_EVENT_MUTATION = `
+mutation DeleteEvent($doctype: String!, $name: String!) {
+  deleteDoc(doctype: $doctype, name: $name) {
+    name
+  }
+}
+`;
+const DELETE_LEAD_NOTE_MUTATION = `
+mutation DeleteLeadNote(
+  $doctype: String!,
+  $name: String!
+) {
+  deleteDoc(
+    doctype: $doctype,
+    name: $name
+  ) {
+    name
+  }
+}
+`;
+export async function deleteEventFromErp(erpName, docname) {
+  if (!erpName) return true;
+
+  try {
+    const data = await graphqlRequest(DELETE_EVENT_MUTATION, {
+      doctype: docname ?? "Event",
+      name: erpName,
+    });
+
+    // Success path
+    clearEventCache();
+    return true;
+
+  } catch (error) {
+    const message = error?.message || "";
+
+    // ✅ ERP already deleted → treat as success
+    if (
+      message.includes("not found") ||
+      message.includes("does not exist") ||
+      message.includes("Missing document")
+    ) {
+      clearEventCache();
+      return true;
+    }
+
+    // ❌ real error
+    throw error;
+  }
+}
+
+// ---------------------------------------------
+// Leave Filters
+// ---------------------------------------------
+const getLeaveAllocationFilters = (employeeId) => [
+  { fieldname: "employee", operator: "EQ", value: employeeId },
+  { fieldname: "docstatus", operator: "EQ", value: "1" },
+];
+
+const getLeaveUsedFilters = (employeeId) => [
+  { fieldname: "employee", operator: "EQ", value: employeeId },
+  { fieldname: "status", operator: "EQ", value: "Approved" },
+  { fieldname: "docstatus", operator: "EQ", value: "1" },
+];
+
+const getLeavePendingFilters = (employeeId) => [
+  { fieldname: "employee", operator: "EQ", value: employeeId },
+  { fieldname: "status", operator: "EQ", value: "Open" },
+];
+
+/* =====================================================
+   EMPLOYEE LEAVE BALANCE (WITH CACHE)
+===================================================== */
+export async function fetchEmployeeLeaveBalance(employeeId) {
+  const cacheKey = getLeaveCacheKey(employeeId);
+  const cached = getCachedLeaveBalance(cacheKey);
+
+  // ⏱ 5-minute TTL
+  if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+    return cached.data;
+  }
+
+  const [allocRes, usedRes, pendingRes] = await Promise.all([
+    graphqlRequest(LEAVE_ALLOCATIONS_QUERY, {
+      first: 20,
+      filters: getLeaveAllocationFilters(employeeId),
+    }),
+    graphqlRequest(LEAVE_APPLICATIONS_QUERY, {
+      first: 100,
+      filters: getLeaveUsedFilters(employeeId),
+    }),
+    graphqlRequest(LEAVE_APPLICATIONS_QUERY, {
+      first: 100,
+      filters: getLeavePendingFilters(employeeId),
+    }),
+  ]);
+
+  const balance = {};
+
+  allocRes.LeaveAllocations.edges.forEach(({ node }) => {
+    balance[node.leave_type__name] = {
+      allocated: node.total_leaves_allocated,
+      used: 0,
+      pending: 0,
+    };
+  });
+
+  usedRes.LeaveApplications.edges.forEach(({ node }) => {
+    if (balance[node.leave_type__name]) {
+      balance[node.leave_type__name].used += node.total_leave_days;
+    }
+  });
+
+  pendingRes.LeaveApplications.edges.forEach(({ node }) => {
+    if (balance[node.leave_type__name]) {
+      balance[node.leave_type__name].pending += node.total_leave_days;
+    }
+  });
+
+  Object.values(balance).forEach((b) => {
+    b.available = b.allocated - b.used - b.pending;
+  });
+
+  setCachedLeaveBalance(cacheKey, balance);
+  return balance;
+}
+export function formatDateForERP(date) {
+  return format(date, "yyyy-MM-dd");
+}
+export async function updateLeadDob(leadName, dob) {
+  const mutation = `
+  mutation UpdateLeadDOB(
+  $name: String!
+  $value: DOCFIELD_VALUE_TYPE!
+) {
+  setValue(
+    doctype: "Lead"
+    name: $name
+    fieldname: "fsl_dob"
+    value: $value
+  ) {
+    name
+  }
+}
+  `;
+
+  return graphqlRequest(mutation, {
+    name: leadName,
+    value: formatDateForERP(dob),
+  });
+}
+
