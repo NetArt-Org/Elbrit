@@ -24,6 +24,7 @@ import {
 	requeueFailedSubmissions,
 	subscribeSubmissionQueue,
 } from "@calendar/lib/calendar/submission-queue";
+import { applyDoctorVisitTeamTitles, createTeamNameResolver } from "@calendar/lib/calendar/doctor-visit-title";
 import { resolveEnabledTagIds, TAG_IDS } from "@calendar/components/calendar/constants";
 import { useAuth } from "@calendar/components/auth/auth-context";
 import { toast } from "sonner";
@@ -441,12 +442,16 @@ export function CalendarProvider({
 		};
 	}, [queueEvents, syncPendingSubmissions]);
 
+	const resolveOwnerTeamName = useMemo(
+		() => createTeamNameResolver(users, elbritRoleEdges),
+		[users, elbritRoleEdges]
+	);
 	const allEvents = useMemo(() => {
-		return mergeServerEventsWithQueuedEvents(
-			serverEvents,
-			queueEvents
+		return applyDoctorVisitTeamTitles(
+			mergeServerEventsWithQueuedEvents(serverEvents, queueEvents),
+			resolveOwnerTeamName
 		);
-	}, [queueEvents, serverEvents]);
+	}, [queueEvents, serverEvents, resolveOwnerTeamName]);
 	const pendingSyncCount = useMemo(() => {
 		return queueEvents.filter(
 			(item) =>
