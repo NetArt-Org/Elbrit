@@ -25,6 +25,7 @@ import {
 	subscribeSubmissionQueue,
 } from "@calendar/lib/calendar/submission-queue";
 import { applyDoctorVisitTeamTitles, createTeamNameResolver } from "@calendar/lib/calendar/doctor-visit-title";
+import { VISIT_FILTER } from "@calendar/lib/calendar/visit-filter";
 import { resolveEnabledTagIds, TAG_IDS } from "@calendar/components/calendar/constants";
 import { useAuth } from "@calendar/components/auth/auth-context";
 import { toast } from "sonner";
@@ -132,6 +133,7 @@ export function CalendarProvider({
 	const [mobileLayer, setMobileLayer] = useState("month-expanded");
 	const [showOnlyApprovedLeaves, setShowOnlyApprovedLeaves] = useState(false);
 	const [showOnlyTodoList, setShowOnlyTodoList] = useState(false);
+	const [agendaVisitFilter, setAgendaVisitFilter] = useState(VISIT_FILTER.ALL);
 	const [territoryDoctors, setTerritoryDoctors] = useState([]);
 	const [isRetryingSync, setIsRetryingSync] = useState(false);
 	const updateSettings = (newPartialSettings) => {
@@ -652,6 +654,7 @@ export function CalendarProvider({
 		elbritRoleLoading, customerOptions, setCustomerOptions,
 		showOnlyApprovedLeaves,
 		setShowOnlyApprovedLeaves, showOnlyTodoList, setShowOnlyTodoList,
+		agendaVisitFilter, setAgendaVisitFilter,
 		enableGoogleCalendarSync,
 	};
 
