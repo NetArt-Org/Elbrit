@@ -24,8 +24,21 @@ export function mapFormToErpEvent(values, options = {}) {
     values.tags === TAG_IDS.DOCTOR_VISIT_PLAN;
 
   const isUpdate = Boolean(erpName);
+  // The visit time already on record for the person saving, if any.
+  const recordedOwnVisitTime =
+    existingEventParticipants.find(
+      (participant) =>
+        participant.reference_doctype === "Employee" &&
+        String(participant.reference_docname) === String(LOGGED_IN_USER.id)
+    )?.[ERP_EVENT_FIELDS.participantVisitTimeWrite] ?? null;
+  // Stamped once, on the save that marks the visit. A visit that is already
+  // recorded gets reopened later to add or correct its POB, and that save must
+  // not move when the visit happened (nor the event's ends_on, which follows
+  // this) to whenever the form was reopened.
   const currentVisitTimestamp =
-    isDoctorVisitPlan && values.attending === "Yes"
+    isDoctorVisitPlan &&
+    values.attending === "Yes" &&
+    !recordedOwnVisitTime
       ? format(new Date(), "yyyy-MM-dd HH:mm:ss")
       : null;
   const meetingAttendanceMap = new Map(
@@ -326,11 +339,12 @@ export function mapFormToErpEvent(values, options = {}) {
     values.doctor,
     "custom_longitude"
   );
-  const shouldSyncWithGoogleCalendar =
-    values.tags === TAG_IDS.MEETING
-      ? (Boolean(values.enableGoogleMeet) && !values.allDay) ||
-        Boolean(enableGoogleCalendarSync)
-      : Boolean(enableGoogleCalendarSync);
+  // `google_calendar` is the only switch that still matters for Google: with it
+  // empty, saveEvent() skips its sync nudge and the backend Scheduler job has
+  // nothing to pick up. So the enableGoogleCalendarSync setting gates it —
+  // hardcoding this to true made every event sync regardless of the setting.
+  // sync_with_google_calendar stays 0 either way (see below).
+  const shouldSyncWithGoogleCalendar = Boolean(enableGoogleCalendarSync);
   const doc = {
     // doctype: "Event",
     subject: values.title,
@@ -365,7 +379,13 @@ export function mapFormToErpEvent(values, options = {}) {
       (Number(values.pob_given) === 1 || Number(values.pob_given) === 0)
         ? Number(values.pob_given)
         : undefined,
-    sync_with_google_calendar: shouldSyncWithGoogleCalendar ? 1 : 0,
+    // Frappe's native Event hook syncs to Google Calendar synchronously
+    // in-request when this flag is 1 — confirmed via backend profiling to add
+    // ~1.7-1.9s to every save. A backend Scheduler Event now syncs
+    // asynchronously instead, so this must always stay 0; saveEvent() nudges
+    // that sync via a non-blocking sync_event_google_Calendar call keyed off
+    // google_calendar below instead of this flag.
+    sync_with_google_calendar: 0,
     google_calendar: shouldSyncWithGoogleCalendar
       ? googleCalendar || "IT Elbrit"
       : "",
