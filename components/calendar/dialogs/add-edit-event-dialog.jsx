@@ -3,7 +3,7 @@ import { addMinutes, differenceInCalendarDays, startOfDay, endOfDay, parseISO } 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
+import { AUTH_CONFIG, LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { isEmployeeOnApprovedLeave } from "@calendar/lib/calendar/leaveDay";
 import { buildEventDefaultValues, getAvailableTags, TAG_IDS } from "@calendar/components/calendar/constants";
 import { mapFormToErpEvent } from "@calendar/components/calendar/module/event/mappers/event-to-erp";
@@ -11,6 +11,9 @@ import {
 	fetchAllCustomers,
 	fetchCustomersByTerritory,
 	fetchGoogleCalendarStatus,
+	findExistingEventByNaturalKey,
+	saveDocToQuotation,
+	saveEvent,
 } from "@calendar/components/calendar/module/event/services/event.service";
 import { useWatch } from "react-hook-form";
 import { LeaveTypeCards } from "@calendar/components/calendar/leave/LeaveTypeCards";
@@ -48,9 +51,15 @@ import { DoctorNotesSection } from "../module/event/components/DoctorNotesSectio
 import TodoComments from "@calendar/components/calendar/module/todo/components/TodoCommentsSection";
 import { ErrorBoundary } from "@calendar/components/ui/error-boundary";
 import { Textarea } from "@calendar/components/ui/textarea";
-import { fetchEmployeeLeaveBalance } from "@calendar/components/calendar/module/leave/services/leave.service";
-import { isLeafRole, resolveLoggedInRoleId, resolveSuperiorShareUserIds, resolveVisibleRoleIds } from "@calendar/lib/employeeHeirachy";
-import { enqueueSubmission } from "@calendar/lib/calendar/submission-queue";
+import {
+	fetchEmployeeLeaveBalance,
+	saveLeaveApplication,
+	updateLeaveAttachment,
+} from "@calendar/components/calendar/module/leave/services/leave.service";
+import { isLeafRole, resolveLoggedInRoleId, resolveSuperiorShareUserIds } from "@calendar/lib/employeeHeirachy";
+import { resolvePobDepartments } from "@calendar/lib/calendar/pobDepartments";
+import { saveDocToErp } from "@calendar/components/calendar/module/todo/services/todo.service";
+import { uploadLeaveMedicalCertificate } from "@calendar/lib/file.service";
 import { fetchDocSharesByDocument } from "@calendar/components/calendar/module/event/services/docshare.service";
 import { cn } from "@calendar/lib/utils";
 
@@ -83,7 +92,8 @@ export function AddEditEventDialog({
 		hqTerritoryOptions,
 		setEmployeeOptions, territoryDoctors, setTerritoryDoctors,
 		setDoctorOptions, customerOptions, setCustomerOptions, selectedDate, allowedEmployeeIds,
-		setHqTerritoryOptions, users, elbritRoleEdges, enabledTagIds, enableGoogleCalendarSync: calendarSyncEnabled } = useCalendar();
+		setHqTerritoryOptions, users, elbritRoleEdges, enabledTagIds, enableGoogleCalendarSync: calendarSyncEnabled,
+		addEvent, updateEvent } = useCalendar();
 	// Only the event types this deployment enables can be created here, and a new
 	// event must start on one of them.
 	const availableTags = useMemo(
@@ -131,6 +141,23 @@ export function AddEditEventDialog({
 	const initialStartDateTs = initialStartDate
 		? initialStartDate.getTime()
 		: null;
+	// POB can be captured or corrected long after the call, so this form gets
+	// reopened on visits that are already marked. Everything below that is tied
+	// to *where and when the visit happened* must then be left exactly as it was
+	// recorded: re-measuring from wherever the user is now would turn a normal
+	// visit into a force visit (and demand a reason before POB could be saved).
+	const isVisitAlreadyRecorded = useMemo(() => {
+		if (!isEditing) return false;
+
+		return Boolean(
+			event?.participants?.some(
+				(participant) =>
+					participant?.type === "Employee" &&
+					String(participant?.id) === String(LOGGED_IN_USER.id) &&
+					participant?.custom_visit_time
+			)
+		);
+	}, [event?.participants, isEditing]);
 	const selectedDateTs = selectedDate
 		? new Date(selectedDate).getTime()
 		: null;
@@ -163,6 +190,17 @@ export function AddEditEventDialog({
 	}, [event?.enableGoogleMeet, form, isEditing, isOpen, selectedTag]);
 	useEffect(() => {
 		if (selectedTag !== TAG_IDS.MEETING) return;
+		if (calendarSyncEnabled) return;
+		if (!enableGoogleMeet) return;
+
+		form.setValue("enableGoogleMeet", false, {
+			shouldDirty: false,
+			shouldValidate: false,
+		});
+	}, [calendarSyncEnabled, enableGoogleMeet, form, selectedTag]);
+
+	useEffect(() => {
+		if (selectedTag !== TAG_IDS.MEETING) return;
 		if (!allDay || !enableGoogleMeet) return;
 
 		form.setValue("enableGoogleMeet", false, {
@@ -173,6 +211,9 @@ export function AddEditEventDialog({
 	}, [allDay, enableGoogleMeet, form, selectedTag]);
 	useEffect(() => {
 		if (!isEditing) return;
+		// Distance and force-visit belong to the moment the visit was marked.
+		// Leave the recorded values alone on a later POB edit.
+		if (isVisitAlreadyRecorded) return;
 		const doctorId = Array.isArray(event?.doctor)
 			? event.doctor[0]
 			: event?.doctor;
@@ -250,7 +291,7 @@ export function AddEditEventDialog({
 			);
 		}
 
-	}, [currentLatitude, currentLongitude, doctorResolvers, event?.doctor, isEditing]);
+	}, [currentLatitude, currentLongitude, doctorResolvers, event?.doctor, isEditing, isVisitAlreadyRecorded]);
 	const hasValidLocation =
 		Number(currentLatitude) !== 0 &&
 		Number(currentLongitude) !== 0 &&
@@ -325,16 +366,11 @@ export function AddEditEventDialog({
 		Boolean(selectedLeaveBalance) &&
 		leaveDays > 0 &&
 		Number(selectedLeaveBalance.available ?? 0) < leaveDays;
-	const hasExistingPobItems =
-		Array.isArray(event?.fsl_doctor_item) &&
-		event.fsl_doctor_item.length > 0;
-	const hasExistingPobDecision =
-		selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-		isEditing &&
-		(Number(event?.pob_given) === 1 ||
-			hasExistingPobItems);
-	const canCurrentParticipantEditPob =
-		!hasExistingPobDecision;
+	// POB used to freeze the moment it was captured, locking out even the person
+	// who entered it. It is commercial data that often lands after the call — the
+	// doctor confirms the order later, a quantity was mistyped — so it stays
+	// editable, and the mapper updates the existing quotation rather than raising
+	// a second one (see `existingName` in mapDoctorVisitToQuotation).
 	const doctorDetails = useMemo(() => {
 		const doctorId = Array.isArray(event?.doctor)
 			? event.doctor[0]
@@ -627,29 +663,12 @@ export function AddEditEventDialog({
 			resolvedLoggedInRoleId
 		).filter((userId) => userId !== LOGGED_IN_USER.email);
 	}, [resolvedLoggedInRoleId, elbritRoleEdges, isEditing, shareUsers]);
-	// Departments whose products this user may bill POB against.
-	//
-	// A manager's own role profile has no department: an SM covers several
-	// (SM-Vasco spans Vasco Chennai and Vasco Coimbatore) and ERP's field holds
-	// only one, so it is left empty — which used to leave every SM with an empty
-	// item list. Resolve it down the same role hierarchy the calendar uses for
-	// event visibility and take the union, so a manager gets exactly what their
-	// team carries. A BE is a leaf, so this is just their own department.
-	const currentUserDepartments = useMemo(() => {
-		if (!resolvedLoggedInRoleId) return [];
-
-		const visibleRoleIds = new Set(
-			resolveVisibleRoleIds(elbritRoleEdges, resolvedLoggedInRoleId)
-		);
-		const departments = new Set();
-
-		elbritRoleEdges?.forEach(({ node }) => {
-			if (!node?.role_id || !visibleRoleIds.has(node.role_id)) return;
-			if (node.sales_team__name) departments.add(node.sales_team__name);
-		});
-
-		return [...departments];
-	}, [elbritRoleEdges, resolvedLoggedInRoleId]);
+	// Shared with the inline POB editor in the visit details dialog, so both
+	// offer the same item list.
+	const currentUserDepartments = useMemo(
+		() => resolvePobDepartments(elbritRoleEdges, resolvedLoggedInRoleId),
+		[elbritRoleEdges, resolvedLoggedInRoleId]
+	);
 	const hasResolvedDepartment = currentUserDepartments.length > 0;
 	const isAutoShareableTag = (tag) => tag !== TAG_IDS.LEAVE;
 	const collectManualShareEmails = (values) => {
@@ -800,14 +819,26 @@ export function AddEditEventDialog({
 		// location then or it spams a geolocation toast on every detail open.
 		if (!isOpen) return;
 		// Location is only relevant to Doctor Visit Plans (force-visit distance).
+		// Once the visit is marked, its coordinates are history — asking the
+		// device again on a later POB edit would overwrite them with wherever
+		// the user happens to be.
+		if (isVisitAlreadyRecorded) return;
 		if (selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN) {
 			resolveLatLong(form, isEditing, toast);
 		}
-	}, [isEditing, isOpen, selectedTag]);
+	}, [isEditing, isOpen, selectedTag, isVisitAlreadyRecorded]);
 	/* ---------------------------------------------
 	  Load Calendar Google Calendar 
 	--------------------------------------------- */
 	useEffect(() => {
+		// With Google sync off there is nothing to ask Google about, and this
+		// query used to run for every mounted dialog (the mobile "+" bar mounts
+		// one per event type) on every calendar load.
+		if (!calendarSyncEnabled) {
+			setGoogleCalendarEnabled(false);
+			return;
+		}
+
 		async function loadGoogleStatus() {
 			const calendar = await fetchGoogleCalendarStatus(
 				LOGGED_IN_USER.email
@@ -821,7 +852,7 @@ export function AddEditEventDialog({
 		}
 
 		loadGoogleStatus();
-	}, []);
+	}, [calendarSyncEnabled]);
 	const handleRequestLocation = async () => {
 		try {
 			setIsResolvingLocation(true);
@@ -1123,10 +1154,50 @@ export function AddEditEventDialog({
 		toast.success(message);
 		resetAndCloseDialog();
 	};
-	const finalizeQueued = (message) => {
-		toast.info(message);
-		resetAndCloseDialog();
+	// Set when a submit from this form has already failed. A save can fail on the
+	// wire (a deadlock surfacing after the row committed, a lost response) while
+	// ERP has in fact stored the document — so a second press of Save would
+	// insert a duplicate. Before re-creating, look for the document the previous
+	// attempt may already have made and adopt it instead.
+	const previousSubmitFailedRef = useRef(false);
+
+	// One toast, updated in place, for however long a contended save takes. A
+	// blocked attempt costs the server's whole lock timeout (50s by default), so
+	// a save that eventually succeeds can take minutes — and with the dialog held
+	// open and Save spinning, silence reads as a hung app. This says what is
+	// happening and that closing the form would throw the work away.
+	const CONTENTION_TOAST_ID = "event-save-contention";
+
+	const reportSaveContention = ({ attempt, maxAttempts, elapsedMs }) => {
+		toast.loading(
+			`ERP is busy with this event — ${Math.round(elapsedMs / 1000)}s so far, retrying (${attempt} of ${maxAttempts}). Keep this open.`,
+			{ id: CONTENTION_TOAST_ID, duration: Infinity }
+		);
 	};
+
+	const createEventAdoptingPreviousAttempt = async (erpDoc, saveOptions) => {
+		if (!erpDoc.name && previousSubmitFailedRef.current) {
+			const existingName = await findExistingEventByNaturalKey({
+				subject: erpDoc.subject,
+				startsOn: erpDoc.starts_on,
+				eventCategory: erpDoc.event_category,
+			});
+
+			if (existingName) {
+				return { name: existingName, adopted: true };
+			}
+		}
+
+		try {
+			return await saveEvent(erpDoc, {
+				...saveOptions,
+				onContention: reportSaveContention,
+			});
+		} finally {
+			toast.dismiss(CONTENTION_TOAST_ID);
+		}
+	};
+
 	function normalizePobItemsForUI(items = []) {
 		return items.map(row => ({
 			item__name:
@@ -1222,7 +1293,11 @@ export function AddEditEventDialog({
 			description: values.description,
 			startDate: normalizedStartDate.toISOString(),
 			endDate: normalizedEndDate.toISOString(),
-			color: shouldBeGreen ? "green" : tagConfig.fixedColor,
+			// Retain the last ERP-confirmed colour while this update is queued.
+			// The server refresh turns a confirmed completed visit green.
+			color:
+				event?.color ??
+				(shouldBeGreen ? "green" : tagConfig.fixedColor),
 			tags: values.tags,
 			allDay: values.allDay ?? event?.allDay ?? false,
 			ownerEmployeeId: ownerEmployeeIdOverride,
@@ -1259,7 +1334,10 @@ export function AddEditEventDialog({
 			),
 			status:
 				values.tags === TAG_IDS.DOCTOR_VISIT_PLAN
-					? erpDoc.status
+					// Completion is durable only after ERP accepts the update. While
+					// it is queued, keep the last confirmed status on the card; the
+					// queue badge communicates the in-flight submission.
+					? event?.status ?? erpDoc.status
 					: event?.status,
 		};
 
@@ -1352,7 +1430,12 @@ export function AddEditEventDialog({
 		isLeafHierarchyUser && Boolean(loggedInEmployeeHqTerritory);
 	const canUseDoctorVisitTag =
 		hasValidHqTourPlan || canCreateDoctorVisitDirectly;
-	const shouldHideHqTourPlanTag = canCreateDoctorVisitDirectly;
+	// Only one HQ Tour Plan per person per day is allowed (enforced on save
+	// below), so once the day has one the tag stops being offered for a NEW
+	// event. Editing is exempt: the plan being edited is the one that matched,
+	// and hiding its own tag would leave the form with no tag selected.
+	const shouldHideHqTourPlanTag =
+		canCreateDoctorVisitDirectly || (!isEditing && hasValidHqTourPlan);
 	// A new event must never sit on a type this deployment doesn't offer. Without
 	// this, a trigger asking for a disabled type (or a stale default) left the
 	// form rendering that type's fields with no chip selected — e.g. tapping
@@ -1543,10 +1626,9 @@ export function AddEditEventDialog({
 	// popover stacked on top of it).
 	useBackToClose(isOpen, () => handleDialogOpenChange(false));
 	const handleDefaultEvent = async (values) => {
-		const shouldSyncGoogleCalendar =
-			values.tags === TAG_IDS.MEETING
-				? (Boolean(values.enableGoogleMeet) && !values.allDay) || calendarSyncEnabled
-				: calendarSyncEnabled;
+		// Google sync is the switch for everything Google, Meet included: ERP
+		// cannot attach a Meet link to an event it never syncs.
+		const shouldSyncGoogleCalendar = calendarSyncEnabled;
 		const normalizedDoctorValue =
 			values.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
 				(!values.doctor ||
@@ -1564,7 +1646,6 @@ export function AddEditEventDialog({
 		// Only for Doctor Visit Plan
 		if (
 			normalizedValues.tags === TAG_IDS.DOCTOR_VISIT_PLAN &&
-			canCurrentParticipantEditPob &&
 			Number(normalizedValues.pob_given) === 1
 		) {
 			const selectedDoctor = Array.isArray(normalizedValues.doctor)
@@ -1623,37 +1704,59 @@ export function AddEditEventDialog({
 				event?.ownerFullName || LOGGED_IN_USER.name,
 		});
 		ensureDoctorOptionsAvailable(normalizedValues.doctor);
-		await enqueueSubmission({
-			kind: "event",
-			replaceQueueId: event?.__localQueueId ?? null,
-			targetErpName: event?.erpName ?? null,
-			optimisticEvent: calendarEvent,
-			payload: {
-				erpDoc,
-				quotationDoc,
-				saveOptions: {
-					shareWithUserIds: getShareUserIds(values),
-					deferShareSync: false,
-					skipExistingShareCheck: !event?.erpName,
-					// Rebuild the participant table from ERP at write time and touch
-					// only this user's row, so marking your own visit can't wipe a
-					// colleague's on a shared visit (see mergeParticipantRows).
-					...(event?.erpName && {
-						mergeParticipants: {
-							actingEmployeeId: LOGGED_IN_USER.id,
-							recomputeDoctorVisitStatus:
-								values.tags === TAG_IDS.DOCTOR_VISIT_PLAN,
-						},
-					}),
+
+		// Straight to ERP, and we wait for it. `form.formState.isSubmitting` keeps
+		// the Save button busy and `handleDialogOpenChange` refuses to close while
+		// that is true, so the user sees the write happening. If it throws,
+		// `onSubmit` catches it, shows the real ERP message and leaves the form
+		// open with their input intact — nothing is written to the calendar that
+		// ERP does not have.
+		const workingDoc = { ...erpDoc };
+
+		if (quotationDoc) {
+			const savedQuotation = await saveDocToQuotation(quotationDoc);
+			if (savedQuotation?.name) {
+				workingDoc.reference_doctype = "Quotation";
+				workingDoc.reference_docname = savedQuotation.name;
+			}
+		}
+
+		const savedEvent = await createEventAdoptingPreviousAttempt(workingDoc, {
+			shareWithUserIds: getShareUserIds(values),
+			// Sharing is follow-up work on a document ERP has already committed,
+			// so it must not hold up the save the user is waiting on.
+			deferShareSync: true,
+			skipExistingShareCheck: !event?.erpName,
+			// Rebuild the participant table from ERP at write time and touch
+			// only this user's row, so marking your own visit can't wipe a
+			// colleague's on a shared visit (see mergeParticipantRows).
+			...(event?.erpName && {
+				mergeParticipants: {
+					actingEmployeeId: LOGGED_IN_USER.id,
+					recomputeDoctorVisitStatus:
+						values.tags === TAG_IDS.DOCTOR_VISIT_PLAN,
 				},
-			},
+			}),
 		});
 
-		finalizeQueued(
-			isEditing
-				? "Event queued for sync"
-				: "Event queued for sync"
-		);
+		const savedCalendarEvent = {
+			...calendarEvent,
+			erpName: savedEvent.name,
+			id: savedEvent.name,
+			reference_doctype: workingDoc.reference_doctype
+				? { name: workingDoc.reference_doctype }
+				: calendarEvent.reference_doctype,
+			reference_docname:
+				workingDoc.reference_docname ?? calendarEvent.reference_docname,
+		};
+
+		if (event?.erpName) {
+			updateEvent(savedCalendarEvent);
+		} else {
+			addEvent(savedCalendarEvent);
+		}
+
+		finalize(isEditing ? "Event updated" : "Event created");
 	};
 	const handleDoctorVisitPlan = async (values) => {
 		const shouldSyncGoogleCalendar = calendarSyncEnabled;
@@ -1667,80 +1770,99 @@ export function AddEditEventDialog({
 		);
 
 		const totalDoctors = normalizedDoctors.length;
-		const results = await Promise.allSettled(
-			normalizedDoctors.map(async (doctor) => {
-				const doctorId =
-					typeof doctor === "object" ? doctor.value : doctor;
-				const computedTitle = buildDoctorVisitTitle(doctorId, values);
+		// One doctor at a time, not Promise.all: these are concurrent writes to
+		// the same ERP table by the same user, which is exactly what produces the
+		// MySQL lock timeouts saveEvent has to retry around. Serial is a little
+		// slower for a multi-doctor plan and materially more likely to land.
+		const remainingDoctors = [];
+		let lastError = null;
 
-				const enrichedValues = {
-					...values,
-					title: computedTitle,
-					doctor,
-				};
-				ensureDoctorOptionsAvailable(doctor);
-				const erpDoc = mapFormToErpEvent(enrichedValues, {
-					employeeResolvers,
-					doctorResolvers,
-					enableGoogleCalendarSync: shouldSyncGoogleCalendar,
-					googleCalendar:
-						shouldSyncGoogleCalendar && googleCalendarEnabled
-							? LOGGED_IN_USER.email
-							: "IT Elbrit"
+		for (const doctor of normalizedDoctors) {
+			const doctorId =
+				typeof doctor === "object" ? doctor.value : doctor;
+			const computedTitle = buildDoctorVisitTitle(doctorId, values);
+
+			const enrichedValues = {
+				...values,
+				title: computedTitle,
+				doctor,
+			};
+			ensureDoctorOptionsAvailable(doctor);
+			const erpDoc = mapFormToErpEvent(enrichedValues, {
+				employeeResolvers,
+				doctorResolvers,
+				enableGoogleCalendarSync: shouldSyncGoogleCalendar,
+				googleCalendar:
+					shouldSyncGoogleCalendar && googleCalendarEnabled
+						? LOGGED_IN_USER.email
+						: "IT Elbrit"
+			});
+
+			try {
+				const savedEvent = await createEventAdoptingPreviousAttempt(erpDoc, {
+					shareWithUserIds: superiorUserIds,
+					// The Event is committed by the time this runs; sharing is
+					// follow-up work and must not hold up the user's save.
+					deferShareSync: true,
+					skipExistingShareCheck: true,
 				});
 
-				const optimisticEventId = createLocalEventId(
-					`local-doctor-visit-${doctorId}`
-				);
-				const optimisticEvent = buildCalendarEvent({
-					values: enrichedValues,
-					erpDoc,
-					savedName: optimisticEventId,
-					tagConfig,
-					employeeOptions: employeePickerOptions,
-					doctorOptions,
-					ownerEmployeeIdOverride: LOGGED_IN_USER.id,
-					ownerEmailOverride: LOGGED_IN_USER.email,
-					ownerFullNameOverride: LOGGED_IN_USER.name,
-				});
-				await enqueueSubmission({
-					kind: "event",
-					targetErpName: null,
-					optimisticEvent,
-					payload: {
+				// Built from the name ERP just gave us, so what lands on the
+				// calendar is a real document — there is no local-only event that
+				// can later turn out never to have been saved.
+				addEvent(
+					buildCalendarEvent({
+						values: enrichedValues,
 						erpDoc,
-						quotationDoc: null,
-						saveOptions: {
-							shareWithUserIds: superiorUserIds,
-							deferShareSync: false,
-							skipExistingShareCheck: true,
-						},
-					},
-				});
-				return optimisticEventId;
-			})
-		);
+						savedName: savedEvent.name,
+						tagConfig,
+						employeeOptions: employeePickerOptions,
+						doctorOptions,
+						ownerEmployeeIdOverride: LOGGED_IN_USER.id,
+						ownerEmailOverride: LOGGED_IN_USER.email,
+						ownerFullNameOverride: LOGGED_IN_USER.name,
+					})
+				);
+			} catch (error) {
+				console.error(
+					`Failed to create Doctor Visit for ${doctorId}`,
+					error
+				);
+				// This loop swallows the error so the other doctors still get
+				// saved, so onSubmit's catch never runs — set the flag here, or a
+				// retry of this doctor could duplicate a document ERP already has.
+				previousSubmitFailedRef.current = true;
+				lastError = error;
+				remainingDoctors.push(doctor);
+			}
+		}
 
-		const successCount = results.filter(
-			(result) => result.status === "fulfilled"
-		).length;
-		const failedCount = totalDoctors - successCount;
+		const successCount = totalDoctors - remainingDoctors.length;
 
-		if (failedCount === 0) {
-			finalizeQueued(
-				`${successCount} Doctor Visit event${successCount > 1 ? "s" : ""} queued for sync`
+		if (!remainingDoctors.length) {
+			finalize(
+				`${successCount} Doctor Visit event${successCount > 1 ? "s" : ""} created`
 			);
 			return;
 		}
 
+		// Leave the form open holding only the doctors that did NOT get saved, so
+		// pressing Save again retries just those. Re-submitting the whole list
+		// would create a second event for the doctors that already succeeded.
 		if (successCount > 0) {
-			toast.error(
-				`Created ${successCount} of ${totalDoctors} Doctor Visit events`
-			);
-			return;
+			form.setValue("doctor", remainingDoctors, {
+				shouldValidate: false,
+				shouldDirty: true,
+			});
 		}
 
-		toast.error("Failed to create Doctor Visit events");
+		const reason = lastError?.message ?? "Please try again.";
+
+		toast.error(
+			successCount > 0
+				? `Created ${successCount} of ${totalDoctors}. ${remainingDoctors.length} left in the form to retry — ${reason}`
+				: `Could not create the Doctor Visit. ${reason}`
+		);
 	};
 
 	const handleLeave = async (values) => {
@@ -1809,24 +1931,60 @@ export function AddEditEventDialog({
 				color: "#DC2626",
 			});
 
-			await enqueueSubmission({
-				kind: "leave",
-				replaceQueueId: event?.__localQueueId ?? null,
-				targetErpName: event?.erpName ?? null,
-				optimisticEvent: calendarLeave,
-				payload: {
-					leaveDoc,
-					saveOptions: {
-						erpName: event?.erpName,
-					},
-					medicalAttachment: values.medicalAttachment,
-				},
+			const savedLeave = await saveLeaveApplication(leaveDoc, {
+				erpName: event?.erpName,
 			});
-			finalizeQueued(
-				isEditing
-					? "Leave queued for sync"
-					: "Leave queued for sync"
-			);
+
+			// The application exists in ERP from here on. A certificate that fails
+			// to upload is reported, but it must not make a saved leave look
+			// unsaved — re-submitting would file a second application.
+			let uploadedFileUrl = null;
+
+			if (values.medicalAttachment instanceof File) {
+				try {
+					const uploadResult = await uploadLeaveMedicalCertificate(
+						{ medicalAttachment: values.medicalAttachment },
+						savedLeave.name,
+						AUTH_CONFIG.erpUrl,
+						AUTH_CONFIG.authToken
+					);
+
+					if (uploadResult?.fileUrl) {
+						await updateLeaveAttachment(
+							savedLeave.name,
+							uploadResult.fileUrl
+						);
+						uploadedFileUrl = uploadResult.fileUrl;
+					}
+				} catch (uploadError) {
+					console.error(
+						`Medical certificate upload failed for ${savedLeave.name}`,
+						uploadError
+					);
+					toast.error(
+						"Leave was saved, but the medical certificate did not upload. Edit the leave to attach it again."
+					);
+				}
+			} else if (typeof values.medicalAttachment === "string") {
+				uploadedFileUrl = values.medicalAttachment;
+			}
+
+			const savedCalendarLeave = {
+				...calendarLeave,
+				erpName: savedLeave.name,
+				id: savedLeave.name,
+				...(uploadedFileUrl
+					? { medicalAttachment: uploadedFileUrl }
+					: {}),
+			};
+
+			if (event?.erpName) {
+				updateEvent(savedCalendarLeave);
+			} else {
+				addEvent(savedCalendarLeave);
+			}
+
+			finalize(isEditing ? "Leave updated" : "Leave applied");
 
 		} catch (error) {
 			console.error("Leave submission error:", error);
@@ -1853,26 +2011,25 @@ export function AddEditEventDialog({
 			employeeResolvers
 		);
 
-		await enqueueSubmission({
-			kind: "todo",
-			replaceQueueId: event?.__localQueueId ?? null,
-			targetErpName: event?.erpName ?? null,
-			optimisticEvent: calendarTodo,
-			payload: {
-				todoDoc,
-				saveOptions: {
-					shareWithUserIds: getShareUserIds(values),
-					deferShareSync: false,
-					skipExistingShareCheck: !event?.erpName,
-				},
-			},
+		const savedTodo = await saveDocToErp(todoDoc, {
+			shareWithUserIds: getShareUserIds(values),
+			deferShareSync: true,
+			skipExistingShareCheck: !event?.erpName,
 		});
 
-		finalizeQueued(
-			isEditing
-				? "Todo queued for sync"
-				: "Todo queued for sync"
-		);
+		const savedCalendarTodo = {
+			...calendarTodo,
+			erpName: savedTodo.name,
+			id: savedTodo.name,
+		};
+
+		if (event?.erpName) {
+			updateEvent(savedCalendarTodo);
+		} else {
+			addEvent(savedCalendarTodo);
+		}
+
+		finalize(isEditing ? "Todo updated" : "Todo created");
 	};
 	const onInvalid = (errors) => {
 		const shown = showFirstFormErrorAsToast(errors);
@@ -1956,6 +2113,10 @@ export function AddEditEventDialog({
 			await handler(values);
 		} catch (error) {
 			console.error("Submit error:", error);
+
+			// The next attempt from this form has to assume ERP may already hold
+			// the document this one was creating.
+			previousSubmitFailedRef.current = true;
 
 			const message =
 				error?.response?.errors?.[0]?.message ||
@@ -2727,12 +2888,6 @@ export function AddEditEventDialog({
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN && (
 								<>
-									{hasExistingPobDecision &&
-										!canCurrentParticipantEditPob && (
-											<p className="text-sm text-muted-foreground">
-												POB has already been captured for this visit. Remaining participants can only mark Visit.
-											</p>
-										)}
 									<FormField
 										control={form.control}
 										name="pob_given"
@@ -2744,7 +2899,6 @@ export function AddEditEventDialog({
 															type="radio"
 															value="1"
 															checked={Number(field.value) === 1}
-															disabled={!canCurrentParticipantEditPob}
 															onChange={() => field.onChange(1)}
 														/>
 														<span>Yes</span>
@@ -2755,7 +2909,6 @@ export function AddEditEventDialog({
 															type="radio"
 															value="0"
 															checked={Number(field.value) === 0}
-															disabled={!canCurrentParticipantEditPob}
 															onChange={() => field.onChange(0)}
 														/>
 														<span>No</span>
@@ -2769,8 +2922,7 @@ export function AddEditEventDialog({
 						{/* ================= CUSTOMER ================= */}
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
-							Number(pobGiven) === 1 &&
-							canCurrentParticipantEditPob && (
+							Number(pobGiven) === 1 && (
 								<FormField
 									control={form.control}
 									name="customer"
@@ -2791,8 +2943,7 @@ export function AddEditEventDialog({
 						{isEditing &&
 							selectedTag === TAG_IDS.DOCTOR_VISIT_PLAN &&
 							Number(pobGiven) === 1 &&
-							customer &&
-							canCurrentParticipantEditPob && (
+							customer && (
 								<div className="space-y-4">
 									<h4 className="font-medium">POB Details</h4>
 

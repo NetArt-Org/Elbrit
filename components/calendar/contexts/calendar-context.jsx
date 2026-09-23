@@ -16,14 +16,6 @@ import {
 	buildLeaveNotifications,
 	filterCalendarEvents,
 } from "@calendar/components/calendar/contexts/calendar-context/selectors";
-import {
-	discardQueuedSubmission,
-	mergeServerEventsWithQueuedEvents,
-	processSubmissionQueue,
-	pruneSubmissionQueueOnStartup,
-	requeueFailedSubmissions,
-	subscribeSubmissionQueue,
-} from "@calendar/lib/calendar/submission-queue";
 import { applyDoctorVisitTeamTitles, createTeamNameResolver } from "@calendar/lib/calendar/doctor-visit-title";
 import { VISIT_FILTER } from "@calendar/lib/calendar/visit-filter";
 import { resolveEnabledTagIds, TAG_IDS } from "@calendar/components/calendar/constants";
@@ -38,13 +30,57 @@ const DEFAULT_SETTINGS = {
 };
 const RECENT_SYNC_GRACE_MS = 30 * 1000;
 
-function mergeFetchedEventsWithRecent(existingEvents = [], fetchedEvents = []) {
+// Writes used to be parked in localStorage and drained in the background. A
+// phone that was carrying items when that queue was removed would otherwise
+// just lose them with no trace, and the user would keep believing those visits
+// were saved. They were never in ERP — nothing can recover them — so say so
+// once, clearly, and clear the keys.
+const LEGACY_QUEUE_KEYS = [
+	"calendar-submission-queue:v1",
+	"calendar-submission-queue:v1:lock",
+];
+
+function discardLegacySubmissionQueue() {
+	if (typeof window === "undefined") return 0;
+
+	let abandonedCount = 0;
+
+	try {
+		const raw = window.localStorage.getItem(LEGACY_QUEUE_KEYS[0]);
+		const parsed = raw ? JSON.parse(raw) : null;
+		abandonedCount = Array.isArray(parsed) ? parsed.length : 0;
+		LEGACY_QUEUE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+	} catch (error) {
+		console.error("Failed to clear the legacy submission queue", error);
+	}
+
+	return abandonedCount;
+}
+
+function mergeFetchedEventsWithRecent(
+	existingEvents = [],
+	fetchedEvents = [],
+	recentlyDeleted = null
+) {
+	const now = Date.now();
+
+	// A refetch that was already in flight when the user deleted something comes
+	// back still listing that event — it was issued before ERP removed it.
+	// Merging it would put the deleted event straight back on the calendar and
+	// make a successful delete look like it did nothing. ERP is right; this list
+	// is just older than the delete.
+	const survivingFetchedEvents = recentlyDeleted?.size
+		? fetchedEvents.filter((event) => {
+			const deletedAt = recentlyDeleted.get(event?.erpName);
+			return !deletedAt || now - deletedAt >= RECENT_SYNC_GRACE_MS;
+		})
+		: fetchedEvents;
+
 	const fetchedIds = new Set(
-		fetchedEvents
+		survivingFetchedEvents
 			.map((event) => event?.erpName)
 			.filter(Boolean)
 	);
-	const now = Date.now();
 	const recentSyncedEvents = existingEvents.filter((event) => {
 		if (!event?.erpName || fetchedIds.has(event.erpName)) {
 			return false;
@@ -58,7 +94,7 @@ function mergeFetchedEventsWithRecent(existingEvents = [], fetchedEvents = []) {
 		return now - justSyncedAt < RECENT_SYNC_GRACE_MS;
 	});
 
-	return [...fetchedEvents, ...recentSyncedEvents];
+	return [...survivingFetchedEvents, ...recentSyncedEvents];
 }
 
 function normalizeCalendarEventState(event) {
@@ -116,7 +152,6 @@ export function CalendarProvider({
 	const [selectedColors, setSelectedColors] = useState([]);
 	const [selectedStatuses, setSelectedStatuses] = useState([]);
 	const [serverEvents, setServerEvents] = useState(events || []);
-	const [queueEvents, setQueueEvents] = useState([]);
 	// const [filteredEvents, setFilteredEvents] = useState(events || []);
 	const [notifications, setNotifications] = useState([]);
 	const [users, setUsers] = useState([]);
@@ -135,7 +170,6 @@ export function CalendarProvider({
 	const [showOnlyTodoList, setShowOnlyTodoList] = useState(false);
 	const [agendaVisitFilter, setAgendaVisitFilter] = useState(VISIT_FILTER.ALL);
 	const [territoryDoctors, setTerritoryDoctors] = useState([]);
-	const [isRetryingSync, setIsRetryingSync] = useState(false);
 	const updateSettings = (newPartialSettings) => {
 		setSettings({
 			...settings,
@@ -205,8 +239,16 @@ export function CalendarProvider({
 		setSelectedDate(date);
 	};
 
+	// `__justSyncedAt` holds a just-written document on screen for
+	// RECENT_SYNC_GRACE_MS even if the next background refetch comes back without
+	// it. ERP's list query can lag its own write by a moment, and without this
+	// the event the user just saved would blink out of the calendar and look like
+	// it had failed.
 	const addEvent = (event) => {
-		const normalized = normalizeCalendarEventState(event);
+		const normalized = normalizeCalendarEventState({
+			...event,
+			__justSyncedAt: Date.now(),
+		});
 		setServerEvents((prev) => [...prev, normalized]);
 		// setFilteredEvents((prev) => [...prev, normalized]);
 	};
@@ -217,7 +259,10 @@ export function CalendarProvider({
 			return;
 		}
 
-		const normalized = normalizeCalendarEventState(updatedEvent);
+		const normalized = normalizeCalendarEventState({
+			...updatedEvent,
+			__justSyncedAt: Date.now(),
+		});
 
 		setServerEvents((prev) =>
 			prev.map((e) =>
@@ -227,8 +272,25 @@ export function CalendarProvider({
 	};
 
 
+	// erpName -> when it was deleted. Read by mergeFetchedEventsWithRecent so a
+	// refetch issued before the delete cannot put the row back.
+	const recentlyDeletedRef = useRef(new Map());
+
 	const removeEvent = (erpName) => {
 		if (!erpName) return;
+
+		const tombstones = recentlyDeletedRef.current;
+		const now = Date.now();
+		tombstones.set(erpName, now);
+
+		// Only the grace window matters; anything older has already been through
+		// a full refetch, so keeping it would suppress a genuine re-creation of
+		// the same document.
+		tombstones.forEach((deletedAt, name) => {
+			if (now - deletedAt >= RECENT_SYNC_GRACE_MS) {
+				tombstones.delete(name);
+			}
+		});
 
 		setServerEvents(prev => prev.filter(e => e.erpName !== erpName));
 		// setFilteredEvents(prev => prev.filter(e => e.erpName !== erpName));
@@ -262,7 +324,11 @@ export function CalendarProvider({
 		}
 
 		setServerEvents((prev) =>
-			mergeFetchedEventsWithRecent(prev, nextEvents)
+			mergeFetchedEventsWithRecent(
+				prev,
+				nextEvents,
+				recentlyDeletedRef.current
+			)
 		);
 		return nextEvents;
 	}, [refreshEvents]);
@@ -290,7 +356,11 @@ export function CalendarProvider({
 		}
 
 		setServerEvents((prev) =>
-			mergeFetchedEventsWithRecent(prev, nextEvents)
+			mergeFetchedEventsWithRecent(
+				prev,
+				nextEvents,
+				recentlyDeletedRef.current
+			)
 		);
 		return nextEvents;
 	}, [selectedDate]);
@@ -321,146 +391,27 @@ export function CalendarProvider({
 	}, [reloadEvents]);
 
 	useEffect(() => {
-		if (typeof window === "undefined") return;
+		const abandonedCount = discardLegacySubmissionQueue();
+		if (!abandonedCount) return;
 
-		setQueueEvents(pruneSubmissionQueueOnStartup());
-
-		const unsubscribe = subscribeSubmissionQueue((queue) => {
-			setQueueEvents(queue);
-		});
-
-		return unsubscribe;
+		toast.error(
+			`${abandonedCount} item${abandonedCount === 1 ? "" : "s"} left over from the old offline queue never reached ERP and ${abandonedCount === 1 ? "has" : "have"} been discarded. Please create ${abandonedCount === 1 ? "it" : "them"} again.`,
+			{ duration: 15000 }
+		);
 	}, []);
 
-	const syncPendingSubmissions = useCallback(async () => {
-		const { processedCount } = await processSubmissionQueue({
-			erpUrl,
-			authToken,
-			onSuccess: async (queueItem, result) => {
-				if (result?.removed) {
-					setServerEvents((prev) =>
-						prev.filter(
-							(event) =>
-								event.erpName !== result.name &&
-								event.erpName !== queueItem.targetErpName
-						)
-					);
-					return;
-				}
-
-				const syncedEvent =
-					result?.calendarEvent ?? queueItem.optimisticEvent;
-				const syncedEventWithMeta = syncedEvent
-					? {
-						...syncedEvent,
-						__justSyncedAt: Date.now(),
-					}
-					: syncedEvent;
-
-				setServerEvents((prev) => {
-					const matchId =
-						queueItem.targetErpName ??
-						queueItem.optimisticEvent?.erpName ??
-						syncedEventWithMeta?.erpName;
-					const next = prev.filter(
-						(event) =>
-							event.erpName !== matchId &&
-							event.erpName !== syncedEventWithMeta?.erpName
-					);
-					return syncedEventWithMeta
-						? [...next, syncedEventWithMeta]
-						: next;
-				});
-			},
-			onError: async (queueItem, error, meta) => {
-				if (meta?.retryable) return;
-
-				if (queueItem.targetErpName) {
-					discardQueuedSubmission({
-						queueId: queueItem.id,
-						erpName: queueItem.targetErpName,
-					});
-				}
-
-				toast.error(
-					error?.message ||
-					`${queueItem.kind} sync failed. Item is still local and not saved to ERP.`
-				);
-			},
-		});
-
-		if (processedCount > 0) {
-			try {
-				// The writes above already invalidated the caches; force past the
-				// in-flight dedupe so this reads ERP rather than a request that
-				// started before them.
-				await reloadEvents({ force: true });
-			} catch (error) {
-				console.error("Failed to refresh after queue sync", error);
-			}
-		}
-
-		return processedCount;
-	}, [authToken, erpUrl, reloadEvents]);
-
-	const retryPendingSync = useCallback(async () => {
-		setIsRetryingSync(true);
-
-		try {
-			requeueFailedSubmissions();
-			const processedCount = await syncPendingSubmissions();
-
-			if (processedCount > 0) {
-				toast.success(`Retried sync for ${processedCount} item${processedCount === 1 ? "" : "s"}.`);
-			} else {
-				toast.info("No pending sync items found.");
-			}
-		} finally {
-			setIsRetryingSync(false);
-		}
-	}, [syncPendingSubmissions]);
-
-	useEffect(() => {
-		if (typeof window === "undefined") return;
-
-		let cancelled = false;
-
-		const runQueue = async () => {
-			const processedCount = await syncPendingSubmissions();
-			if (cancelled) return;
-			return processedCount;
-		};
-
-		runQueue();
-
-		const handleOnline = () => {
-			runQueue();
-		};
-
-		window.addEventListener("online", handleOnline);
-		return () => {
-			cancelled = true;
-			window.removeEventListener("online", handleOnline);
-		};
-	}, [queueEvents, syncPendingSubmissions]);
-
+	// Writes go straight to ERP and are awaited, so `serverEvents` only ever
+	// holds documents ERP has actually stored. There is no second, local list of
+	// not-yet-saved events to merge in — and so no way for the calendar to show
+	// an event that does not exist, or to hide one that does.
 	const resolveOwnerTeamName = useMemo(
 		() => createTeamNameResolver(users, elbritRoleEdges),
 		[users, elbritRoleEdges]
 	);
-	const allEvents = useMemo(() => {
-		return applyDoctorVisitTeamTitles(
-			mergeServerEventsWithQueuedEvents(serverEvents, queueEvents),
-			resolveOwnerTeamName
-		);
-	}, [queueEvents, serverEvents, resolveOwnerTeamName]);
-	const pendingSyncCount = useMemo(() => {
-		return queueEvents.filter(
-			(item) =>
-				item.kind !== "delete" &&
-				["pending", "syncing", "failed"].includes(item.status)
-		).length;
-	}, [queueEvents]);
+	const allEvents = useMemo(
+		() => applyDoctorVisitTeamTitles(serverEvents, resolveOwnerTeamName),
+		[serverEvents, resolveOwnerTeamName]
+	);
 	useEffect(() => {
 		let cancelled = false;
 
@@ -630,9 +581,6 @@ export function CalendarProvider({
 		removeEvent,
 		refreshEvents: reloadEvents,
 		syncCalendar,
-		pendingSyncCount,
-		retryPendingSync,
-		isRetryingSync,
 		clearFilter,
 		mobileMode,
 		setMobileMode,

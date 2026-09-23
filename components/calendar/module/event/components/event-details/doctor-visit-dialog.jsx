@@ -7,6 +7,7 @@ import { TAG_FORM_CONFIG } from "@calendar/lib/calendar/form-config";
 import { ScrollArea } from "@calendar/components/ui/scroll-area";
 import { useCalendar } from "@calendar/components/calendar/contexts/calendar-context";
 import { AddEditEventDialog } from "@calendar/components/calendar/dialogs/add-edit-event-dialog";
+import { VisitPobEditor } from "@calendar/components/calendar/module/event/components/event-details/VisitPobEditor";
 import { TAG_IDS } from "@calendar/components/calendar/constants";
 import { LOGGED_IN_USER } from "@calendar/components/auth/calendar-users";
 import { buildParticipantsWithDetails } from "@calendar/lib/helper";
@@ -331,11 +332,34 @@ export function EventDoctorVisitDialog({
   // decide the displayed status, or the same visit reads differently per role.
   const viewerHasVisited = isParticipantVisited(currentEmployeeParticipant);
 
+  // Who created the plan. Matched on employee id first, falling back to email,
+  // because older events carry only one of the two.
+  const isEventOwner = useMemo(() => {
+    const ownerEmployeeId = event?.ownerEmployeeId ?? event?.owner?.id;
+    if (
+      ownerEmployeeId &&
+      String(ownerEmployeeId) === String(LOGGED_IN_USER.id)
+    ) {
+      return true;
+    }
+
+    const ownerEmail = String(
+      event?.ownerEmail ?? event?.owner?.email ?? ""
+    ).toLowerCase();
+    const viewerEmail = String(LOGGED_IN_USER.email ?? "").toLowerCase();
+
+    return Boolean(ownerEmail) && ownerEmail === viewerEmail;
+  }, [event]);
+
+  const isVisitSyncPending =
+    event?.__syncStatus === "pending" || event?.__syncStatus === "syncing";
+
   // Whether the VISIT ITSELF is complete, derived from the participant data on
   // the shared event. Identical across BE / ABM / RBM views.
   const visitCompleted = useMemo(
-    () => employeeParticipants.some((p) => p.visited),
-    [employeeParticipants]
+    () =>
+      !isVisitSyncPending && employeeParticipants.some((p) => p.visited),
+    [employeeParticipants, isVisitSyncPending]
   );
   const isFailedSync = event?.__syncStatus === "failed";
   const hasPobItems =
@@ -346,6 +370,16 @@ export function EventDoctorVisitDialog({
   ) ?? false;
   const shouldShowPob =
     hasPobItems || visitCompleted;
+  const hasPobDecision =
+    Number(event.pob_given) === 1 || hasPobItems;
+  // POB is edited here, in the POB block itself, and saved on its own. The visit
+  // form is reachable only while the visit is open and the date has not passed;
+  // POB is not on that clock — the doctor may confirm the order hours or days
+  // later, and a wrong quantity has to stay correctable. Editing it here also
+  // means nothing else about the visit is put back in play.
+  const canManagePob =
+    isDoctorVisit && isEmployeeParticipant && !isFailedSync;
+  const [isEditingPob, setIsEditingPob] = useState(false);
   const pobTotals = useMemo(() => {
     if (!hasPobItems) return { qty: 0, amount: 0 };
 
@@ -568,18 +602,37 @@ export function EventDoctorVisitDialog({
             </div>
           )}
           {/* ================= POB ================= */}
-          {shouldShowPob && (
+          {(shouldShowPob || canManagePob) && (
             <div className="space-y-3">
-              <p className="text-sm font-medium mb-[4px]">
-                POB
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium">POB</p>
 
-              <p className="text-sm text-muted-foreground">
-                {Number(event.pob_given) === 1 ? "Yes" : "No"}
-              </p>
+                {canManagePob && !isEditingPob && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setIsEditingPob(true)}
+                  >
+                    {hasPobDecision ? "Edit POB" : "Add POB"}
+                  </Button>
+                )}
+              </div>
+
+              {isEditingPob ? (
+                <VisitPobEditor
+                  event={event}
+                  onDone={() => setIsEditingPob(false)}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {Number(event.pob_given) === 1 ? "Yes" : "No"}
+                </p>
+              )}
 
               {/* Table only if items exist */}
-              {hasPobItems && (
+              {!isEditingPob && hasPobItems && (
                 <div className="border rounded-md text-sm mt-2">
                   <div className="grid grid-cols-4 gap-4 border-b p-2 font-medium">
                     <span>Date</span>
@@ -667,13 +720,27 @@ export function EventDoctorVisitDialog({
 
               {permissions.canVisitNow && !isFailedSync && (
                 <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-                  <Button
-                    variant="destructive"
-                    className="w-full sm:w-auto"
-                    onClick={handleLeaveVisit}
-                  >
-                    Remove
-                  </Button>
+                  {/* The creator has nothing to "remove" themselves from: doing
+                      so strands their own plan with no participants, which then
+                      offers Join and still has to be deleted. So they get the
+                      delete outright. Invited participants keep Remove, which
+                      leaves the visit standing for everyone else. */}
+                  {isEventOwner && permissions.canDelete ? (
+                    <DeleteEventDialog
+                      className="w-full sm:w-auto"
+                      onConfirm={() =>
+                        handleDelete(event.erpName, undefined, event)
+                      }
+                    />
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      className="w-full sm:w-auto"
+                      onClick={handleLeaveVisit}
+                    >
+                      Remove
+                    </Button>
+                  )}
                   <AddEditEventDialog
                     event={event}
                     forceValues={

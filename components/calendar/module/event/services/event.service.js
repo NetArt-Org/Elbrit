@@ -5,6 +5,7 @@ import { isParticipantVisitRecorded } from "@calendar/lib/calendar/visit";
 import { ERP_EVENT_FIELDS } from "@calendar/components/calendar/module/event/graphql/field-config";
 import {
   CUSTOMER_QUERY,
+  EVENT_BY_NATURAL_KEY_QUERY,
   EVENT_PARTICIPANTS_QUERY,
   EVENTS_BY_RANGE_QUERY,
   SAVE_EVENT_MUTATION,
@@ -104,6 +105,7 @@ export async function fetchQuotationsByNames(names) {
           node {
             name
             creation
+            party_name__name
             items {
               item_code { name }
               qty
@@ -172,6 +174,76 @@ const PARTICIPANT_VISIT_FIELDS = [
 
 // Same rule the roster uses, so "already visited" means one thing everywhere.
 const isVisitRecorded = isParticipantVisitRecorded;
+
+// Event saves can collide when two participants complete the same visit at
+// nearly the same time. Frappe rolls these transactions back with MySQL 1205
+// (lock wait timeout) or 1213 (deadlock), so retrying that explicit response is
+// safe. Each retry rebuilds the participant table from ERP below, which also
+// prevents a stale retry from overwriting another participant's visit.
+// Jittered, because the writers that contend here are other clients running
+// this same code: fixed delays make two of them collide again on every retry.
+const EVENT_SAVE_RETRY_DELAYS_MS = [600, 1400, 3000];
+
+// Total wall-clock budget for a save including its retries.
+//
+// The retries above assume a collision that fails fast — a deadlock (MySQL
+// 1213) is detected and rolled back in milliseconds, so trying again shortly
+// after is nearly free and usually works. A lock *wait* timeout (1205) is the
+// opposite: the request sat holding the connection for the server's whole
+// innodb_lock_wait_timeout, 50s by default, because another transaction is
+// sitting on the row. Retrying that burns another 50s per attempt and the user
+// watches a locked dialog for three and a half minutes before being told it
+// failed. Both arrive here as "contention", so the thing that separates them is
+// not the message — it is how long the attempt took.
+//
+// The budget is therefore generous, not tight. A blocked save DOES usually land
+// on a later attempt once the other transaction commits, so cutting the retries
+// short would turn a slow success into a fast failure and leave the user with no
+// event at all. What it must not do is run forever: four attempts against a 50s
+// timeout is already ~3.5 minutes, and past that the lock is not transient and
+// somebody needs to look at the server.
+//
+// The cost of waiting that long is paid in the UI instead — `onContention` below
+// reports every attempt so the user can see it is working rather than frozen.
+const SAVE_RETRY_TIME_BUDGET_MS = 150_000;
+
+function withJitter(delayMs) {
+  return Math.round(delayMs * (0.7 + Math.random() * 0.6));
+}
+
+/**
+ * Two writers touching one Event at the same time.
+ *
+ * Frappe reports this several different ways depending on where the collision
+ * lands: a row-lock timeout or deadlock from MySQL, a timestamp mismatch when
+ * the row changed under the request, or an explicit document lock. All of them
+ * mean the same thing for us — nothing is wrong with the payload, so the save
+ * is worth retrying.
+ */
+function isDatabaseContentionError(error) {
+  const message = String(error?.message ?? "").toLowerCase();
+
+  return (
+    // Matched loosely on purpose. Frappe surfaces the same MySQL condition with
+    // several different wrappings, and anything that reaches the user as a raw
+    // "deadlock" string is a retry we failed to make — it is contention, not a
+    // problem with the payload.
+    message.includes("lock wait") ||
+    message.includes("deadlock") ||
+    message.includes("try restarting transaction") ||
+    message.includes("timestampmismatch") ||
+    message.includes("has been modified after you have opened it") ||
+    message.includes("document has been modified") ||
+    message.includes("documentlocked") ||
+    message.includes("document locked") ||
+    message.includes("querytimeout") ||
+    /operationalerror:\s*\((1205|1213)\b/.test(message)
+  );
+}
+
+function waitForRetry(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 
 async function fetchEventParticipantRows(erpName) {
   const data = await graphqlRequest(EVENT_PARTICIPANTS_QUERY, {
@@ -262,7 +334,7 @@ export function mergeParticipantRows({
   return merged;
 }
 
-export async function saveEvent(doc, options = {}) {
+async function prepareEventDocForSave(doc, options) {
   let outgoingDoc = doc;
 
   if (options.mergeParticipants && doc?.name) {
@@ -306,15 +378,119 @@ export async function saveEvent(doc, options = {}) {
     }
   }
 
-  const data = await graphqlRequest(SAVE_EVENT_MUTATION, {
-    doc: serializeEventDoc(outgoingDoc),
+  return outgoingDoc;
+}
+
+/**
+ * The document a previous attempt at this create already made, if any.
+ *
+ * Subject and starts_on together identify one of these events: the subject is
+ * generated from the doctor/HQ and the employee, and the app already treats one
+ * doctor per employee per day as unique. Matched with EQ only — this Frappe
+ * GraphQL layer mishandles IN filters.
+ */
+export async function findExistingEventByNaturalKey({
+  subject,
+  startsOn,
+  eventCategory,
+}) {
+  if (!subject || !startsOn) return null;
+
+  const data = await graphqlRequest(EVENT_BY_NATURAL_KEY_QUERY, {
+    first: 5,
+    filters: [
+      { fieldname: "subject", operator: "EQ", value: subject },
+      { fieldname: "starts_on", operator: "EQ", value: startsOn },
+    ],
   });
+
+  const nodes =
+    data?.Events?.edges?.map((edge) => edge?.node).filter(Boolean) ?? [];
+
+  const match = eventCategory
+    ? nodes.find((node) => node.event_category === eventCategory)
+    : nodes[0];
+
+  return match?.name ?? null;
+}
+
+export async function saveEvent(doc, options = {}) {
+  let outgoingDoc = doc;
+  let data;
+  const startedAt = Date.now();
+
+  for (
+    let attempt = 0;
+    attempt <= EVENT_SAVE_RETRY_DELAYS_MS.length;
+    attempt += 1
+  ) {
+    // Do this inside the retry loop. Another participant may have completed
+    // the visit while this request was waiting for the database lock.
+    outgoingDoc = await prepareEventDocForSave(doc, options);
+
+    try {
+      data = await graphqlRequest(SAVE_EVENT_MUTATION, {
+        doc: serializeEventDoc(outgoingDoc),
+      });
+      break;
+    } catch (error) {
+      const elapsedMs = Date.now() - startedAt;
+      const withinTimeBudget = elapsedMs < SAVE_RETRY_TIME_BUDGET_MS;
+      const canRetry =
+        isDatabaseContentionError(error) &&
+        attempt < EVENT_SAVE_RETRY_DELAYS_MS.length &&
+        withinTimeBudget;
+
+      if (!canRetry) {
+        if (isDatabaseContentionError(error)) {
+          // Nothing retries this in the background any more, so the message must
+          // not promise that it will. The user is the retry now, and the form is
+          // still open in front of them.
+          //
+          // If we spent minutes on this, the lock was not a passing collision
+          // between two users — something on the server is holding the row and
+          // pressing Save again will just queue behind it.
+          const heldForSeconds = Math.round(elapsedMs / 1000);
+
+          throw new Error(
+            heldForSeconds >= 30
+              ? `ERP kept this event locked for ${heldForSeconds}s across ${attempt + 1} attempts and it was not saved. Something on the server is holding it — report this rather than retrying.`
+              : "ERP was busy with this event and the save did not go through. Press Save again.",
+            { cause: error }
+          );
+        }
+
+        throw error;
+      }
+
+      const nextDelayMs = withJitter(EVENT_SAVE_RETRY_DELAYS_MS[attempt]);
+
+      // Tell the caller before sleeping. A blocked attempt has already cost the
+      // server's whole lock timeout, so without this the UI sits silent and
+      // locked for minutes and reads as a hung app.
+      options.onContention?.({
+        attempt: attempt + 1,
+        maxAttempts: EVENT_SAVE_RETRY_DELAYS_MS.length + 1,
+        elapsedMs,
+        nextDelayMs,
+      });
+
+      await waitForRetry(nextDelayMs);
+    }
+  }
 
   if (!data?.saveDoc?.doc?.name) {
     throw new Error("ERP did not return Event name");
   }
   // invalidate cache only after successful write
-  invalidateCalendarData({ reason: "event:save" });
+  invalidateCalendarData({ broadcast: false, reason: "event:save" });
+
+  // Only events that actually want Google Calendar sync (google_calendar set
+  // by mapFormToErpEvent) need the nudge — everything else can just wait for
+  // nothing, since sync_with_google_calendar is always 0 on the wire now.
+  if (outgoingDoc.google_calendar) {
+    void enqueueGoogleCalendarSync(data.saveDoc.doc.name);
+  }
 
   // Only events that actually want Google Calendar sync (google_calendar set
   // by mapFormToErpEvent) need the nudge — everything else can just wait for
@@ -336,11 +512,31 @@ export async function saveEvent(doc, options = {}) {
         shareOptions
       );
     } else {
-      await syncEventDocShares(
-        data.saveDoc.doc.name,
-        options.shareWithUserIds,
-        shareOptions
-      );
+      try {
+        await syncEventDocShares(
+          data.saveDoc.doc.name,
+          options.shareWithUserIds,
+          shareOptions
+        );
+      } catch (error) {
+        // The Event transaction has already committed. Reporting the whole
+        // queue item as failed here makes a successful create look local-only
+        // and can cause a duplicate create on retry. Sharing is independent
+        // follow-up work, so record its failure without undoing Event success.
+        console.error(
+          `DocShare sync failed after Event:${data.saveDoc.doc.name} was saved`,
+          error
+        );
+        // Re-read existing shares on the retry. Some recipients may already
+        // have been saved before the failure, and creating them twice would
+        // produce duplicate permission rows.
+        void enqueueDocShareSync(
+          "Event",
+          data.saveDoc.doc.name,
+          options.shareWithUserIds,
+          { ...shareOptions, skipExistingCheck: false }
+        );
+      }
     }
   }
 
@@ -454,6 +650,44 @@ export async function saveDocToQuotation(doc) {
   invalidateCalendarData({ reason: "quotation:save" });
   return data.saveDoc.doc;
 }
+/**
+ * Save only the POB of a visit.
+ *
+ * POB is captured and corrected long after the call, on visits that are already
+ * marked, so this must not touch anything else about the event: no participants,
+ * no attendance or visit time, no dates, no status, no location. ERP's `saveDoc`
+ * merges the fields it is given (the same partial-write `joinDoctorVisit` relies
+ * on), so the document carries the POB flag and the quotation link and nothing
+ * more.
+ */
+export async function saveVisitPob({ erpName, pobGiven, quotationDoc }) {
+  if (!erpName) throw new Error("Missing event to save POB against");
+
+  let quotationFields = {};
+
+  if (quotationDoc) {
+    const savedQuotation = await saveDocToQuotation(quotationDoc);
+
+    if (savedQuotation?.name) {
+      quotationFields = {
+        reference_doctype: "Quotation",
+        reference_docname: savedQuotation.name,
+      };
+    }
+  }
+
+  const savedEvent = await saveEvent({
+    name: erpName,
+    [ERP_EVENT_FIELDS.pobGivenWrite]: Number(pobGiven) === 1 ? 1 : 0,
+    ...quotationFields,
+  });
+
+  return {
+    name: savedEvent.name,
+    ...quotationFields,
+  };
+}
+
 export async function fetchAllCustomers() {
   return getCached("CUSTOMERS", async () => {
     const data = await graphqlRequest(CUSTOMER_QUERY, {
@@ -731,6 +965,9 @@ async function fetchEventsByRangeUncached(
       const quotation =
         quotationMap[node.reference_docname__name];
       node.pob_creation = quotation.creation ?? null;
+      // Without the customer the POB cannot be edited without re-picking it,
+      // and the quotation would be revised against a blank party.
+      node.customer = quotation.party_name__name ?? null;
       node.fsl_doctor_item =
         quotation.items?.map((row) => ({
           item__name: row.item_code?.name,
@@ -809,7 +1046,7 @@ export async function deleteEventFromErp(erpName, docname) {
     });
 
     // Success path
-    invalidateCalendarData({ reason: "event:delete" });
+    invalidateCalendarData({ broadcast: false, reason: "event:delete" });
     return true;
 
   } catch (error) {
@@ -821,7 +1058,7 @@ export async function deleteEventFromErp(erpName, docname) {
       message.includes("does not exist") ||
       message.includes("Missing document")
     ) {
-      invalidateCalendarData({ reason: "event:delete" });
+      invalidateCalendarData({ broadcast: false, reason: "event:delete" });
       return true;
     }
 
